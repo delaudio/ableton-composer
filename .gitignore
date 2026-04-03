@@ -1,0 +1,4 @@
+node_modules/
+.env
+sets/*.json
+!sets/.gitkeep

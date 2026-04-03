@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AbletonSong",
+  "description": "A structured song definition for Ableton Live. Each section maps to a scene row in the session view. Each track entry maps to a named track in Live.",
+  "type": "object",
+  "required": ["meta", "sections"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["bpm", "scale", "genre"],
+      "properties": {
+        "bpm":            { "type": "number", "minimum": 40, "maximum": 220 },
+        "scale":          { "type": "string", "description": "E.g. 'D minor', 'A major', 'C# dorian', 'G phrygian'" },
+        "root_note":      { "type": "integer", "minimum": 0, "maximum": 127, "description": "MIDI note number of the scale root (60 = C4)" },
+        "genre":          { "type": "string" },
+        "mood":           { "type": "string" },
+        "time_signature": { "type": "string", "default": "4/4", "description": "E.g. '4/4', '3/4', '6/8'" },
+        "description":    { "type": "string", "description": "Free-text description of this song/set" }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Each section maps to a scene (row) in Ableton's session view. Index 0 = scene 0, index 1 = scene 1, etc.",
+      "items": {
+        "type": "object",
+        "required": ["name", "bars", "tracks"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "E.g. 'intro', 'verse', 'chorus', 'bridge', 'outro', 'drop'"
+          },
+          "bars": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Length of this section in bars (used for context only)"
+          },
+          "tracks": {
+            "type": "array",
+            "description": "List of tracks to populate. ableton_name must match the track name in your Live set exactly.",
+            "items": {
+              "type": "object",
+              "required": ["ableton_name", "clip"],
+              "properties": {
+                "ableton_name": {
+                  "type": "string",
+                  "description": "Must match the MIDI track name in Ableton Live exactly (case-sensitive)"
+                },
+                "instrument": {
+                  "type": "string",
+                  "description": "Human-readable description of the instrument (for LLM context only)"
+                },
+                "clip": {
+                  "type": "object",
+                  "required": ["length_bars", "notes"],
+                  "properties": {
+                    "length_bars": {
+                      "type": "number",
+                      "minimum": 0.5,
+                      "description": "Clip loop length in bars. All note times must be < length_bars * beats_per_bar."
+                    },
+                    "loop": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "notes": {
+                      "type": "array",
+                      "description": "MIDI notes in this clip",
+                      "items": {
+                        "type": "object",
+                        "required": ["pitch", "time", "duration", "velocity"],
+                        "properties": {
+                          "pitch": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 127,
+                            "description": "MIDI note number. C-2=0, C-1=12, C0=24, C1=36, C2=48, C3=60, C4=72. Drum map: Kick=36, Snare=38, HH Closed=42, HH Open=46, Crash=49, Ride=51, Clap=39, Tom Hi=50, Tom Mid=47, Tom Lo=43."
+                          },
+                          "time": {
+                            "type": "number",
+                            "minimum": 0,
+                            "description": "Beat position from start of clip (0-indexed). 0=beat1, 1=beat2, 2=beat3, 3=beat4. For 16th note grid: 0, 0.25, 0.5, 0.75, 1.0, 1.25..."
+                          },
+                          "duration": {
+                            "type": "number",
+                            "minimum": 0.0625,
+                            "description": "Duration in beats: 4=whole, 2=half, 1=quarter, 0.5=eighth, 0.25=16th, 0.125=32nd"
+                          },
+                          "velocity": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 127,
+                            "description": "Note velocity. Soft=30-50, Medium=60-90, Hard=100-120, Max=127"
+                          },
+                          "muted": {
+                            "type": "boolean",
+                            "default": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

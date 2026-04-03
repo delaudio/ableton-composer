@@ -1,0 +1,27 @@
+{
+  "name": "ableton-composer",
+  "version": "0.1.0",
+  "description": "CLI to generate Ableton Live MIDI content using Claude AI",
+  "type": "module",
+  "bin": {
+    "ableton-composer": "./bin/cli.js"
+  },
+  "scripts": {
+    "generate": "node bin/cli.js generate",
+    "push": "node bin/cli.js push",
+    "list": "node bin/cli.js list",
+    "info": "node bin/cli.js info"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "ableton-js": "^2.4.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "ora": "^8.0.1",
+    "zod": "^3.23.8"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
