@@ -14,6 +14,7 @@ import { pullCommand }     from '../src/commands/pull.js';
 import { arrangeCommand }  from '../src/commands/arrange.js';
 import { splitCommand }    from '../src/commands/split.js';
 import { compileCommand }  from '../src/commands/compile.js';
+import { clearCommand }    from '../src/commands/clear.js';
 import { listCommand }     from '../src/commands/list.js';
 import { infoCommand }     from '../src/commands/info.js';
 
@@ -81,6 +82,17 @@ program
   .option('--add-to <file>',        'Merge into an existing flat JSON instead of creating a new file')
   .option('--replace',              'When used with --out or --add-to, replace a section with the same name')
   .action(pullCommand);
+
+// ── clear ─────────────────────────────────────────────────────────────────────
+program
+  .command('clear')
+  .description('Remove clips from the current Ableton Live set')
+  .option('-a, --all',              'Clear both session and arrangement view')
+  .option('--arrangement',          'Clear arrangement view (empties notes; containers remain)')
+  .option('-t, --tracks <names>',   'Only clear specific tracks (comma-separated)')
+  .option('--scenes <indices>',     'Only clear specific scene rows, e.g. "0,1,2" (session only)')
+  .option('--dry-run',              'Show what would be cleared without making changes')
+  .action(clearCommand);
 
 // ── list ──────────────────────────────────────────────────────────────────────
 program
