@@ -11,6 +11,7 @@ config({ path: join(__dirname, '../.env') });
 import { generateCommand } from '../src/commands/generate.js';
 import { pushCommand }     from '../src/commands/push.js';
 import { pullCommand }     from '../src/commands/pull.js';
+import { arrangeCommand }  from '../src/commands/arrange.js';
 import { listCommand }     from '../src/commands/list.js';
 import { infoCommand }     from '../src/commands/info.js';
 
@@ -43,6 +44,16 @@ program
   .option('--dry-run',             'Show what would be pushed without writing to Live')
   .option('--sections <names>',    'Only push specific sections (comma-separated, e.g. "intro,verse")')
   .action(pushCommand);
+
+// ── arrange ───────────────────────────────────────────────────────────────────
+program
+  .command('arrange <file>')
+  .description('Place session view clips into the arrangement timeline in sequence')
+  .option('--start <bars>',     'Start position in bars (default: 0)', '0')
+  .option('--gap <bars>',       'Gap in bars between sections (default: 0)', '0')
+  .option('--sections <names>', 'Only arrange specific sections (comma-separated)')
+  .option('--dry-run',          'Show what would be placed without writing to Live')
+  .action(arrangeCommand);
 
 // ── pull ──────────────────────────────────────────────────────────────────────
 program
