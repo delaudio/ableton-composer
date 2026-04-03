@@ -33,7 +33,7 @@ export async function saveSong(song, nameHint) {
 
 /**
  * Load a song from the sets directory by filename or partial match.
- * @param {string} nameOrPath - Full filename, partial name, or absolute path
+ * @param {string} nameOrPath - Full filename, partial name, relative path, or absolute path
  * @returns {Promise<{song: object, filepath: string}>}
  */
 export async function loadSong(nameOrPath) {
@@ -41,6 +41,15 @@ export async function loadSong(nameOrPath) {
   if (nameOrPath.startsWith('/')) {
     const content = await readFile(nameOrPath, 'utf-8');
     return { song: JSON.parse(content), filepath: nameOrPath };
+  }
+
+  // Relative path from CWD (e.g. "sets/foo.json" or "./sets/foo.json")
+  const fromCwd = join(process.cwd(), nameOrPath);
+  try {
+    const content = await readFile(fromCwd, 'utf-8');
+    return { song: JSON.parse(content), filepath: fromCwd };
+  } catch {
+    // Fall through
   }
 
   // Exact filename in sets/

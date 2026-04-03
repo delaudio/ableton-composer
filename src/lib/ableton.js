@@ -146,7 +146,8 @@ export async function pushClip(track, slotIndex, clipDef, opts = {}) {
     muted:    n.muted ?? false,
   }));
 
-  await clip.addNewNotes(notes);
+  // v2.x API: setNotes replaces/adds notes in the clip
+  await clip.setNotes(notes);
 }
 
 /**
