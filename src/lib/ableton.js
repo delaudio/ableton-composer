@@ -1,11 +1,13 @@
 /**
  * Higher-level ableton-js wrapper.
  *
- * ableton-js communicates with Live via a Max for Live companion patch.
- * The M4L patch must be open in your Live set (on any track — a dedicated
- * "Composer Bridge" MIDI track works well).
+ * ableton-js (v2.x) communicates with Ableton Live via a Python MIDI Remote Script
+ * over UDP. The script must be installed at:
+ *   ~/Music/Ableton/User Library/Remote Scripts/AbletonJS/
+ * and activated in Live → Preferences → Link, Tempo & MIDI → Control Surfaces.
  *
- * Install the M4L patch from node_modules/ableton-js/ableton/midi-script/
+ * NOTE: v2.x has no start() method — the UDP socket and heartbeat start in the
+ * constructor automatically. connect() waits for the first successful handshake.
  */
 
 import { Ableton } from 'ableton-js';
@@ -20,11 +22,35 @@ export function getAbleton() {
 }
 
 /**
- * Connect and return the Ableton instance.
+ * Wait for Ableton to be reachable and return the instance.
+ * The connection is established automatically on construction;
+ * this function just waits until the heartbeat confirms Live is responding.
  */
 export async function connect() {
   const ableton = getAbleton();
-  await ableton.start();
+
+  if (ableton.isConnected()) return ableton;
+
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(
+        'Timed out waiting for Ableton Live.\n' +
+        'Make sure Live is open and AbletonJS is set as a Control Surface in Preferences → Link, Tempo & MIDI.'
+      ));
+    }, 10_000);
+
+    ableton.once('connect', () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+
+    // Handle the race condition where it connected between isConnected() check and once()
+    if (ableton.isConnected()) {
+      clearTimeout(timeout);
+      resolve();
+    }
+  });
+
   return ableton;
 }
 
