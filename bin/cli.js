@@ -12,6 +12,8 @@ import { generateCommand } from '../src/commands/generate.js';
 import { pushCommand }     from '../src/commands/push.js';
 import { pullCommand }     from '../src/commands/pull.js';
 import { arrangeCommand }  from '../src/commands/arrange.js';
+import { splitCommand }    from '../src/commands/split.js';
+import { compileCommand }  from '../src/commands/compile.js';
 import { listCommand }     from '../src/commands/list.js';
 import { infoCommand }     from '../src/commands/info.js';
 
@@ -55,14 +57,29 @@ program
   .option('--dry-run',          'Show what would be placed without writing to Live')
   .action(arrangeCommand);
 
+// ── split ─────────────────────────────────────────────────────────────────────
+program
+  .command('split <file>')
+  .description('Convert a flat song JSON into a set directory (one file per section)')
+  .option('--out <dir>', 'Output directory (default: same name as file without .json)')
+  .action(splitCommand);
+
+// ── compile ───────────────────────────────────────────────────────────────────
+program
+  .command('compile <dir>')
+  .description('Merge a set directory into a single flat song JSON')
+  .option('--out <file>', 'Output file path (default: sets/<dirname>_<timestamp>.json)')
+  .action(compileCommand);
+
 // ── pull ──────────────────────────────────────────────────────────────────────
 program
   .command('pull')
   .description('Read clips from the current Ableton Live set and save to JSON')
   .option('-s, --scene <index>',    'Pull only this scene row (0-indexed). Omit to pull all scenes with clips.')
   .option('-n, --name <name>',      'Section name to use in the JSON (default: "scene_N")')
-  .option('--add-to <file>',        'Merge into an existing song JSON instead of creating a new file')
-  .option('--replace',              'When used with --add-to, replace an existing section with the same name')
+  .option('--out <path>',           'Write to a set directory (e.g. sets/my-song/) or flat file')
+  .option('--add-to <file>',        'Merge into an existing flat JSON instead of creating a new file')
+  .option('--replace',              'When used with --out or --add-to, replace a section with the same name')
   .action(pullCommand);
 
 // ── list ──────────────────────────────────────────────────────────────────────

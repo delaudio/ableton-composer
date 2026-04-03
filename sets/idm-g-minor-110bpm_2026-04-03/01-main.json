@@ -1,0 +1,492 @@
+{
+  "name": "main",
+  "bars": 8,
+  "tracks": [
+    {
+      "ableton_name": "Drums",
+      "instrument": "drum machine",
+      "clip": {
+        "length_bars": 2,
+        "notes": [
+          {
+            "pitch": 36,
+            "time": 0,
+            "duration": 0.25,
+            "velocity": 112
+          },
+          {
+            "pitch": 36,
+            "time": 1.25,
+            "duration": 0.25,
+            "velocity": 68
+          },
+          {
+            "pitch": 36,
+            "time": 1.75,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 36,
+            "time": 2.5,
+            "duration": 0.25,
+            "velocity": 88
+          },
+          {
+            "pitch": 36,
+            "time": 3.75,
+            "duration": 0.25,
+            "velocity": 78
+          },
+          {
+            "pitch": 36,
+            "time": 4,
+            "duration": 0.25,
+            "velocity": 108
+          },
+          {
+            "pitch": 36,
+            "time": 5,
+            "duration": 0.25,
+            "velocity": 72
+          },
+          {
+            "pitch": 36,
+            "time": 6.25,
+            "duration": 0.25,
+            "velocity": 82
+          },
+          {
+            "pitch": 36,
+            "time": 7.25,
+            "duration": 0.25,
+            "velocity": 68
+          },
+          {
+            "pitch": 38,
+            "time": 2,
+            "duration": 0.25,
+            "velocity": 98
+          },
+          {
+            "pitch": 38,
+            "time": 3.5,
+            "duration": 0.25,
+            "velocity": 72
+          },
+          {
+            "pitch": 38,
+            "time": 6,
+            "duration": 0.25,
+            "velocity": 92
+          },
+          {
+            "pitch": 38,
+            "time": 7.5,
+            "duration": 0.25,
+            "velocity": 68
+          },
+          {
+            "pitch": 42,
+            "time": 0,
+            "duration": 0.25,
+            "velocity": 68
+          },
+          {
+            "pitch": 42,
+            "time": 0.25,
+            "duration": 0.25,
+            "velocity": 52
+          },
+          {
+            "pitch": 42,
+            "time": 0.5,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 42,
+            "time": 0.75,
+            "duration": 0.25,
+            "velocity": 48
+          },
+          {
+            "pitch": 42,
+            "time": 1,
+            "duration": 0.25,
+            "velocity": 65
+          },
+          {
+            "pitch": 42,
+            "time": 1.5,
+            "duration": 0.25,
+            "velocity": 58
+          },
+          {
+            "pitch": 42,
+            "time": 2.25,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 42,
+            "time": 2.5,
+            "duration": 0.25,
+            "velocity": 58
+          },
+          {
+            "pitch": 42,
+            "time": 3,
+            "duration": 0.25,
+            "velocity": 68
+          },
+          {
+            "pitch": 42,
+            "time": 3.25,
+            "duration": 0.25,
+            "velocity": 52
+          },
+          {
+            "pitch": 42,
+            "time": 3.5,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 42,
+            "time": 4,
+            "duration": 0.25,
+            "velocity": 68
+          },
+          {
+            "pitch": 42,
+            "time": 4.25,
+            "duration": 0.25,
+            "velocity": 52
+          },
+          {
+            "pitch": 42,
+            "time": 4.5,
+            "duration": 0.25,
+            "velocity": 65
+          },
+          {
+            "pitch": 42,
+            "time": 5,
+            "duration": 0.25,
+            "velocity": 68
+          },
+          {
+            "pitch": 42,
+            "time": 5.5,
+            "duration": 0.25,
+            "velocity": 58
+          },
+          {
+            "pitch": 42,
+            "time": 5.75,
+            "duration": 0.25,
+            "velocity": 52
+          },
+          {
+            "pitch": 42,
+            "time": 6,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 42,
+            "time": 6.5,
+            "duration": 0.25,
+            "velocity": 58
+          },
+          {
+            "pitch": 42,
+            "time": 7,
+            "duration": 0.25,
+            "velocity": 68
+          },
+          {
+            "pitch": 42,
+            "time": 7.25,
+            "duration": 0.25,
+            "velocity": 52
+          },
+          {
+            "pitch": 42,
+            "time": 7.5,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 46,
+            "time": 1.75,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 46,
+            "time": 3.75,
+            "duration": 0.25,
+            "velocity": 58
+          },
+          {
+            "pitch": 46,
+            "time": 5.75,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 46,
+            "time": 7.75,
+            "duration": 0.25,
+            "velocity": 58
+          }
+        ]
+      }
+    },
+    {
+      "ableton_name": "Bass",
+      "instrument": "sub bass",
+      "clip": {
+        "length_bars": 2,
+        "notes": [
+          {
+            "pitch": 43,
+            "time": 0,
+            "duration": 0.75,
+            "velocity": 90
+          },
+          {
+            "pitch": 43,
+            "time": 1,
+            "duration": 0.5,
+            "velocity": 80
+          },
+          {
+            "pitch": 50,
+            "time": 1.75,
+            "duration": 0.5,
+            "velocity": 85
+          },
+          {
+            "pitch": 48,
+            "time": 2.5,
+            "duration": 0.5,
+            "velocity": 75
+          },
+          {
+            "pitch": 46,
+            "time": 3.25,
+            "duration": 0.75,
+            "velocity": 78
+          },
+          {
+            "pitch": 43,
+            "time": 4,
+            "duration": 0.75,
+            "velocity": 90
+          },
+          {
+            "pitch": 43,
+            "time": 5,
+            "duration": 0.25,
+            "velocity": 68
+          },
+          {
+            "pitch": 51,
+            "time": 5.5,
+            "duration": 0.5,
+            "velocity": 80
+          },
+          {
+            "pitch": 50,
+            "time": 6.25,
+            "duration": 0.5,
+            "velocity": 75
+          },
+          {
+            "pitch": 41,
+            "time": 7,
+            "duration": 0.9,
+            "velocity": 82
+          }
+        ]
+      }
+    },
+    {
+      "ableton_name": "Lead",
+      "instrument": "synth lead",
+      "clip": {
+        "length_bars": 2,
+        "notes": [
+          {
+            "pitch": 79,
+            "time": 0,
+            "duration": 0.25,
+            "velocity": 72
+          },
+          {
+            "pitch": 82,
+            "time": 0.5,
+            "duration": 0.25,
+            "velocity": 78
+          },
+          {
+            "pitch": 84,
+            "time": 1,
+            "duration": 0.5,
+            "velocity": 70
+          },
+          {
+            "pitch": 82,
+            "time": 1.75,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 79,
+            "time": 2.25,
+            "duration": 0.25,
+            "velocity": 75
+          },
+          {
+            "pitch": 77,
+            "time": 2.75,
+            "duration": 0.5,
+            "velocity": 68
+          },
+          {
+            "pitch": 74,
+            "time": 3.5,
+            "duration": 0.5,
+            "velocity": 72
+          },
+          {
+            "pitch": 75,
+            "time": 4,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 77,
+            "time": 4.5,
+            "duration": 0.5,
+            "velocity": 70
+          },
+          {
+            "pitch": 79,
+            "time": 5.25,
+            "duration": 0.25,
+            "velocity": 75
+          },
+          {
+            "pitch": 84,
+            "time": 5.75,
+            "duration": 0.5,
+            "velocity": 72
+          },
+          {
+            "pitch": 82,
+            "time": 6.5,
+            "duration": 0.25,
+            "velocity": 62
+          },
+          {
+            "pitch": 79,
+            "time": 7,
+            "duration": 0.75,
+            "velocity": 78
+          }
+        ]
+      }
+    },
+    {
+      "ableton_name": "Chords",
+      "instrument": "pad synth",
+      "clip": {
+        "length_bars": 4,
+        "notes": [
+          {
+            "pitch": 67,
+            "time": 0,
+            "duration": 4,
+            "velocity": 65
+          },
+          {
+            "pitch": 70,
+            "time": 0,
+            "duration": 4,
+            "velocity": 60
+          },
+          {
+            "pitch": 74,
+            "time": 0,
+            "duration": 4,
+            "velocity": 58
+          },
+          {
+            "pitch": 77,
+            "time": 0,
+            "duration": 2,
+            "velocity": 52
+          },
+          {
+            "pitch": 63,
+            "time": 4,
+            "duration": 4,
+            "velocity": 62
+          },
+          {
+            "pitch": 67,
+            "time": 4,
+            "duration": 4,
+            "velocity": 58
+          },
+          {
+            "pitch": 70,
+            "time": 4,
+            "duration": 4,
+            "velocity": 55
+          },
+          {
+            "pitch": 58,
+            "time": 8,
+            "duration": 4,
+            "velocity": 65
+          },
+          {
+            "pitch": 62,
+            "time": 8,
+            "duration": 4,
+            "velocity": 60
+          },
+          {
+            "pitch": 65,
+            "time": 8,
+            "duration": 4,
+            "velocity": 58
+          },
+          {
+            "pitch": 60,
+            "time": 12,
+            "duration": 3.9,
+            "velocity": 62
+          },
+          {
+            "pitch": 63,
+            "time": 12,
+            "duration": 3.9,
+            "velocity": 58
+          },
+          {
+            "pitch": 67,
+            "time": 12,
+            "duration": 3.9,
+            "velocity": 55
+          }
+        ]
+      }
+    }
+  ]
+}
