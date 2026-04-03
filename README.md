@@ -47,15 +47,22 @@ cp .env.example .env
 # edit .env — add your ANTHROPIC_API_KEY and optionally your coordinates for weather
 ```
 
-### Install the M4L patch
+### Install the MIDI Remote Script
 
-The `ableton-js` package ships with a Max for Live patch that acts as the WebSocket bridge:
+`ableton-js` communicates with Live via a Python MIDI Remote Script — not a Max for Live patch.
 
+**1. Copy the script to Ableton's Remote Scripts folder:**
+
+```bash
+cp -r node_modules/ableton-js/midi-script \
+      ~/Music/Ableton/User\ Library/Remote\ Scripts/AbletonJS
 ```
-node_modules/ableton-js/ableton/midi-script/
-```
 
-Drag it onto any MIDI track in your Live set (a dedicated "Composer Bridge" track works well). It must be open whenever you use `push` or `info`.
+**2. Activate it in Ableton Live:**
+
+Open `Preferences` → `Link / MIDI` → `Control Surfaces` → pick **AbletonJS** in any available slot.
+
+Restart Ableton if it was already open. The script activates automatically on every launch — no tracks or patches needed.
 
 ---
 
