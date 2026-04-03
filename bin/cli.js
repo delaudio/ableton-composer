@@ -10,6 +10,7 @@ config({ path: join(__dirname, '../.env') });
 
 import { generateCommand } from '../src/commands/generate.js';
 import { pushCommand }     from '../src/commands/push.js';
+import { pullCommand }     from '../src/commands/pull.js';
 import { listCommand }     from '../src/commands/list.js';
 import { infoCommand }     from '../src/commands/info.js';
 
@@ -42,6 +43,16 @@ program
   .option('--dry-run',             'Show what would be pushed without writing to Live')
   .option('--sections <names>',    'Only push specific sections (comma-separated, e.g. "intro,verse")')
   .action(pushCommand);
+
+// ── pull ──────────────────────────────────────────────────────────────────────
+program
+  .command('pull')
+  .description('Read clips from the current Ableton Live set and save to JSON')
+  .option('-s, --scene <index>',    'Pull only this scene row (0-indexed). Omit to pull all scenes with clips.')
+  .option('-n, --name <name>',      'Section name to use in the JSON (default: "scene_N")')
+  .option('--add-to <file>',        'Merge into an existing song JSON instead of creating a new file')
+  .option('--replace',              'When used with --add-to, replace an existing section with the same name')
+  .action(pullCommand);
 
 // ── list ──────────────────────────────────────────────────────────────────────
 program
