@@ -18,6 +18,7 @@ import { clearCommand }    from '../src/commands/clear.js';
 import { listCommand }     from '../src/commands/list.js';
 import { infoCommand }     from '../src/commands/info.js';
 import { analyzeCommand }  from '../src/commands/analyze.js';
+import { compareCommand }  from '../src/commands/compare.js';
 
 const program = new Command();
 
@@ -106,6 +107,13 @@ program
   .option('--out <path>',   'Save profile to a specific path (default: profiles/<name>.json)')
   .option('--print',        'Print JSON to stdout instead of saving')
   .action(analyzeCommand);
+
+// ── compare ───────────────────────────────────────────────────────────────────
+program
+  .command('compare <source> <generated>')
+  .description('Compare two sets or profiles to measure style fidelity')
+  .option('--out <path>', 'Save the comparison report as JSON')
+  .action(compareCommand);
 
 // ── list ──────────────────────────────────────────────────────────────────────
 program

@@ -402,3 +402,140 @@ export function aggregateProfiles(profiles) {
     },
   };
 }
+
+// ── Profile comparison ────────────────────────────────────────────────────────
+
+/**
+ * Compare a source profile against a generated profile.
+ * Returns a structured diff with per-dimension scores and an overall fidelity %.
+ *
+ * @param {object} source    - Reference style profile (from analyze)
+ * @param {object} generated - Profile of the generated set (from analyze)
+ * @returns {object} comparison report
+ */
+export function compareProfiles(source, generated) {
+  const report = {};
+
+  // ── Key ──────────────────────────────────────────────────────────────────
+  report.key = {
+    source:    source.key,
+    generated: generated.key,
+    match:     source.key === generated.key,
+    mode_match: source.key?.split(' ')[1] === generated.key?.split(' ')[1],
+  };
+
+  // ── BPM ──────────────────────────────────────────────────────────────────
+  report.bpm = {
+    source:    source.bpm,
+    generated: generated.bpm,
+    delta:     source.bpm != null && generated.bpm != null
+      ? generated.bpm - source.bpm
+      : null,
+  };
+
+  // ── Track presence ───────────────────────────────────────────────────────
+  const srcPresence = source.arrangement?.track_presence  ?? {};
+  const genPresence = generated.arrangement?.track_presence ?? {};
+  const sharedTracks = Object.keys(srcPresence).filter(t => t in genPresence);
+
+  report.track_presence = {};
+  for (const t of sharedTracks) {
+    const diff = Math.round((genPresence[t] - srcPresence[t]) * 100);
+    report.track_presence[t] = {
+      source: Math.round(srcPresence[t] * 100),
+      generated: Math.round(genPresence[t] * 100),
+      delta: diff,
+    };
+  }
+
+  // ── Rhythm density ───────────────────────────────────────────────────────
+  const srcNpb = source.rhythm?.notes_per_bar    ?? {};
+  const genNpb = generated.rhythm?.notes_per_bar ?? {};
+  const rhythmTracks = Object.keys(srcNpb).filter(t => t in genNpb);
+
+  report.rhythm = {};
+  for (const t of rhythmTracks) {
+    const ratio = srcNpb[t] > 0 ? genNpb[t] / srcNpb[t] : null;
+    report.rhythm[t] = {
+      source:    srcNpb[t],
+      generated: genNpb[t],
+      ratio:     ratio != null ? Math.round(ratio * 100) / 100 : null,
+    };
+  }
+
+  // ── Pitch ranges ─────────────────────────────────────────────────────────
+  const srcPitch = source.pitch?.by_track    ?? {};
+  const genPitch = generated.pitch?.by_track ?? {};
+  const pitchTracks = Object.keys(srcPitch).filter(t => t in genPitch);
+
+  report.pitch = {};
+  for (const t of pitchTracks) {
+    const s = srcPitch[t];
+    const g = genPitch[t];
+    const overlapLo  = Math.max(s.min, g.min);
+    const overlapHi  = Math.min(s.max, g.max);
+    const srcRange   = s.max - s.min || 1;
+    const overlapPct = overlapHi >= overlapLo
+      ? Math.round(((overlapHi - overlapLo) / srcRange) * 100)
+      : 0;
+    report.pitch[t] = {
+      source:      { min: s.min, max: s.max },
+      generated:   { min: g.min, max: g.max },
+      overlap_pct: overlapPct,
+    };
+  }
+
+  // ── Chord vocabulary ─────────────────────────────────────────────────────
+  const srcChords = source.pitch?.chords_by_track    ?? {};
+  const genChords = generated.pitch?.chords_by_track ?? {};
+  const chordTracks = Object.keys(srcChords).filter(t => t in genChords);
+
+  report.chords = {};
+  for (const t of chordTracks) {
+    const srcSet = new Set(srcChords[t].map(c => c.chord));
+    const genSet = new Set(genChords[t].map(c => c.chord));
+    const common = [...srcSet].filter(c => genSet.has(c));
+    report.chords[t] = {
+      source_top:    [...srcSet].slice(0, 5),
+      generated_top: [...genSet].slice(0, 5),
+      common,
+      overlap_pct: srcSet.size > 0 ? Math.round((common.length / srcSet.size) * 100) : 0,
+    };
+  }
+
+  // ── Overall fidelity score ────────────────────────────────────────────────
+  // Weighted average: key (30%), rhythm (30%), pitch range (20%), chords (20%)
+  const scores = [];
+
+  // Key: 100 if exact match, 50 if same mode, 0 otherwise
+  scores.push({ weight: 0.30, score: report.key.match ? 100 : report.key.mode_match ? 50 : 0 });
+
+  // Rhythm: average ratio clamped to [0,1] per track
+  if (rhythmTracks.length > 0) {
+    const avg = rhythmTracks.reduce((s, t) => {
+      const r = report.rhythm[t].ratio ?? 0;
+      return s + Math.min(r, 1 / r || 0, 1);  // penalise both over and under
+    }, 0) / rhythmTracks.length;
+    scores.push({ weight: 0.30, score: Math.round(avg * 100) });
+  }
+
+  // Pitch range overlap: average across tracks
+  if (pitchTracks.length > 0) {
+    const avg = pitchTracks.reduce((s, t) => s + report.pitch[t].overlap_pct, 0) / pitchTracks.length;
+    scores.push({ weight: 0.20, score: avg });
+  }
+
+  // Chord overlap: average across tracks
+  if (chordTracks.length > 0) {
+    const avg = chordTracks.reduce((s, t) => s + report.chords[t].overlap_pct, 0) / chordTracks.length;
+    scores.push({ weight: 0.20, score: avg });
+  }
+
+  const totalWeight = scores.reduce((s, x) => s + x.weight, 0);
+  const fidelity    = totalWeight > 0
+    ? Math.round(scores.reduce((s, x) => s + x.score * x.weight, 0) / totalWeight)
+    : 0;
+
+  report.fidelity_score = fidelity;
+  return report;
+}
