@@ -78,56 +78,78 @@ export async function generateCommand(prompt, options) {
       spinner.succeed('Context ready');
     }
 
-    // ── 3. Generate with Claude ──────────────────────────────────────────────
-    spinner.start(`Generating with ${options.model || process.env.CLAUDE_MODEL || 'claude-opus-4-5'}...`);
+    // ── 3. Generate (single or multiple variations) ──────────────────────────
+    const variationCount = Math.max(1, parseInt(options.variations, 10) || 1);
+    const modelLabel     = options.model || process.env.CLAUDE_MODEL || 'claude-opus-4-5';
+    const savedPaths     = [];
 
-    const song = await generateSong({
-      prompt,
-      trackNames,
-      context,
-      styleProfile,
-      model: options.model,
-    });
+    for (let v = 1; v <= variationCount; v++) {
+      const label = variationCount > 1 ? `v${v}/${variationCount}` : '';
+      spinner.start(`Generating with ${modelLabel}${label ? `  [${label}]` : ''}...`);
 
-    spinner.succeed('Song generated');
+      const song = await generateSong({
+        prompt,
+        trackNames,
+        context,
+        styleProfile,
+        model: options.model,
+      });
 
-    // ── 4. Print summary ─────────────────────────────────────────────────────
-    const { meta, sections } = song;
-    console.log('');
-    console.log(chalk.bold(`🎵 ${meta.genre || 'Song'} — ${meta.bpm} BPM — ${meta.scale}`));
-    if (meta.mood) console.log(chalk.dim(`   mood: ${meta.mood}`));
-    if (meta.description) console.log(chalk.dim(`   ${meta.description}`));
-    console.log('');
+      spinner.succeed(`Song generated${label ? `  [${label}]` : ''}`);
 
-    for (const [i, section] of sections.entries()) {
-      const noteCount = section.tracks.reduce((sum, t) => sum + t.clip.notes.length, 0);
-      console.log(
-        chalk.cyan(`  [${i}] ${section.name}`) +
-        chalk.dim(` — ${section.bars} bars, ${section.tracks.length} tracks, ${noteCount} notes total`)
-      );
-      for (const track of section.tracks) {
-        console.log(chalk.dim(`       ${track.ableton_name}: ${track.clip.notes.length} notes`));
+      // ── Print summary ───────────────────────────────────────────────────
+      const { meta, sections } = song;
+      console.log('');
+      if (variationCount > 1) console.log(chalk.bold(`  ── Variation ${v} ──`));
+      console.log(chalk.bold(`🎵 ${meta.genre || 'Song'} — ${meta.bpm} BPM — ${meta.scale}`));
+      if (meta.mood) console.log(chalk.dim(`   mood: ${meta.mood}`));
+      if (meta.description) console.log(chalk.dim(`   ${meta.description}`));
+      console.log('');
+
+      for (const [i, section] of sections.entries()) {
+        const noteCount = section.tracks.reduce((sum, t) => sum + t.clip.notes.length, 0);
+        console.log(
+          chalk.cyan(`  [${i}] ${section.name}`) +
+          chalk.dim(` — ${section.bars} bars, ${section.tracks.length} tracks, ${noteCount} notes total`)
+        );
+        for (const track of section.tracks) {
+          console.log(chalk.dim(`       ${track.ableton_name}: ${track.clip.notes.length} notes`));
+        }
+      }
+
+      console.log('');
+
+      // ── Save ────────────────────────────────────────────────────────────
+      if (options.save !== false) {
+        const nameHint = options.name
+          ? (variationCount > 1 ? `${options.name}_v${v}` : options.name)
+          : `${meta.genre || 'song'}-${meta.bpm}bpm`;
+
+        const savedPath = options.output
+          ? await writeOutputFile(song, options.output)
+          : await saveSong(song, nameHint);
+
+        savedPaths.push(savedPath);
+        console.log(chalk.green(`✓ Saved to ${savedPath}`));
+        console.log('');
+      } else {
+        console.log(JSON.stringify(song, null, 2));
       }
     }
 
-    console.log('');
-
-    // ── 5. Save ───────────────────────────────────────────────────────────────
-    if (options.save !== false) {
-      const nameHint = options.name || `${meta.genre || 'song'}-${meta.bpm}bpm`;
-      const savedPath = options.output
-        ? await writeOutputFile(song, options.output)
-        : await saveSong(song, nameHint);
-
-      console.log(chalk.green(`✓ Saved to ${savedPath}`));
+    // ── Final summary for multiple variations ───────────────────────────────
+    if (variationCount > 1 && savedPaths.length > 0) {
+      console.log(chalk.bold('  Generated variations:'));
+      savedPaths.forEach((p, i) => {
+        console.log(`    ${chalk.cyan(`v${i + 1}`)}  ${p}`);
+        console.log(chalk.dim(`         ableton-composer push ${p}`));
+      });
       console.log('');
-      console.log(chalk.dim(`  Next: ableton-composer push ${savedPath}`));
-    } else {
-      // Just print the JSON
-      console.log(JSON.stringify(song, null, 2));
+    } else if (savedPaths.length === 1) {
+      console.log(chalk.dim(`  Next: ableton-composer push ${savedPaths[0]}`));
     }
 
-    return song;
+    return savedPaths;
 
   } catch (err) {
     spinner.fail(err.message);
