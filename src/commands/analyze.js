@@ -121,6 +121,15 @@ function printProfile(p) {
     const topPcs = Object.entries(p.pitch.pitch_classes)
       .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k]) => k).join('  ');
     console.log(`    Top pitch classes: ${chalk.dim(topPcs)}`);
+
+    const chords = p.pitch.chords_by_track ?? {};
+    if (Object.keys(chords).length > 0) {
+      console.log(chalk.cyan('\n  Chords  (most frequent per track)'));
+      for (const [track, list] of Object.entries(chords)) {
+        const str = list.map(c => `${c.chord}×${c.count}`).join('  ');
+        console.log(`    ${track.padEnd(12)} ${chalk.dim(str)}`);
+      }
+    }
   }
 
   // Show per-section keys only when there is tonal variation

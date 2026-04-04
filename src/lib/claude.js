@@ -109,13 +109,17 @@ function buildStyleSection(p) {
     lines.push('');
   }
 
-  // Rhythm density
-  const npb = p.rhythm?.notes_per_bar ?? {};
+  // Rhythm density — convert to absolute note targets per section so Claude
+  // has a concrete number to aim for rather than an abstract rate
+  const npb      = p.rhythm?.notes_per_bar ?? {};
+  const bps      = p.structure?.bars_per_section ?? 8;
   if (Object.keys(npb).length > 0) {
-    lines.push('**Rhythm density** (avg notes per bar — guides how busy each track should be)');
+    lines.push('**Rhythm density** (notes per bar → target note count for an 8-bar section)');
+    lines.push('These are TARGET counts — write approximately this many notes per section when the track is active.');
     for (const [name, n] of Object.entries(npb)) {
-      const density = n < 2 ? 'slow/sparse' : n < 5 ? 'moderate' : n < 8 ? 'busy' : 'very dense';
-      lines.push(`- ${name.padEnd(12)} ${n} notes/bar  (${density})`);
+      const target  = Math.round(n * bps);
+      const density = n < 2 ? 'slow, long notes' : n < 5 ? 'moderate groove' : n < 8 ? 'busy pattern' : 'very dense, fast notes';
+      lines.push(`- ${name.padEnd(12)} ${n}/bar → ~${target} notes per section  (${density})`);
     }
     lines.push('');
   }
@@ -135,6 +139,17 @@ function buildStyleSection(p) {
   if (Object.keys(pcs).length > 0) {
     const top = Object.entries(pcs).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k]) => k).join('  ');
     lines.push(`**Most-used pitch classes**: ${top}`);
+    lines.push('');
+  }
+
+  // Chord vocabulary per track
+  const chordsByTrack = p.pitch?.chords_by_track ?? {};
+  if (Object.keys(chordsByTrack).length > 0) {
+    lines.push('**Chord vocabulary** (most-used simultaneities per track — replicate these patterns)');
+    for (const [name, list] of Object.entries(chordsByTrack)) {
+      const str = list.map(c => `${c.chord} (×${c.count})`).join(',  ');
+      lines.push(`- ${name.padEnd(12)} ${str}`);
+    }
     lines.push('');
   }
 

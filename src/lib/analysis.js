@@ -103,6 +103,55 @@ export function pitchRange(notes) {
   return { min, max, semitones: max - min };
 }
 
+// ── Chord detection ───────────────────────────────────────────────────────────
+
+const CHORD_WINDOW = 0.1; // beats — notes within this window are considered simultaneous
+
+/**
+ * Group notes into simultaneous clusters (chords) using a sliding time window.
+ * Returns an array of pitch-class sets (sorted, deduped), e.g. ["A","C","E"].
+ */
+export function detectChords(notes) {
+  if (notes.length < 2) return [];
+
+  const sorted  = [...notes].sort((a, b) => a.time - b.time);
+  const chords  = [];
+  let cluster   = [sorted[0]];
+
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].time - cluster[0].time <= CHORD_WINDOW) {
+      cluster.push(sorted[i]);
+    } else {
+      if (cluster.length >= 2) {
+        const pcs = [...new Set(cluster.map(n => PITCH_CLASS_NAMES[n.pitch % 12]))];
+        chords.push(pcs.sort().join('-'));
+      }
+      cluster = [sorted[i]];
+    }
+  }
+  if (cluster.length >= 2) {
+    const pcs = [...new Set(cluster.map(n => PITCH_CLASS_NAMES[n.pitch % 12]))];
+    chords.push(pcs.sort().join('-'));
+  }
+
+  return chords;
+}
+
+/**
+ * Count chord occurrences and return top N most frequent, with counts.
+ * e.g. [{ chord: "A-C-E", count: 12 }, ...]
+ */
+export function topChords(notes, topN = 5) {
+  const all    = detectChords(notes);
+  if (all.length === 0) return [];
+  const counts = {};
+  for (const c of all) counts[c] = (counts[c] || 0) + 1;
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([chord, count]) => ({ chord, count }));
+}
+
 // ── Average note duration ─────────────────────────────────────────────────────
 
 export function avgDuration(notes) {
@@ -211,6 +260,14 @@ export function analyzeSong(song, source = '') {
     }
   }
 
+  // ── Chord detection (non-drum tracks only) ───────────────────────────────
+  const chordsByTrack = {};
+  for (const [name, notes] of allNotesByTrack) {
+    if (isDrumTrack(name)) continue;
+    const top = topChords(notes);
+    if (top.length > 0) chordsByTrack[name] = top;
+  }
+
   // Pitch class distribution (named)
   const pcNamed = {};
   for (let i = 0; i < 12; i++) {
@@ -262,6 +319,7 @@ export function analyzeSong(song, source = '') {
     pitch: {
       pitch_classes:  pcNamed,
       by_track:       pitchByTrack,
+      chords_by_track: chordsByTrack,
       key_by_section: keyBySection,
     },
   };

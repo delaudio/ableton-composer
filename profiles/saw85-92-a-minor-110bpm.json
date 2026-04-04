@@ -2,7 +2,7 @@
   "_meta": {
     "source": "/Users/fdg/dev/side/ableton-composer/sets/saw85-92-a-minor-110bpm",
     "sections_analyzed": 12,
-    "generated_at": "2026-04-04T21:47:34.286Z"
+    "generated_at": "2026-04-04T22:32:02.941Z"
   },
   "bpm": 110,
   "time_signature": "4/4",
@@ -160,6 +160,134 @@
         "semitones": 17,
         "avg_velocity": 76,
         "avg_duration": 1.55
+      }
+    },
+    "chords_by_track": {
+      "Pad": [
+        {
+          "chord": "A-C-E-G",
+          "count": 2
+        },
+        {
+          "chord": "A-C-F",
+          "count": 1
+        },
+        {
+          "chord": "B-D-G",
+          "count": 1
+        }
+      ],
+      "Arp": [
+        {
+          "chord": "A",
+          "count": 24
+        },
+        {
+          "chord": "C",
+          "count": 24
+        },
+        {
+          "chord": "C-E",
+          "count": 8
+        },
+        {
+          "chord": "E",
+          "count": 8
+        }
+      ],
+      "Bass": [
+        {
+          "chord": "A",
+          "count": 3
+        },
+        {
+          "chord": "G",
+          "count": 2
+        },
+        {
+          "chord": "A-F-G",
+          "count": 2
+        },
+        {
+          "chord": "F",
+          "count": 2
+        },
+        {
+          "chord": "E",
+          "count": 2
+        }
+      ],
+      "Lead": [
+        {
+          "chord": "A-E",
+          "count": 2
+        },
+        {
+          "chord": "E",
+          "count": 2
+        },
+        {
+          "chord": "A",
+          "count": 2
+        },
+        {
+          "chord": "D-G",
+          "count": 1
+        },
+        {
+          "chord": "D",
+          "count": 1
+        }
+      ]
+    },
+    "key_by_section": {
+      "intro": {
+        "key": "A minor",
+        "confidence": 0.92
+      },
+      "rise_1": {
+        "key": "A minor",
+        "confidence": 0.91
+      },
+      "rise_2": {
+        "key": "A minor",
+        "confidence": 0.91
+      },
+      "main_1": {
+        "key": "A minor",
+        "confidence": 0.92
+      },
+      "main_2": {
+        "key": "A minor",
+        "confidence": 0.94
+      },
+      "main_3": {
+        "key": "A minor",
+        "confidence": 0.9
+      },
+      "break_1": {
+        "key": "A minor",
+        "confidence": 0.91
+      },
+      "break_2": {
+        "key": "A minor",
+        "confidence": 0.82
+      },
+      "return_1": {
+        "key": "A minor",
+        "confidence": 0.91
+      },
+      "return_2": {
+        "key": "A minor",
+        "confidence": 0.94
+      },
+      "outro_1": {
+        "key": "A minor",
+        "confidence": 0.92
+      },
+      "outro_2": {
+        "key": "A minor",
+        "confidence": 0.92
       }
     }
   }
