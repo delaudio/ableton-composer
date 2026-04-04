@@ -39,6 +39,7 @@ program
   .option('-n, --name <name>',     'Name hint for the saved filename')
   .option('-o, --output <path>',   'Save to a specific path instead of sets/')
   .option('-s, --style <path>',    'Style profile JSON to guide generation (from "analyze" command)')
+  .option('-c, --continue <file>', 'Existing set to continue — new sections are appended')
   .option('-V, --variations <n>',  'Generate N variations and save each one', '1')
   .option('--no-save',             'Print JSON to stdout without saving to disk')
   .action(generateCommand);

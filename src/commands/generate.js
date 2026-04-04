@@ -13,7 +13,7 @@ import ora from 'ora';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { generateSong } from '../lib/claude.js';
-import { saveSong } from '../lib/storage.js';
+import { saveSong, loadSong } from '../lib/storage.js';
 import { fetchContext } from '../lib/fetchers/index.js';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
 
@@ -21,7 +21,15 @@ export async function generateCommand(prompt, options) {
   const spinner = ora();
 
   try {
-    // ── 0. Load style profile (optional) ────────────────────────────────────
+    // ── 0a. Load existing song for --continue ────────────────────────────────
+    let existingSong = null;
+    if (options.continue) {
+      const { song } = await loadSong(options.continue);
+      existingSong = song;
+      console.log(chalk.dim(`Continuing: ${options.continue} (${existingSong.sections.length} existing sections)`));
+    }
+
+    // ── 0b. Load style profile (optional) ───────────────────────────────────
     let styleProfile = null;
     if (options.style) {
       const absStyle = options.style.startsWith('/')
@@ -92,8 +100,15 @@ export async function generateCommand(prompt, options) {
         trackNames,
         context,
         styleProfile,
+        existingSong,
         model: options.model,
       });
+
+      // Merge new sections into the existing song if --continue was used
+      if (existingSong) {
+        song.meta = { ...existingSong.meta, ...song.meta };
+        song.sections = [...existingSong.sections, ...song.sections];
+      }
 
       spinner.succeed(`Song generated${label ? `  [${label}]` : ''}`);
 

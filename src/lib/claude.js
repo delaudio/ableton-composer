@@ -33,7 +33,7 @@ function getClient() {
  * @param {string} [options.model]          - Claude model to use
  * @returns {Promise<object>}               - Parsed AbletonSong JSON
  */
-export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, model }) {
+export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, model }) {
   const client = getClient();
   const systemPrompt = await readFile(join(PROMPTS_DIR, 'system.md'), 'utf-8');
   const schema = await readFile(join(SCHEMA_DIR, 'song.schema.json'), 'utf-8');
@@ -51,6 +51,10 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
 
   if (styleProfile) {
     parts.push(buildStyleSection(styleProfile));
+  }
+
+  if (existingSong) {
+    parts.push(buildContinuationSection(existingSong));
   }
 
   parts.push(`## Request\n${prompt}`);
@@ -165,5 +169,40 @@ function buildStyleSection(p) {
     lines.push('');
   }
 
+  return lines.join('\n');
+}
+
+// ─── Continuation context ─────────────────────────────────────────────────────
+
+/**
+ * Build a prompt section that shows Claude the existing sections of a song,
+ * so it can generate new sections that continue coherently from where it left off.
+ */
+function buildContinuationSection(song) {
+  const { meta, sections } = song;
+  const lines = [];
+
+  lines.push('## Existing song to continue');
+  lines.push('The sections below already exist. Generate ONLY the NEW sections requested — do not repeat or modify these.');
+  lines.push(`Use the same BPM (${meta.bpm}), scale (${meta.scale}), time signature (${meta.time_signature}), and track names.\n`);
+
+  lines.push(`**Existing meta**: BPM ${meta.bpm} | Scale: ${meta.scale} | Time sig: ${meta.time_signature}`);
+  lines.push(`**Existing sections** (${sections.length} total, in order):`);
+
+  for (const section of sections) {
+    const trackSummary = section.tracks
+      .map(t => {
+        const pitches = t.clip?.notes?.map(n => n.pitch) ?? [];
+        const minP    = pitches.length ? Math.min(...pitches) : null;
+        const maxP    = pitches.length ? Math.max(...pitches) : null;
+        const rangeStr = minP != null ? ` MIDI ${minP}–${maxP}` : '';
+        return `${t.ableton_name} (${t.clip?.notes?.length ?? 0} notes${rangeStr})`;
+      })
+      .join(', ');
+    lines.push(`  - ${section.name} (${section.bars} bars): ${trackSummary}`);
+  }
+
+  lines.push('');
+  lines.push('The new sections you generate will be appended after these. Maintain harmonic and rhythmic continuity.');
   return lines.join('\n');
 }
