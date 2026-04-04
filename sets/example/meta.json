@@ -1,0 +1,9 @@
+{
+  "meta": {
+    "bpm": 120,
+    "scale": "C major",
+    "genre": "example",
+    "time_signature": "4/4",
+    "description": "Minimal example set — 2 tracks (Bass, Lead), 2 scenes, 4 bars each."
+  }
+}

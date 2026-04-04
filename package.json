@@ -1,8 +1,25 @@
 {
   "name": "ableton-composer",
   "version": "0.1.0",
-  "description": "CLI to generate Ableton Live MIDI content using Claude AI",
+  "description": "CLI to generate and push MIDI content into Ableton Live using Claude AI",
   "type": "module",
+  "license": "MIT",
+  "author": "Federico Del Gaudio <federico.delgaudio@gmail.com>",
+  "keywords": [
+    "ableton",
+    "ableton-live",
+    "midi",
+    "claude",
+    "anthropic",
+    "ai",
+    "music",
+    "music-generation",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fdg/ableton-composer"
+  },
   "bin": {
     "ableton-composer": "./bin/cli.js"
   },
@@ -14,7 +31,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "ableton-js": "^2.4.0",
+    "ableton-js": "^2.9.0",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "dotenv": "^16.4.5",

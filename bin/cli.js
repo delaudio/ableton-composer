@@ -46,6 +46,7 @@ program
   .option('--overwrite',           'Replace existing clips in target slots')
   .option('--dry-run',             'Show what would be pushed without writing to Live')
   .option('--sections <names>',    'Only push specific sections (comma-separated, e.g. "intro,verse")')
+  .option('--setup',               'Create missing MIDI tracks and scenes before pushing')
   .action(pushCommand);
 
 // ── arrange ───────────────────────────────────────────────────────────────────

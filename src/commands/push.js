@@ -23,7 +23,7 @@ import {
   loadSetDirectory,
   slotIndexFromFilename,
 } from '../lib/storage.js';
-import { connect, disconnect, pushSong, pushClip, getTrackByName, getAbleton } from '../lib/ableton.js';
+import { connect, disconnect, pushSong, pushClip, getTrackByName, getAbleton, setupLiveSet } from '../lib/ableton.js';
 
 export async function pushCommand(fileOrName, options) {
   const spinner = ora();
@@ -78,11 +78,32 @@ export async function pushCommand(fileOrName, options) {
       return;
     }
 
-    // ── Connect and push ──────────────────────────────────────────────────────
+    // ── Connect ───────────────────────────────────────────────────────────────
     spinner.start('Connecting to Ableton Live...');
     await connect();
     spinner.succeed('Connected');
 
+    // ── Setup (create missing tracks and scenes) ──────────────────────────────
+    if (options.setup) {
+      const trackNames = [...new Set(
+        filteredSong.sections.flatMap(s => s.tracks.map(t => t.ableton_name)),
+      )];
+      const sceneCount = filteredSong.sections.length;
+
+      spinner.start('Setting up Live set...');
+      const setup = await setupLiveSet(trackNames, sceneCount);
+      spinner.succeed('Live set ready');
+
+      if (setup.tracks.length > 0)
+        console.log(chalk.green(`  + Created tracks: ${setup.tracks.join(', ')}`));
+      if (setup.scenes.length > 0)
+        console.log(chalk.green(`  + Created ${setup.scenes.length} scene(s)`));
+      if (setup.tracks.length === 0 && setup.scenes.length === 0)
+        console.log(chalk.dim('  (no tracks or scenes to create)'));
+      console.log('');
+    }
+
+    // ── Push ──────────────────────────────────────────────────────────────────
     console.log('');
     const result = await pushSong(filteredSong, {
       overwrite: options.overwrite,

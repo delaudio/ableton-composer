@@ -65,6 +65,46 @@ export async function disconnect() {
 }
 
 /**
+ * Prepare a Live set for a push: create any missing MIDI tracks (by name)
+ * and add scenes until the set has at least `requiredSceneCount`.
+ *
+ * @param {string[]} requiredTrackNames  - Ordered list of track names needed
+ * @param {number}   requiredSceneCount  - Minimum number of scenes needed
+ * @returns {Promise<{tracks: string[], scenes: number[]}>} What was created
+ */
+export async function setupLiveSet(requiredTrackNames, requiredSceneCount) {
+  const ableton = getAbleton();
+  const created = { tracks: [], scenes: [] };
+
+  // ── Tracks ──────────────────────────────────────────────────────────────────
+  const existing = await getMidiTracks(ableton);
+  const existingNames = new Set(existing.map(t => t.name));
+
+  for (const name of requiredTrackNames) {
+    if (existingNames.has(name)) continue;
+
+    // Create at end (-1) and rename immediately
+    await ableton.song.createMidiTrack(-1);
+    const allTracks = await ableton.song.get('tracks');
+    const newTrack = allTracks[allTracks.length - 1];
+    await newTrack.set('name', name);
+
+    created.tracks.push(name);
+    existingNames.add(name);
+  }
+
+  // ── Scenes ──────────────────────────────────────────────────────────────────
+  const scenes = await ableton.song.get('scenes');
+
+  for (let i = scenes.length; i < requiredSceneCount; i++) {
+    await ableton.song.createScene(-1);
+    created.scenes.push(i);
+  }
+
+  return created;
+}
+
+/**
  * Get all MIDI tracks with their names.
  * Returns an array of { index, name, track } objects.
  */
@@ -103,11 +143,12 @@ export async function getTrackByName(ableton, name) {
  * @param {number} slotIndex   - Clip slot (scene) index
  * @param {object} clipDef     - { length_bars, notes: [{pitch, time, duration, velocity, muted}] }
  * @param {object} [opts]
- * @param {boolean} [opts.overwrite=false] - Delete existing clip before creating
- * @param {string} [opts.timeSignature='4/4'] - For beats-per-bar calculation
+ * @param {boolean} [opts.overwrite=false]      - Delete existing clip before creating
+ * @param {string}  [opts.timeSignature='4/4']  - For beats-per-bar calculation
+ * @param {string}  [opts.clipName]             - Name to assign to the created clip
  */
 export async function pushClip(track, slotIndex, clipDef, opts = {}) {
-  const { overwrite = false, timeSignature = '4/4' } = opts;
+  const { overwrite = false, timeSignature = '4/4', clipName } = opts;
   const beatsPerBar = parseBeatsPerBar(timeSignature);
   const lengthBeats = clipDef.length_bars * beatsPerBar;
 
@@ -136,6 +177,11 @@ export async function pushClip(track, slotIndex, clipDef, opts = {}) {
 
   // Get the newly created clip
   const clip = await slot.get('clip');
+
+  // Set clip name if provided
+  if (clipName) {
+    await clip.set('name', clipName);
+  }
 
   // Map our notes to ableton-js format
   const notes = clipDef.notes.map(n => ({
@@ -170,9 +216,25 @@ export async function pushSong(song, opts = {}) {
   const skipped = [];
   const errors = [];
 
+  // Cache scenes list once — used to name each scene row
+  let scenes = null;
+  try {
+    scenes = await ableton.song.get('scenes');
+  } catch {
+    // Non-fatal: scene naming will be skipped if unavailable
+  }
+
   for (let sectionIndex = 0; sectionIndex < song.sections.length; sectionIndex++) {
     const section = song.sections[sectionIndex];
     onProgress(`Section [${sectionIndex}] "${section.name}"`);
+
+    if (!dryRun && scenes && scenes[sectionIndex]) {
+      try {
+        await scenes[sectionIndex].set('name', section.name);
+      } catch {
+        // Non-fatal: continue even if scene naming fails
+      }
+    }
 
     for (const trackDef of section.tracks) {
       const label = `  ${trackDef.ableton_name} → slot ${sectionIndex}`;
@@ -193,7 +255,8 @@ export async function pushSong(song, opts = {}) {
           continue;
         }
 
-        await pushClip(found.track, sectionIndex, trackDef.clip, { overwrite, timeSignature });
+        const clipName = `${section.name} — ${trackDef.ableton_name}`;
+        await pushClip(found.track, sectionIndex, trackDef.clip, { overwrite, timeSignature, clipName });
         onProgress(`${label} ✓ (${trackDef.clip.notes.length} notes)`);
         pushed++;
       } catch (err) {

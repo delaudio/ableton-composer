@@ -1,0 +1,31 @@
+{
+  "name": "intro",
+  "bars": 4,
+  "tracks": [
+    {
+      "ableton_name": "Bass",
+      "clip": {
+        "length_bars": 4,
+        "notes": [
+          { "pitch": 36, "time": 0,  "duration": 1.5, "velocity": 85 },
+          { "pitch": 36, "time": 4,  "duration": 1.5, "velocity": 80 },
+          { "pitch": 43, "time": 8,  "duration": 1.5, "velocity": 85 },
+          { "pitch": 36, "time": 12, "duration": 1.5, "velocity": 80 }
+        ]
+      }
+    },
+    {
+      "ableton_name": "Lead",
+      "clip": {
+        "length_bars": 4,
+        "notes": [
+          { "pitch": 64, "time": 0,  "duration": 2,   "velocity": 75 },
+          { "pitch": 62, "time": 2,  "duration": 1,   "velocity": 70 },
+          { "pitch": 60, "time": 4,  "duration": 4,   "velocity": 75 },
+          { "pitch": 62, "time": 10, "duration": 1,   "velocity": 70 },
+          { "pitch": 64, "time": 12, "duration": 3.5, "velocity": 72 }
+        ]
+      }
+    }
+  ]
+}
