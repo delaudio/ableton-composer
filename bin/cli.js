@@ -82,6 +82,8 @@ program
   .option('--out <path>',           'Write to a set directory (e.g. sets/my-song/) or flat file')
   .option('--add-to <file>',        'Merge into an existing flat JSON instead of creating a new file')
   .option('--replace',              'When used with --out or --add-to, replace a section with the same name')
+  .option('--from-arrangement',     'Pull from arrangement view, split by cue points (locators)')
+  .option('--split-every <bars>',   'Fallback: split every N bars when no cue points exist (default: 8)')
   .action(pullCommand);
 
 // ── clear ─────────────────────────────────────────────────────────────────────
