@@ -10,6 +10,8 @@
 
 import chalk from 'chalk';
 import ora from 'ora';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 import { generateSong } from '../lib/claude.js';
 import { saveSong } from '../lib/storage.js';
 import { fetchContext } from '../lib/fetchers/index.js';
@@ -19,6 +21,19 @@ export async function generateCommand(prompt, options) {
   const spinner = ora();
 
   try {
+    // ── 0. Load style profile (optional) ────────────────────────────────────
+    let styleProfile = null;
+    if (options.style) {
+      const absStyle = options.style.startsWith('/')
+        ? options.style
+        : join(process.cwd(), options.style);
+      const raw = await readFile(absStyle, 'utf-8').catch(() => {
+        throw new Error(`Style profile not found: ${absStyle}`);
+      });
+      styleProfile = JSON.parse(raw);
+      console.log(chalk.dim(`Style profile: ${styleProfile._meta?.source || absStyle}`));
+    }
+
     // ── 1. Resolve track names ───────────────────────────────────────────────
     let trackNames = [];
 
@@ -39,6 +54,12 @@ export async function generateCommand(prompt, options) {
         spinner.warn('Could not connect to Ableton. Using --tracks or provide track names manually.');
         await disconnect();
       }
+    }
+
+    // Fall back to track names from the style profile
+    if (trackNames.length === 0 && styleProfile?.arrangement?.tracks?.length > 0) {
+      trackNames = styleProfile.arrangement.tracks;
+      console.log(chalk.dim(`Using tracks from style profile: ${trackNames.join(', ')}`));
     }
 
     if (trackNames.length === 0) {
@@ -64,6 +85,7 @@ export async function generateCommand(prompt, options) {
       prompt,
       trackNames,
       context,
+      styleProfile,
       model: options.model,
     });
 

@@ -29,10 +29,11 @@ function getClient() {
  * @param {string} options.prompt           - User's natural language prompt
  * @param {string[]} options.trackNames     - Available track names in the Live set
  * @param {object} [options.context]        - Optional external context (weather, etc.)
+ * @param {object} [options.styleProfile]   - Style profile from the analyze command
  * @param {string} [options.model]          - Claude model to use
  * @returns {Promise<object>}               - Parsed AbletonSong JSON
  */
-export async function generateSong({ prompt, trackNames, context = {}, model }) {
+export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, model }) {
   const client = getClient();
   const systemPrompt = await readFile(join(PROMPTS_DIR, 'system.md'), 'utf-8');
   const schema = await readFile(join(SCHEMA_DIR, 'song.schema.json'), 'utf-8');
@@ -48,6 +49,10 @@ export async function generateSong({ prompt, trackNames, context = {}, model }) 
     parts.push(`## External context\n\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\``);
   }
 
+  if (styleProfile) {
+    parts.push(buildStyleSection(styleProfile));
+  }
+
   parts.push(`## Request\n${prompt}`);
 
   parts.push(`## Full schema reference\n\`\`\`json\n${schema}\n\`\`\``);
@@ -56,7 +61,7 @@ export async function generateSong({ prompt, trackNames, context = {}, model }) 
 
   const response = await client.messages.create({
     model: modelToUse,
-    max_tokens: 8192,
+    max_tokens: 16384,
     system: systemPrompt,
     messages: [{ role: 'user', content: userMessage }],
   });
@@ -71,4 +76,79 @@ export async function generateSong({ prompt, trackNames, context = {}, model }) 
   } catch (err) {
     throw new Error(`Claude returned invalid JSON:\n${jsonStr.slice(0, 500)}\n\nParse error: ${err.message}`);
   }
+}
+
+// ─── Style profile → prompt section ──────────────────────────────────────────
+
+/**
+ * Convert a style profile (from `analyze`) into a concise prompt section
+ * that guides Claude to generate in a similar style.
+ */
+function buildStyleSection(p) {
+  const lines = [];
+  const src = p._meta?.source ? ` (from: ${p._meta.source})` : '';
+  lines.push(`## Style reference${src}`);
+  lines.push('Use this as a strong creative guide — match the style closely unless the request says otherwise.\n');
+
+  // Key & tempo
+  lines.push('**Key & Tempo**');
+  if (p.key && p.key !== 'unknown') lines.push(`- Key: ${p.key}  (confidence: ${p.key_confidence})`);
+  if (p.bpm)           lines.push(`- BPM: ${p.bpm}`);
+  if (p.time_signature) lines.push(`- Time signature: ${p.time_signature}`);
+  lines.push('');
+
+  // Track lineup & presence
+  const presence = p.arrangement?.track_presence ?? {};
+  if (Object.keys(presence).length > 0) {
+    lines.push('**Track lineup & presence** (fraction of sections where each track plays)');
+    for (const [name, ratio] of Object.entries(presence)) {
+      const pct   = Math.round(ratio * 100);
+      const hint  = pct === 100 ? 'always present' : pct >= 75 ? 'mostly present' : pct >= 40 ? 'occasional' : 'sparse — use sparingly';
+      lines.push(`- ${name.padEnd(12)} ${pct}%  (${hint})`);
+    }
+    lines.push('');
+  }
+
+  // Rhythm density
+  const npb = p.rhythm?.notes_per_bar ?? {};
+  if (Object.keys(npb).length > 0) {
+    lines.push('**Rhythm density** (avg notes per bar — guides how busy each track should be)');
+    for (const [name, n] of Object.entries(npb)) {
+      const density = n < 2 ? 'slow/sparse' : n < 5 ? 'moderate' : n < 8 ? 'busy' : 'very dense';
+      lines.push(`- ${name.padEnd(12)} ${n} notes/bar  (${density})`);
+    }
+    lines.push('');
+  }
+
+  // Pitch ranges
+  const byTrack = p.pitch?.by_track ?? {};
+  if (Object.keys(byTrack).length > 0) {
+    lines.push('**Pitch ranges per track** (MIDI note numbers — stay within these ranges)');
+    for (const [name, info] of Object.entries(byTrack)) {
+      lines.push(`- ${name.padEnd(12)} MIDI ${info.min}–${info.max}  avg vel ${info.avg_velocity}  avg dur ${info.avg_duration} beats`);
+    }
+    lines.push('');
+  }
+
+  // Top pitch classes
+  const pcs = p.pitch?.pitch_classes ?? {};
+  if (Object.keys(pcs).length > 0) {
+    const top = Object.entries(pcs).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k]) => k).join('  ');
+    lines.push(`**Most-used pitch classes**: ${top}`);
+    lines.push('');
+  }
+
+  // Per-section key variation
+  const kbs = p.pitch?.key_by_section ?? {};
+  const kbsEntries = Object.entries(kbs);
+  const uniqueKeys = new Set(kbsEntries.map(([, v]) => v.key));
+  if (uniqueKeys.size > 1) {
+    lines.push('**Tonal variation** (the source modulates — consider similar key changes)');
+    for (const [name, info] of kbsEntries) {
+      lines.push(`- ${name.padEnd(14)} ${info.key}  (conf: ${info.confidence})`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n');
 }

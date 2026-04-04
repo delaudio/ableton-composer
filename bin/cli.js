@@ -17,6 +17,7 @@ import { compileCommand }  from '../src/commands/compile.js';
 import { clearCommand }    from '../src/commands/clear.js';
 import { listCommand }     from '../src/commands/list.js';
 import { infoCommand }     from '../src/commands/info.js';
+import { analyzeCommand }  from '../src/commands/analyze.js';
 
 const program = new Command();
 
@@ -36,6 +37,7 @@ program
   .option('-m, --model <model>',   'Claude model to use (overrides CLAUDE_MODEL env var)')
   .option('-n, --name <name>',     'Name hint for the saved filename')
   .option('-o, --output <path>',   'Save to a specific path instead of sets/')
+  .option('-s, --style <path>',    'Style profile JSON to guide generation (from "analyze" command)')
   .option('--no-save',             'Print JSON to stdout without saving to disk')
   .action(generateCommand);
 
@@ -96,6 +98,14 @@ program
   .option('--scenes <indices>',     'Only clear specific scene rows, e.g. "0,1,2" (session only)')
   .option('--dry-run',              'Show what would be cleared without making changes')
   .action(clearCommand);
+
+// ── analyze ───────────────────────────────────────────────────────────────────
+program
+  .command('analyze <target>')
+  .description('Extract a style profile from a set or collection of sets')
+  .option('--out <path>',   'Save profile to a specific path (default: profiles/<name>.json)')
+  .option('--print',        'Print JSON to stdout instead of saving')
+  .action(analyzeCommand);
 
 // ── list ──────────────────────────────────────────────────────────────────────
 program

@@ -72,6 +72,25 @@ Always install with `npm install` from the project root — never `npm install -
 
 ---
 
+## AbletonSong Set Directory Schema
+
+A set directory (`sets/my-song/`) must contain:
+
+- `meta.json` — **flat** JSON object with top-level fields: `bpm`, `scale`, `genre`, `time_signature`, `description`. Never wrap in a `{ "meta": { ... } }` envelope.
+- `NN-section-name.json` — one file per section, each with `{ "name", "bars", "tracks": [...] }`.
+
+```json
+// meta.json — CORRECT
+{ "bpm": 110, "scale": "A minor", "genre": "IDM / Ambient", "time_signature": "4/4", "description": "..." }
+
+// meta.json — WRONG (double-wrapped)
+{ "meta": { "bpm": 110, ... } }
+```
+
+`storage.js` (`loadSong`, `isSetDirectory`) and `analyzeSong()` both rely on the flat format. The double-wrapped form was introduced by a one-off generation script — do not repeat it.
+
+---
+
 ## Governance
 
 - Run `archgate:onboard` to extend governance for new domains

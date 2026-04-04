@@ -1,0 +1,166 @@
+{
+  "_meta": {
+    "source": "/Users/fdg/dev/side/ableton-composer/sets/saw85-92-a-minor-110bpm",
+    "sections_analyzed": 12,
+    "generated_at": "2026-04-04T21:47:34.286Z"
+  },
+  "bpm": 110,
+  "time_signature": "4/4",
+  "key": "A minor",
+  "key_confidence": 0.95,
+  "structure": {
+    "section_count": 12,
+    "bars_per_section": 8,
+    "total_bars": 96,
+    "section_sequence": [
+      "intro",
+      "rise_1",
+      "rise_2",
+      "main_1",
+      "main_2",
+      "main_3",
+      "break_1",
+      "break_2",
+      "return_1",
+      "return_2",
+      "outro_1",
+      "outro_2"
+    ]
+  },
+  "arrangement": {
+    "tracks": [
+      "Pad",
+      "Arp",
+      "Drums",
+      "Bass",
+      "Lead"
+    ],
+    "by_section": {
+      "intro": [
+        "Pad",
+        "Arp"
+      ],
+      "rise_1": [
+        "Drums",
+        "Pad",
+        "Arp"
+      ],
+      "rise_2": [
+        "Drums",
+        "Bass",
+        "Pad",
+        "Arp"
+      ],
+      "main_1": [
+        "Drums",
+        "Bass",
+        "Pad",
+        "Lead",
+        "Arp"
+      ],
+      "main_2": [
+        "Drums",
+        "Bass",
+        "Pad",
+        "Lead",
+        "Arp"
+      ],
+      "main_3": [
+        "Drums",
+        "Bass",
+        "Pad",
+        "Lead"
+      ],
+      "break_1": [
+        "Pad",
+        "Arp"
+      ],
+      "break_2": [
+        "Bass",
+        "Pad"
+      ],
+      "return_1": [
+        "Drums",
+        "Bass",
+        "Pad",
+        "Arp"
+      ],
+      "return_2": [
+        "Drums",
+        "Bass",
+        "Pad",
+        "Lead",
+        "Arp"
+      ],
+      "outro_1": [
+        "Drums",
+        "Bass",
+        "Pad"
+      ],
+      "outro_2": [
+        "Pad",
+        "Arp"
+      ]
+    },
+    "track_presence": {
+      "Pad": 1,
+      "Arp": 0.75,
+      "Drums": 0.67,
+      "Bass": 0.67,
+      "Lead": 0.33
+    }
+  },
+  "rhythm": {
+    "notes_per_bar": {
+      "Pad": 1.2,
+      "Arp": 7.1,
+      "Drums": 9.3,
+      "Bass": 1.9,
+      "Lead": 1.7
+    },
+    "drum_syncopation": {
+      "Drums": 0.32
+    }
+  },
+  "pitch": {
+    "pitch_classes": {
+      "C": 205.58,
+      "D": 33.49,
+      "E": 184.35,
+      "F": 63.27,
+      "G": 104.36,
+      "A": 231.6,
+      "B": 32.78
+    },
+    "by_track": {
+      "Pad": {
+        "min": 53,
+        "max": 67,
+        "semitones": 14,
+        "avg_velocity": 64,
+        "avg_duration": 9.98
+      },
+      "Arp": {
+        "min": 69,
+        "max": 81,
+        "semitones": 12,
+        "avg_velocity": 71,
+        "avg_duration": 0.45
+      },
+      "Bass": {
+        "min": 40,
+        "max": 45,
+        "semitones": 5,
+        "avg_velocity": 82,
+        "avg_duration": 1.57
+      },
+      "Lead": {
+        "min": 64,
+        "max": 81,
+        "semitones": 17,
+        "avg_velocity": 76,
+        "avg_duration": 1.55
+      }
+    }
+  }
+}
