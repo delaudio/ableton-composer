@@ -1,11 +1,14 @@
 # ableton-composer
 
-CLI that uses Claude AI to generate structured MIDI content for Ableton Live. Describe a song in natural language, get a JSON with notes for every track, push it directly into your Live set.
+CLI that uses Claude AI to generate structured MIDI content for Ableton Live. Describe a song in natural language, get a JSON with notes for every track, push it directly into your Live set. Analyze existing sets to extract style profiles and use them to guide future generations.
 
-```
-ableton-composer generate "trip-hop 87 BPM D minor, melancholic, 4 sections" \
-  --tracks "Bass,Drums,Chords,Lead" \
-  --weather
+```bash
+# Generate a set guided by an existing style
+ableton-composer generate "melancholic IDM, 12 sections, 8 bars each" \
+  --style profiles/saw85-92-a-minor-110bpm.json
+
+# Push into Ableton (creates tracks and scenes automatically)
+ableton-composer push sets/idm-110bpm_2026-04-05.json --setup
 ```
 
 ---
@@ -13,15 +16,21 @@ ableton-composer generate "trip-hop 87 BPM D minor, melancholic, 4 sections" \
 ## How it works
 
 ```
-Prompt + context
+Existing sets
       ↓
-  Claude API          generates an AbletonSong JSON
+  analyze             extracts style profile (key, BPM, rhythm, chords, pitch ranges)
+      ↓
+  profiles/*.json     editable style profile — curate before using
+      ↓
+  generate --style    Claude generates a new set guided by the profile
       ↓
   sets/*.json         saved to disk
       ↓
-  ableton-js          writes notes into Live clip slots via MIDI Remote Script
+  push                writes notes into Live clip slots via ableton-js
       ↓
   Ableton Live        clips ready in session view, one row per section
+      ↓
+  compare             measure how faithful the generation is to the source style
 ```
 
 Each **section** in the JSON maps to a **scene row** in session view. Trigger a scene to audition that part of the song.
@@ -31,38 +40,44 @@ Each **section** in the JSON maps to a **scene row** in session view. Trigger a 
 ## Requirements
 
 - Node.js >=18
-- Ableton Live with the **ableton-js M4L companion patch** loaded on any MIDI track
-- An Anthropic API key
+- Ableton Live with the **ableton-js MIDI Remote Script** active (see Setup)
+- An Anthropic API key — or Claude Code CLI installed (`--provider cli`)
 
 ---
 
 ## Setup
 
 ```bash
-git clone <repo>
+git clone https://github.com/delaudio/ableton-composer
 cd ableton-composer
 npm install
 
 cp .env.example .env
-# edit .env — add your ANTHROPIC_API_KEY and optionally your coordinates for weather
+# Edit .env — add ANTHROPIC_API_KEY and optionally your coordinates for --weather
 ```
+
+### Install globally
+
+```bash
+npm link
+```
+
+This creates a symlink so you can run `ableton-composer` from any directory. To unlink: `npm unlink -g ableton-composer`.
 
 ### Install the MIDI Remote Script
 
 `ableton-js` communicates with Live via a Python MIDI Remote Script — not a Max for Live patch.
 
-**1. Copy the script to Ableton's Remote Scripts folder:**
+**1. Copy the script:**
 
 ```bash
 cp -r node_modules/ableton-js/midi-script \
       ~/Music/Ableton/User\ Library/Remote\ Scripts/AbletonJS
 ```
 
-**2. Activate it in Ableton Live:**
+**2. Activate in Ableton:** `Preferences → Link / MIDI → Control Surfaces` → pick **AbletonJS** in any slot.
 
-Open `Preferences` → `Link / MIDI` → `Control Surfaces` → pick **AbletonJS** in any available slot.
-
-Restart Ableton if it was already open. The script activates automatically on every launch — no tracks or patches needed.
+Restart Ableton if already open. The script activates automatically on every launch.
 
 ---
 
@@ -78,10 +93,14 @@ ableton-composer generate "<prompt>" [options]
 
 | Option | Description |
 |---|---|
-| `-t, --tracks <names>` | Comma-separated track names to use, e.g. `"Bass,Drums,Chords,Lead"` |
+| `-t, --tracks <names>` | Comma-separated track names, e.g. `"Bass,Drums,Chords,Lead"` |
 | `-L, --live-sync` | Auto-detect track names from the open Live set |
-| `-w, --weather` | Fetch current weather (Open-Meteo) and pass it as context |
-| `-m, --model <model>` | Claude model to use (overrides `CLAUDE_MODEL` env var) |
+| `-s, --style <path>` | Style profile JSON to guide generation (from `analyze`) |
+| `-c, --continue <file>` | Existing set to extend — new sections are appended |
+| `-V, --variations <n>` | Generate N variations and save each one |
+| `--provider <name>` | `api` (default, uses Anthropic SDK) or `cli` (uses Claude Code CLI, no API key needed) |
+| `-w, --weather` | Fetch current weather and include as context |
+| `-m, --model <model>` | Claude model (overrides `CLAUDE_MODEL` env var) |
 | `-n, --name <name>` | Filename hint for the saved set |
 | `-o, --output <path>` | Save to a specific path instead of `sets/` |
 | `--no-save` | Print JSON to stdout without saving |
@@ -89,19 +108,128 @@ ableton-composer generate "<prompt>" [options]
 **Examples:**
 
 ```bash
-# Basic
-ableton-composer generate "house 128 BPM A minor, 3 sections: intro verse chorus" \
-  --tracks "Kick,Snare,HH,Bass,Lead"
+# Guided by a style profile (track names inferred automatically)
+ableton-composer generate "melancholic IDM, 12 sections, 8 bars each" \
+  --style profiles/saw85-92-a-minor-110bpm.json
+
+# Generate 3 variations and pick the best one
+ableton-composer generate "ambient drone, 4 sections" \
+  --style profiles/saw85-92.json --variations 3
+
+# Extend an existing set with 4 more sections
+ableton-composer generate "add breakdown, buildup, climax, and fade-out" \
+  --continue sets/my-song.json --style profiles/saw85-92.json
+
+# Use Claude Code CLI instead of the API (no ANTHROPIC_API_KEY needed)
+ableton-composer generate "trip-hop 90 BPM" --provider cli
 
 # Auto-detect tracks from open Live set
-ableton-composer generate "slow cinematic ambient, lots of space" --live-sync
+ableton-composer generate "slow cinematic ambient" --live-sync
 
 # Weather as generative seed
-ableton-composer generate "reflect today's weather as a short ambient piece" \
+ableton-composer generate "reflect today's weather as ambient" \
   --tracks "Pad,Bass,Melody" --weather
+```
 
-# Print JSON without saving (pipe to another tool)
-ableton-composer generate "..." --no-save | jq '.meta'
+---
+
+### `analyze`
+
+Extract a style profile from a set or a collection of sets. The profile captures key/mode, BPM, track presence, rhythm density, pitch ranges, and chord vocabulary — and can be passed directly to `generate --style`.
+
+```bash
+ableton-composer analyze <target> [options]
+```
+
+| Option | Description |
+|---|---|
+| `--out <path>` | Save profile to a specific path |
+| `--print` | Print JSON to stdout instead of saving |
+
+**Examples:**
+
+```bash
+# Single set → profile saved to profiles/
+ableton-composer analyze sets/saw85-92-a-minor-110bpm/
+
+# Collection of sets → aggregated profile
+ableton-composer analyze sets/idm-collection/
+
+# Flat JSON file
+ableton-composer analyze sets/my-song.json
+
+# Print to stdout
+ableton-composer analyze sets/my-song/ --print
+```
+
+**Profile output:**
+
+```
+ Style Profile — sets/saw85-92-a-minor-110bpm
+
+  Key & Tempo
+    Key:            A minor  (confidence: 0.95)
+    BPM:            110
+    Time signature: 4/4
+
+  Arrangement
+    Pad          ██████████  100%
+    Arp          ████████░░  75%
+    Drums        ███████░░░  67%
+
+  Rhythm  (notes/bar)
+    Arp          7.1
+    Drums        9.3
+
+  Chords  (most frequent per track)
+    Pad          A-C-E-G×2  A-C-F×1
+```
+
+Use the saved profile with `generate --style` or `compare`.
+
+---
+
+### `compare`
+
+Compare two sets or profiles to measure style fidelity — useful for evaluating how closely a generated set matches the source style.
+
+```bash
+ableton-composer compare <source> <generated> [options]
+```
+
+Accepts set directories, flat JSON sets, or pre-saved profile JSONs as inputs.
+
+| Option | Description |
+|---|---|
+| `--out <path>` | Save the comparison report as JSON |
+
+**Example:**
+
+```bash
+ableton-composer compare sets/saw85-92-a-minor-110bpm sets/idm-generated.json
+```
+
+```
+ Style Fidelity Report
+  source:    sets/saw85-92-a-minor-110bpm
+  generated: sets/idm-generated.json
+
+  Fidelity   ████████░░  80%
+
+  Key
+    ✓ A minor  →  A minor
+
+  Rhythm density  (notes/bar: source → generated)
+    ✓ Pad          1.2 → 0.9 ×0.75
+    ~ Arp          7.1 → 5.1 ×0.72
+    ✓ Bass         1.9 → 2.0 ×1.05
+
+  Pitch range overlap
+    ✓ Pad          ██████████  100%
+    ✓ Arp          ██████████  100%
+
+  Chord vocabulary overlap
+    ~ Pad          33% common: B-D-G
 ```
 
 ---
@@ -124,20 +252,20 @@ ableton-composer push <file> [options]
 **Examples:**
 
 ```bash
-# Push everything
-ableton-composer push sets/trip-hop-87bpm_2026-04-03.json --overwrite
-
 # Push into an empty Live set — create tracks and scenes automatically
-ableton-composer push sets/my-song/ --setup --overwrite
+ableton-composer push sets/my-song.json --setup
+
+# Push everything, replacing existing clips
+ableton-composer push sets/my-song.json --overwrite
 
 # Preview first
-ableton-composer push sets/trip-hop-87bpm_2026-04-03.json --dry-run
+ableton-composer push sets/my-song.json --dry-run
 
-# Push only the drop section
-ableton-composer push sets/my-set.json --sections drop
+# Push only one section
+ableton-composer push sets/my-song.json --sections drop
 ```
 
-`--setup` reads the track names from the song JSON, creates any that are missing, and adds scenes until the Live set has enough rows. Track order in Live matches the order they first appear in the JSON.
+`--setup` reads track names from the song JSON, creates any that are missing, and adds scenes until the Live set has enough rows.
 
 ---
 
@@ -153,9 +281,11 @@ ableton-composer pull [options]
 |---|---|
 | `--scene <index>` | Only pull a specific scene row (0-based) |
 | `--name <name>` | Label for the pulled section(s) |
-| `--out <path>` | Save into an existing set directory (e.g. `sets/my-song/`) |
+| `--out <path>` | Save into a set directory or flat file |
 | `--add-to <file>` | Merge pulled sections into an existing flat JSON |
-| `--replace` | When merging, replace existing sections with the same name |
+| `--replace` | When merging, replace sections with the same name |
+| `--from-arrangement` | Pull from arrangement view, split by cue points (locators) |
+| `--split-every <bars>` | Fallback: split every N bars when no cue points exist (default: 8) |
 
 **Examples:**
 
@@ -163,14 +293,14 @@ ableton-composer pull [options]
 # Pull all scenes → new flat JSON in sets/
 ableton-composer pull
 
-# Pull scene 2 and label it "bridge"
+# Pull scene 2 labelled "bridge"
 ableton-composer pull --scene 2 --name bridge
 
-# Pull scene 1 and save it into an existing set directory
-ableton-composer pull --scene 1 --out sets/idm-g-minor/ --replace
+# Import a MIDI arrangement, split by locators
+ableton-composer pull --from-arrangement --out sets/my-song/
 
-# Merge into an existing flat file
-ableton-composer pull --add-to sets/my-song.json
+# Import arrangement with no locators, split every 8 bars
+ableton-composer pull --from-arrangement --split-every 8
 ```
 
 ---
@@ -179,9 +309,6 @@ ableton-composer pull --add-to sets/my-song.json
 
 Remove clips from the current Ableton Live set.
 
-- **Session view**: clip slots are fully deleted.
-- **Arrangement view**: notes are removed from each clip (empty containers remain — ableton-js cannot delete them).
-
 ```bash
 ableton-composer clear [options]
 ```
@@ -189,71 +316,16 @@ ableton-composer clear [options]
 | Option | Description |
 |---|---|
 | `--arrangement` | Clear arrangement clips instead of session view |
-| `--all` | Clear both session view and arrangement |
-| `--tracks <names>` | Only clear specific tracks, e.g. `"Bass,Drums"` |
-| `--scenes <indices>` | Only clear specific scene rows, e.g. `"0,1,2"` (session only) |
-| `--dry-run` | Show what would be cleared without making changes |
-
-**Examples:**
-
-```bash
-# Clear all session clips
-ableton-composer clear
-
-# Clear arrangement for specific tracks only
-ableton-composer clear --arrangement --tracks "Bass,Lead"
-
-# Preview what would be deleted
-ableton-composer clear --dry-run
-```
-
----
-
-### `split`
-
-Convert a flat song JSON into a **set directory** — one file per section plus a `meta.json`. Useful for editing sections independently.
-
-```bash
-ableton-composer split <file> [options]
-```
-
-| Option | Description |
-|---|---|
-| `--out <dir>` | Output directory (defaults to filename without timestamp/extension) |
-
-**Example:**
-
-```bash
-ableton-composer split sets/idm-g-minor_2026-04-03.json
-# creates: sets/idm-g-minor/meta.json, 00-intro.json, 01-main.json, …
-```
-
----
-
-### `compile`
-
-Merge a set directory back into a single flat JSON.
-
-```bash
-ableton-composer compile <directory> [options]
-```
-
-| Option | Description |
-|---|---|
-| `--out <file>` | Output path (defaults to a timestamped file in `sets/`) |
-
-**Example:**
-
-```bash
-ableton-composer compile sets/idm-g-minor/
-ableton-composer compile sets/idm-g-minor/ --out sets/idm-g-minor-full.json
-```
+| `--all` | Clear both session and arrangement |
+| `--tracks <names>` | Only clear specific tracks |
+| `--scenes <indices>` | Only clear specific scene rows, e.g. `"0,1,2"` |
+| `--dry-run` | Preview without making changes |
 
 ---
 
 ### `arrange`
 
-Place session view clips into the arrangement timeline. Sections are laid out sequentially; if a clip loop is shorter than the section's bar count it is duplicated to fill the full length. Requires the clips to already exist in the session view — run `push` first.
+Place session view clips into the arrangement timeline sequentially.
 
 ```bash
 ableton-composer arrange <file> [options]
@@ -263,64 +335,75 @@ ableton-composer arrange <file> [options]
 |---|---|
 | `--start <bars>` | Start position in bars (default: `0`) |
 | `--gap <bars>` | Gap in bars between sections (default: `0`) |
-| `--sections <names>` | Only arrange specific sections, e.g. `"intro,main"` |
+| `--sections <names>` | Only arrange specific sections |
 | `--dry-run` | Preview the layout without writing to Ableton |
 
-**Examples:**
-
 ```bash
-# Arrange full song starting at bar 0
 ableton-composer arrange sets/my-song.json
-
-# Start at bar 8, 2-bar gap between sections
 ableton-composer arrange sets/my-song.json --start 8 --gap 2
-
-# Preview the layout first
-ableton-composer arrange sets/my-song.json --dry-run
-
-# Only arrange intro and chorus
-ableton-composer arrange sets/my-song.json --sections intro,chorus
 ```
 
 ---
 
-### `list`
+### `split` / `compile`
 
-List all saved sets in the `sets/` directory.
+Convert between flat JSON and set directory format.
 
 ```bash
-ableton-composer list
+ableton-composer split sets/my-song.json         # → sets/my-song/
+ableton-composer compile sets/my-song/            # → sets/my-song_<timestamp>.json
 ```
 
 ---
 
-### `info`
-
-Introspect the open Ableton Live set — shows track names, optionally device lists.
+### `list` / `info`
 
 ```bash
-ableton-composer info
-ableton-composer info --devices        # show devices per track
-ableton-composer info --devices --params  # show device parameters too
+ableton-composer list             # list saved sets in sets/
+ableton-composer info             # show tracks in the open Live set
+ableton-composer info --devices   # include device list per track
 ```
 
-Use this to get the exact track names to pass to `--tracks` or to embed in your song JSON (`ableton_name` is case-sensitive).
+---
+
+## Style-guided workflow
+
+The full loop for generating in the style of an existing set:
+
+```bash
+# 1. Analyze a reference set → extract style profile
+ableton-composer analyze sets/saw85-92-a-minor-110bpm/
+#    → profiles/saw85-92-a-minor-110bpm.json
+
+# 2. Generate guided by the profile (track names inferred automatically)
+ableton-composer generate "melancholic IDM, 12 sections, 8 bars each" \
+  --style profiles/saw85-92-a-minor-110bpm.json --variations 3
+
+# 3. Compare the best result against the source
+ableton-composer compare sets/saw85-92-a-minor-110bpm sets/idm-110bpm_v2.json
+
+# 4. Push into Ableton
+ableton-composer push sets/idm-110bpm_v2.json --setup
+
+# 5. Extend the set with more sections
+ableton-composer generate "add breakdown and outro" \
+  --continue sets/idm-110bpm_v2.json --style profiles/saw85-92.json
+```
 
 ---
 
 ## The AbletonSong schema
 
-Every generated JSON follows this structure. You can write or edit them by hand too.
-
 ```json
 {
   "meta": {
-    "bpm": 87,
-    "scale": "D minor",
-    "root_note": 62,
-    "genre": "trip-hop",
+    "bpm": 110,
+    "scale": "A minor",
+    "root_note": 57,
+    "genre": "IDM",
     "mood": "melancholic",
-    "time_signature": "4/4"
+    "time_signature": "4/4",
+    "description": "..."
   },
   "sections": [
     {
@@ -333,8 +416,8 @@ Every generated JSON follows this structure. You can write or edit them by hand 
           "clip": {
             "length_bars": 2,
             "notes": [
-              { "pitch": 38, "time": 0,    "duration": 1,   "velocity": 90 },
-              { "pitch": 38, "time": 2,    "duration": 0.5, "velocity": 70 }
+              { "pitch": 38, "time": 0,   "duration": 1,   "velocity": 90 },
+              { "pitch": 38, "time": 2,   "duration": 0.5, "velocity": 70 }
             ]
           }
         }
@@ -355,112 +438,17 @@ Full schema: [`schema/song.schema.json`](schema/song.schema.json)
 
 ## Set directory format
 
-Songs can also be stored as a **directory** — one JSON file per section plus a `meta.json`:
+Songs can also be stored as a directory — one JSON file per section plus a `meta.json`:
 
 ```
-sets/idm-g-minor/
-  meta.json          ← bpm, scale, genre, time_signature
+sets/my-song/
+  meta.json          ← bpm, scale, genre, time_signature  (flat — no nesting)
   00-intro.json      ← section 0
   01-main.json       ← section 1
   02-break.json      ← section 2
 ```
 
-The numeric prefix (`00-`, `01-`…) maps directly to the Ableton session slot index, so section files can be edited and pushed independently.
-
-All commands that accept a flat file also accept a directory path or a single section file:
-
-```bash
-ableton-composer push sets/idm-g-minor/           # push all sections
-ableton-composer push sets/idm-g-minor/01-main.json   # push section 1 only
-ableton-composer arrange sets/idm-g-minor/
-```
-
-Convert between the two formats with `split` and `compile`.
-
----
-
-## External context
-
-The `--weather` flag fetches current conditions from [Open-Meteo](https://open-meteo.com/) (free, no API key) and passes them to Claude as seed data. Set your location in `.env`:
-
-```env
-WEATHER_LAT=45.07
-WEATHER_LON=7.69
-WEATHER_CITY=Torino
-```
-
-More fetchers can be added in `src/lib/fetchers/` — see `weather.js` as a reference.
-
----
-
-## Workflow tip
-
-1. Set up a **template Live set** with named MIDI tracks and instruments already loaded
-2. Run `ableton-composer info` to confirm track names
-3. Run `generate` with those names via `--tracks`
-4. Run `push --dry-run` to preview, then `push --overwrite` to write the clips
-5. Tweak notes directly in Live, then run `pull --add-to <file>` to capture edits back into JSON
-6. Run `split` to break the song into per-section files for easier iteration
-7. Run `arrange` (after `push`) to place everything on the arrangement timeline
-8. Tweak sounds, effects, and arrangement in Live — that's the part AI doesn't do
-
----
-
-## Roadmap
-
-### `ableton-js-extended` — fork with device loading
-
-`ableton-js` does not expose an API for loading instruments or presets into tracks. The plan is to fork the library into a separate npm package (`ableton-js-extended`) that adds this capability.
-
-The library has two layers — a Node.js wrapper and a Python MIDI Remote Script. Both need to be extended:
-
-**New API (Node.js side):**
-
-```js
-// Load a native Ableton instrument by browser path
-await track.loadDevice(['instruments', 'Wavetable']);
-
-// Load a specific preset
-await track.loadDevice(['instruments', 'Operator', 'Basses', 'Deep Bass']);
-
-// Load a VST/AU plugin
-await track.loadDevice(['plugins', 'Serum']);
-
-// List available instruments (for discovery)
-const tree = await ableton.song.getBrowserTree('instruments', 2);
-```
-
-**Python side (`midi-script/Track.py`):**
-
-```python
-def load_device(self, ns, device_path):
-    import Live
-    browser = Live.Application.get_application().browser
-    song    = self.ableton.song()
-    song.view.selected_track = ns  # select target track
-
-    node = browser
-    for segment in device_path:
-        node = next((c for c in node.children if c.name == segment), None)
-        if not node:
-            raise Exception("Browser item not found: " + segment)
-
-    browser.load_item(node)
-```
-
-Once this is available, `push --setup` could optionally load instruments from an `instrument` field in the song JSON:
-
-```json
-{
-  "ableton_name": "Pad",
-  "instrument": ["instruments", "Wavetable"],
-  "clip": { ... }
-}
-```
-
-### Device parameter control
-
-`ableton-js` already exposes `DeviceParameter` with a settable `value` property. This enables per-section automation of any knob — filter cutoff, reverb decay, oscillator shape — without touching the arrangement. A future `params` key in the section JSON could apply parameter snapshots at push time.
+The numeric prefix maps directly to the Ableton session slot index. All commands accept both flat files and directory paths.
 
 ---
 
@@ -468,9 +456,23 @@ Once this is available, `push --setup` could optionally load instruments from an
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `ANTHROPIC_API_KEY` | yes | — | Your Anthropic API key |
+| `ANTHROPIC_API_KEY` | for `--provider api` | — | Your Anthropic API key |
 | `CLAUDE_MODEL` | no | `claude-opus-4-5` | Model for generation |
 | `WEATHER_LAT` | for `--weather` | — | Latitude |
 | `WEATHER_LON` | for `--weather` | — | Longitude |
 | `WEATHER_CITY` | no | — | City name (display only) |
 | `DEBUG` | no | — | Set to any value to enable ableton-js logging |
+
+`ANTHROPIC_API_KEY` is not needed when using `--provider cli` (Claude Code CLI authentication is used instead).
+
+---
+
+## Roadmap
+
+### `ableton-js-extended` — fork with device loading
+
+`ableton-js` does not expose an API for loading instruments or presets into tracks. The plan is to fork the library into a separate npm package (`ableton-js-extended`) that adds this capability, allowing `push --setup` to optionally load instruments from an `instrument` field in the song JSON.
+
+### Device parameter control
+
+`ableton-js` already exposes `DeviceParameter` with a settable `value` property. A future `params` key in the section JSON could apply parameter snapshots (filter cutoff, reverb decay, etc.) at push time.
