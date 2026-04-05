@@ -248,12 +248,19 @@ ableton-composer push <file> [options]
 | `--dry-run` | Show what would be pushed without writing to Live |
 | `--sections <names>` | Only push specific sections, e.g. `"intro,verse"` |
 | `--setup` | Create any missing MIDI tracks and scenes before pushing |
+| `--humanize [profile]` | Apply humanization before writing notes (default profile: `loose`) |
 
 **Examples:**
 
 ```bash
 # Push into an empty Live set — create tracks and scenes automatically
 ableton-composer push sets/my-song.json --setup
+
+# Push with MPC-style swing
+ableton-composer push sets/my-song.json --humanize swing
+
+# Push with custom humanization params
+ableton-composer push sets/my-song.json --humanize '{"swing":0.6,"timing":0.02}'
 
 # Push everything, replacing existing clips
 ableton-composer push sets/my-song.json --overwrite
@@ -263,9 +270,29 @@ ableton-composer push sets/my-song.json --dry-run
 
 # Push only one section
 ableton-composer push sets/my-song.json --sections drop
+
+# List all humanize profiles
+ableton-composer push --humanize list
 ```
 
 `--setup` reads track names from the song JSON, creates any that are missing, and adds scenes until the Live set has enough rows.
+
+---
+
+### Humanization profiles
+
+Applied at push time — the source JSON is never modified. Drum tracks are excluded from swing but still receive timing and velocity variation.
+
+| Profile | Description | Swing | Timing | Velocity |
+|---|---|---|---|---|
+| `tight` | Studio — barely noticeable imperfections | — | ±0.01b | ±7% |
+| `loose` | Natural — like a good live drummer | — | ±0.025b | ±14% |
+| `swing` | MPC light swing — 16th off-beats at ~57% | 0.57 | ±0.01b | ±10% |
+| `swing-heavy` | Triplet swing — 16th off-beats at ~65% | 0.65 | ±0.015b | ±12% |
+| `vinyl` | Warm vinyl — subtle swing with timing drift | 0.54 | ±0.02b | ±12% |
+| `idm` | Glitchy IDM — strong irregular timing | — | ±0.04b | ±22% |
+
+Custom params are also accepted as JSON: `--humanize '{"swing":0.6,"timing":0.015,"velocity":0.1}'`
 
 ---
 
