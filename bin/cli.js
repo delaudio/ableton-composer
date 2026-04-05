@@ -19,6 +19,7 @@ import { listCommand }     from '../src/commands/list.js';
 import { infoCommand }     from '../src/commands/info.js';
 import { analyzeCommand }  from '../src/commands/analyze.js';
 import { compareCommand }  from '../src/commands/compare.js';
+import { importMidiCommand } from '../src/commands/import-midi.js';
 
 const program = new Command();
 
@@ -106,8 +107,8 @@ program
 
 // ── analyze ───────────────────────────────────────────────────────────────────
 program
-  .command('analyze <target>')
-  .description('Extract a style profile from a set or collection of sets')
+  .command('analyze <targets...>')
+  .description('Extract a style profile from one or more sets or a collection directory')
   .option('--out <path>',   'Save profile to a specific path (default: profiles/<name>.json)')
   .option('--print',        'Print JSON to stdout instead of saving')
   .action(analyzeCommand);
@@ -118,6 +119,16 @@ program
   .description('Compare two sets or profiles to measure style fidelity')
   .option('--out <path>', 'Save the comparison report as JSON')
   .action(compareCommand);
+
+// ── import-midi ───────────────────────────────────────────────────────────────
+program
+  .command('import-midi <file>')
+  .description('Convert a .mid file to an AbletonSong JSON (no Ableton required)')
+  .option('-n, --name <name>',           'Name hint for the output file and section(s)')
+  .option('-o, --out <path>',            'Save to a specific path (directory or .json file)')
+  .option('--split-every <bars>',        'Split into sections every N bars (default: one section)')
+  .option('-t, --tracks <names>',        'Rename tracks: positional "Bass,Drums" or mapped "Piano:Pad,Bass:Bass"')
+  .action(importMidiCommand);
 
 // ── list ──────────────────────────────────────────────────────────────────────
 program

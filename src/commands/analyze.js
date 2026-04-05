@@ -14,12 +14,18 @@ import { join, resolve } from 'path';
 import { loadSong, isSetDirectory } from '../lib/storage.js';
 import { analyzeSong, aggregateProfiles } from '../lib/analysis.js';
 
-export async function analyzeCommand(target, options) {
-  const absTarget = target.startsWith('/') ? target : join(process.cwd(), target);
-
+export async function analyzeCommand(targets, options) {
   try {
-    // ── Detect mode: single set vs collection directory ────────────────────
-    const isDir = await isSetDirectory(absTarget).catch(() => false);
+    // ── Multiple explicit targets → aggregate directly ─────────────────────
+    if (targets.length > 1) {
+      await analyzeMultipleTargets(targets, options);
+      return;
+    }
+
+    // ── Single target ──────────────────────────────────────────────────────
+    const target    = targets[0];
+    const absTarget = target.startsWith('/') ? target : join(process.cwd(), target);
+    const isDir     = await isSetDirectory(absTarget).catch(() => false);
 
     if (!isDir && !target.endsWith('.json')) {
       // Could be a collection directory (contains set subdirectories, not a set itself)
@@ -32,7 +38,6 @@ export async function analyzeCommand(target, options) {
       }
     }
 
-    // ── Single set ─────────────────────────────────────────────────────────
     await analyzeSingleSet(target, absTarget, options);
 
   } catch (err) {
@@ -85,6 +90,43 @@ async function analyzeCollection(absTarget, subDirs, options) {
   const aggregate = aggregateProfiles(profiles);
   printAggregateProfile(aggregate);
   await saveIfRequested(aggregate, options, absTarget);
+}
+
+// ─── multiple explicit targets ───────────────────────────────────────────────
+
+async function analyzeMultipleTargets(targets, options) {
+  console.log(chalk.bold(`\n Analyzing ${targets.length} sets...\n`));
+
+  const profiles = [];
+
+  for (const target of targets) {
+    const absTarget = target.startsWith('/') ? target : join(process.cwd(), target);
+    try {
+      const { song, filepath } = await loadSong(target);
+      const profile = analyzeSong(song, filepath);
+      profiles.push(profile);
+      console.log(chalk.dim(`  ✓ ${target}  (${profile.key}, ${profile.bpm} BPM, ${profile.structure.section_count} sections)`));
+    } catch (err) {
+      console.log(chalk.yellow(`  ⚠ ${target}: ${err.message}`));
+    }
+  }
+
+  if (profiles.length === 0) {
+    console.log(chalk.yellow('⚠ No valid sets could be analyzed.'));
+    return;
+  }
+
+  console.log('');
+  const aggregate = aggregateProfiles(profiles);
+
+  // Use a combined label for the default output filename
+  const label = targets
+    .map(t => t.replace(/.*\//, '').replace(/\.json$/, ''))
+    .join('_+_')
+    .slice(0, 60);
+
+  printAggregateProfile(aggregate);
+  await saveIfRequested(aggregate, options, label);
 }
 
 // ─── output helpers ───────────────────────────────────────────────────────────

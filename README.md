@@ -135,10 +135,10 @@ ableton-composer generate "reflect today's weather as ambient" \
 
 ### `analyze`
 
-Extract a style profile from a set or a collection of sets. The profile captures key/mode, BPM, track presence, rhythm density, pitch ranges, and chord vocabulary — and can be passed directly to `generate --style`.
+Extract a style profile from one or more sets. The profile captures key/mode, BPM, track presence, rhythm density, pitch ranges, and chord vocabulary — and can be passed directly to `generate --style`.
 
 ```bash
-ableton-composer analyze <target> [options]
+ableton-composer analyze <targets...> [options]
 ```
 
 | Option | Description |
@@ -152,7 +152,10 @@ ableton-composer analyze <target> [options]
 # Single set → profile saved to profiles/
 ableton-composer analyze sets/saw85-92-a-minor-110bpm/
 
-# Collection of sets → aggregated profile
+# Multiple sets passed directly → aggregated profile
+ableton-composer analyze sets/song-a.json sets/song-b/ sets/song-c.json
+
+# Collection directory (contains set subdirectories) → aggregated profile
 ableton-composer analyze sets/idm-collection/
 
 # Flat JSON file
@@ -368,6 +371,48 @@ ableton-composer arrange <file> [options]
 ```bash
 ableton-composer arrange sets/my-song.json
 ableton-composer arrange sets/my-song.json --start 8 --gap 2
+```
+
+---
+
+### `import-midi`
+
+Convert a `.mid` file directly to an AbletonSong JSON — no Ableton Live required.
+
+```bash
+ableton-composer import-midi <file.mid> [options]
+```
+
+| Option | Description |
+|---|---|
+| `-n, --name <name>` | Name hint for the output file and section(s) |
+| `-o, --out <path>` | Save to a specific path (directory or `.json` file) |
+| `--split-every <bars>` | Split the file into sections every N bars (default: one section) |
+| `-t, --tracks <names>` | Rename tracks: positional `"Bass,Drums"` or mapped `"Piano:Pad,Bass:Bass"` |
+
+**Examples:**
+
+```bash
+# Convert a MIDI file — saves to sets/ as a flat JSON
+ableton-composer import-midi jazz-blues.mid --name "jazz-blues"
+
+# Split a long MIDI file into 8-bar sections
+ableton-composer import-midi song.mid --name "my-song" --split-every 8
+
+# Save as a set directory (one file per section)
+ableton-composer import-midi song.mid --out sets/my-song/
+
+# Rename MIDI tracks to match Ableton track names (positional)
+ableton-composer import-midi song.mid --tracks "Bass,Drums,Chords,Lead"
+
+# Rename by original MIDI track name (mapped)
+ableton-composer import-midi song.mid --tracks "Piano Right:Pad,Acoustic Bass:Bass"
+```
+
+Once imported, push straight into Ableton:
+
+```bash
+ableton-composer push sets/jazz-blues_<timestamp>.json --setup
 ```
 
 ---

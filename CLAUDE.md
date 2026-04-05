@@ -91,6 +91,39 @@ A set directory (`sets/my-song/`) must contain:
 
 ---
 
+## @tonejs/midi v2.x — Verified API Surface
+
+Used by `import-midi` to parse `.mid` files without Ableton.
+
+### Import (ESM interop)
+
+```js
+// @tonejs/midi is CJS — must destructure from .default
+const { Midi } = (await import('@tonejs/midi')).default;
+const midi = new Midi(uint8ArrayOrBuffer);
+```
+
+### Key fields
+
+```js
+midi.header.ppq                          // ticks per quarter note (beat)
+midi.header.tempos[0].bpm                // first tempo (float)
+midi.header.timeSignatures[0].timeSignature  // [4, 4]
+midi.tracks[i].name                      // track name (may be empty)
+midi.tracks[i].notes[j].midi             // pitch (MIDI note number)
+midi.tracks[i].notes[j].velocity         // 0–1 (NOT 0–127; multiply by 127)
+midi.tracks[i].notes[j].ticks            // start time in ticks
+midi.tracks[i].notes[j].durationTicks    // duration in ticks
+```
+
+### Tick → beat conversion
+
+```js
+const beats = ticks / midi.header.ppq;  // quarter note = 1 beat
+```
+
+---
+
 ## Governance
 
 - Run `archgate:onboard` to extend governance for new domains
