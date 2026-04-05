@@ -62,7 +62,7 @@ try {
 
 ## Local npm Registry
 
-The global `~/.npmrc` points to an expired AWS CodeArtifact registry. A local `.npmrc` at the project root overrides it:
+If your global `~/.npmrc` points to a private registry, a local `.npmrc` at the project root overrides it:
 
 ```
 registry=https://registry.npmjs.org

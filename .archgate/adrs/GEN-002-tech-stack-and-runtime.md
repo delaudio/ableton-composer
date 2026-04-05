@@ -14,7 +14,7 @@ ableton-composer is a personal side project that bridges Claude AI and Ableton L
 Without an explicit decision, several tensions arise:
 
 1. **Module system ambiguity**: Node.js supports both CommonJS (`require`/`module.exports`) and ES modules (`import`/`export`). Mixing them within the same project causes hard-to-debug interop errors, especially with ESM-only packages like `chalk` and `ora`.
-2. **Registry conflicts**: The developer's global `~/.npmrc` points to a private AWS CodeArtifact registry (`private-registry`) whose auth token expires regularly. Installing without a local override silently fails with E401.
+2. **Registry conflicts**: The developer's global `~/.npmrc` may point to a private registry whose auth token expires regularly. Installing without a local override can silently fail with E401.
 3. **Language drift**: Without a declared stance on TypeScript, incremental `.ts` files may appear inconsistently alongside `.js` files, creating a half-migrated codebase that is harder to reason about than either pure option.
 4. **Tooling accumulation**: Side projects frequently acquire linters and formatters ad-hoc, each requiring configuration overhead that diverts from the project's actual goal.
 
@@ -49,7 +49,7 @@ This decision does not cover: the structure of source files (see ARCH ADRs), err
 - **DO** use `import`/`export` syntax in every source file — this is an ESM-only project
 - **DO** target Node.js >=18 APIs: use `fetch` (native), `fs/promises`, `path`, and `url` from the standard library without requiring polyfills
 - **DO** derive `__dirname` and `__filename` using `import.meta.url` + `fileURLToPath` from `node:url` in every file that needs them
-- **DO** keep `.npmrc` at the project root with `registry=https://registry.npmjs.org` — this overrides the global AWS CodeArtifact registry
+- **DO** keep `.npmrc` at the project root with `registry=https://registry.npmjs.org` — this overrides any global private registry
 - **DO** run `npm install --registry https://registry.npmjs.org` if `.npmrc` is missing or overridden in a CI or automation context
 - **DO** update this ADR before introducing a linter, formatter, or test runner
 
@@ -57,7 +57,7 @@ This decision does not cover: the structure of source files (see ARCH ADRs), err
 
 - **DON'T** use `require()` or `module.exports` anywhere in the codebase — CommonJS is prohibited
 - **DON'T** use `__dirname` or `__filename` as bare globals — they are not available in ESM; always derive them via `fileURLToPath(import.meta.url)`
-- **DON'T** run `npm install` without first verifying that `.npmrc` is present — the global registry override will cause E401 failures against the expired CodeArtifact token
+- **DON'T** run `npm install` without first verifying that `.npmrc` is present — a global private registry override can cause E401 failures
 - **DON'T** introduce `.ts` files without first authoring a TypeScript migration ADR and updating this document
 - **DON'T** add a linter, formatter, or test runner without updating this ADR — tooling decisions MUST be deliberate and documented
 
