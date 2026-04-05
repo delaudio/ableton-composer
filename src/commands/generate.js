@@ -92,8 +92,9 @@ export async function generateCommand(prompt, options) {
     const savedPaths     = [];
 
     for (let v = 1; v <= variationCount; v++) {
-      const label = variationCount > 1 ? `v${v}/${variationCount}` : '';
-      spinner.start(`Generating with ${modelLabel}${label ? `  [${label}]` : ''}...`);
+      const label        = variationCount > 1 ? `v${v}/${variationCount}` : '';
+      const providerLabel = options.provider === 'cli' ? 'Claude Code CLI' : modelLabel;
+      spinner.start(`Generating with ${providerLabel}${label ? `  [${label}]` : ''}...`);
 
       const song = await generateSong({
         prompt,
@@ -101,7 +102,8 @@ export async function generateCommand(prompt, options) {
         context,
         styleProfile,
         existingSong,
-        model: options.model,
+        model:    options.model,
+        provider: options.provider || 'api',
       });
 
       // Merge new sections into the existing song if --continue was used

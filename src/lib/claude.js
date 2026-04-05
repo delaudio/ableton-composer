@@ -33,14 +33,11 @@ function getClient() {
  * @param {string} [options.model]          - Claude model to use
  * @returns {Promise<object>}               - Parsed AbletonSong JSON
  */
-export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, model }) {
-  const client = getClient();
+export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, model, provider = 'api' }) {
   const systemPrompt = await readFile(join(PROMPTS_DIR, 'system.md'), 'utf-8');
-  const schema = await readFile(join(SCHEMA_DIR, 'song.schema.json'), 'utf-8');
+  const schema       = await readFile(join(SCHEMA_DIR, 'song.schema.json'), 'utf-8');
 
-  const modelToUse = model || process.env.CLAUDE_MODEL || 'claude-opus-4-5';
-
-  // Build the user message
+  // Build the user message (shared between both providers)
   const parts = [];
 
   parts.push(`## Available tracks in this Ableton set\n${trackNames.map(n => `- "${n}"`).join('\n')}`);
@@ -58,27 +55,69 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
   }
 
   parts.push(`## Request\n${prompt}`);
-
   parts.push(`## Full schema reference\n\`\`\`json\n${schema}\n\`\`\``);
 
   const userMessage = parts.join('\n\n');
 
-  const response = await client.messages.create({
-    model: modelToUse,
-    max_tokens: 16384,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: userMessage }],
+  // ── Provider: Anthropic SDK (default) ────────────────────────────────────
+  if (provider !== 'cli') {
+    const client     = getClient();
+    const modelToUse = model || process.env.CLAUDE_MODEL || 'claude-opus-4-5';
+
+    const response = await client.messages.create({
+      model: modelToUse,
+      max_tokens: 16384,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }],
+    });
+
+    return parseJsonResponse(response.content[0].text.trim());
+  }
+
+  // ── Provider: Claude Code CLI ─────────────────────────────────────────────
+  return generateWithClaudeCodeCLI(systemPrompt, userMessage);
+}
+
+async function generateWithClaudeCodeCLI(systemPrompt, userMessage) {
+  const { spawn } = await import('child_process');
+
+  // Combine system + user into a single prompt for the CLI.
+  // Claude Code -p flag reads the prompt argument; we pipe via stdin
+  // to avoid shell argument length limits.
+  const fullPrompt = `${systemPrompt}\n\n${userMessage}`;
+
+  return new Promise((resolve, reject) => {
+    const proc = spawn('claude', ['-p', '--output-format', 'text'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    let output = '';
+    let errOutput = '';
+
+    proc.stdin.write(fullPrompt);
+    proc.stdin.end();
+
+    proc.stdout.on('data', chunk => { output += chunk; });
+    proc.stderr.on('data', chunk => { errOutput += chunk; });
+
+    proc.on('error', err => reject(new Error(`claude CLI not found: ${err.message}. Is Claude Code installed?`)));
+
+    proc.on('close', code => {
+      if (code !== 0) {
+        reject(new Error(`claude CLI exited with code ${code}:\n${errOutput.slice(0, 300)}`));
+        return;
+      }
+      resolve(parseJsonResponse(output.trim()));
+    });
   });
+}
 
-  const raw = response.content[0].text.trim();
-
-  // Strip accidental markdown fences if the model adds them
+function parseJsonResponse(raw) {
   const jsonStr = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
-
   try {
     return JSON.parse(jsonStr);
   } catch (err) {
-    throw new Error(`Claude returned invalid JSON:\n${jsonStr.slice(0, 500)}\n\nParse error: ${err.message}`);
+    throw new Error(`Invalid JSON response:\n${jsonStr.slice(0, 500)}\n\nParse error: ${err.message}`);
   }
 }
 
