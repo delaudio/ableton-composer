@@ -24,8 +24,25 @@ import {
   slotIndexFromFilename,
 } from '../lib/storage.js';
 import { connect, disconnect, pushSong, pushClip, getTrackByName, getAbleton, setupLiveSet } from '../lib/ableton.js';
+import { humanizeSong, HUMANIZE_PROFILES } from '../lib/humanize.js';
 
 export async function pushCommand(fileOrName, options) {
+  // ── Special: list humanize profiles ────────────────────────────────────────
+  if (options.humanize === 'list' || (!fileOrName && options.humanize)) {
+    console.log(chalk.bold('\n  Humanize profiles:\n'));
+    for (const [name, p] of Object.entries(HUMANIZE_PROFILES)) {
+      console.log(`  ${chalk.cyan(name.padEnd(14))} ${p.description}`);
+      console.log(chalk.dim(`                 swing: ${p.swing}  timing: ±${p.timing}b  velocity: ±${Math.round(p.velocity * 100)}%`));
+    }
+    console.log('');
+    return;
+  }
+
+  if (!fileOrName) {
+    console.error(chalk.red('✗ Missing required argument: file'));
+    process.exit(1);
+  }
+
   const spinner = ora();
 
   try {
@@ -65,6 +82,26 @@ export async function pushCommand(fileOrName, options) {
         console.log(chalk.dim(`  Available: ${song.sections.map(s => s.name).join(', ')}`));
         process.exit(1);
       }
+    }
+
+    // ── Humanize ──────────────────────────────────────────────────────────────
+    if (options.humanize) {
+      const spec = options.humanize === true ? 'loose' : options.humanize;
+
+      // Allow JSON object as spec: --humanize '{"swing":0.6,"timing":0.02}'
+      let resolvedSpec = spec;
+      if (typeof spec === 'string' && spec.startsWith('{')) {
+        try { resolvedSpec = JSON.parse(spec); } catch {
+          console.error(chalk.red(`✗ Invalid JSON for --humanize: ${spec}`));
+          process.exit(1);
+        }
+      }
+
+      const beatsPerBar = parseInt((filteredSong.meta.time_signature || '4/4').split('/')[0], 10) || 4;
+      filteredSong = humanizeSong(filteredSong, resolvedSpec, beatsPerBar);
+
+      const profileName = typeof resolvedSpec === 'string' ? resolvedSpec : 'custom';
+      console.log(chalk.dim(`  Humanize: ${profileName}`));
     }
 
     // ── Dry run ───────────────────────────────────────────────────────────────

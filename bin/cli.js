@@ -47,12 +47,13 @@ program
 
 // ── push ──────────────────────────────────────────────────────────────────────
 program
-  .command('push <file>')
+  .command('push [file]')
   .description('Push a song JSON into the current Ableton Live set')
   .option('--overwrite',           'Replace existing clips in target slots')
   .option('--dry-run',             'Show what would be pushed without writing to Live')
   .option('--sections <names>',    'Only push specific sections (comma-separated, e.g. "intro,verse")')
   .option('--setup',               'Create missing MIDI tracks and scenes before pushing')
+  .option('--humanize [profile]',  'Apply humanization: tight, loose, swing, swing-heavy, vinyl, idm (default: loose). Use "list" to see all profiles.')
   .action(pushCommand);
 
 // ── arrange ───────────────────────────────────────────────────────────────────
