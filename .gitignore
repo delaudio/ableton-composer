@@ -13,6 +13,6 @@ mxls/*
 !mxls/.gitkeep
 profiles/*.json
 !profiles/.gitkeep
-presets/*.json
+presets/**/*.json
 !presets/.gitkeep
 .claude/
