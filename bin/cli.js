@@ -23,13 +23,13 @@ import { importMidiCommand } from '../src/commands/import-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
 import { snapshotCommand }  from '../src/commands/snapshot.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
-import { presetSaveCommand, presetLoadCommand, presetListCommand } from '../src/commands/preset.js';
+import { presetSaveCommand, presetLoadCommand, presetListCommand, presetAnalyzeCommand, presetGenerateCommand } from '../src/commands/preset.js';
 
 const program = new Command();
 
 program
   .name('ableton-composer')
-  .description('Generate and push MIDI content into Ableton Live using Claude AI')
+  .description('Generate and push MIDI content into Ableton Live using AI models')
   .version('0.1.0');
 
 // ── generate ─────────────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ program
   .option('-t, --tracks <names>',  'Comma-separated track names (e.g. "Bass,Drums,Chords,Lead")')
   .option('-L, --live-sync',       'Auto-detect track names from the open Ableton set')
   .option('-w, --weather',         'Fetch weather data and include it in the prompt context')
-  .option('-m, --model <model>',   'Claude model to use (overrides CLAUDE_MODEL env var)')
+  .option('-m, --model <model>',   'Model to use (overrides provider-specific env defaults)')
   .option('-n, --name <name>',     'Name hint for the saved filename')
   .option('-o, --output <path>',   'Save to a specific path instead of sets/')
   .option('-s, --style <path>',    'Style profile JSON to guide generation (from "analyze" command)')
@@ -48,7 +48,7 @@ program
   .option('-V, --variations <n>',  'Generate N variations and save each one', '1')
   .option('-S, --sections <n>',    'Total number of sections to generate')
   .option('--chunk-size <n>',      'Generate in chunks of N sections per API call (use with --sections)')
-  .option('--provider <name>',     'AI provider: "api" (Anthropic SDK, default) or "cli" (Claude Code CLI)')
+  .option('--provider <name>',     'AI provider: "api"/"anthropic", "openai", "codex", or "cli"/"claude-cli"')
   .option('--no-save',             'Print JSON to stdout without saving to disk')
   .action(generateCommand);
 
@@ -115,7 +115,11 @@ program
 program
   .command('analyze <targets...>')
   .description('Extract a style profile from one or more sets or a collection directory')
-  .option('--out <path>',   'Save profile to a specific path (default: profiles/<name>.json)')
+  .option('--out <path>',   'Save profile to a specific path instead of the hierarchical profiles/ tree')
+  .option('--scope <name>', 'Profile scope: song, album, artist, or collection')
+  .option('--artist <name>','Artist name for hierarchical profile output')
+  .option('--album <name>', 'Album name for hierarchical profile output')
+  .option('--song <name>',  'Song name for hierarchical profile output')
   .option('--print',        'Print JSON to stdout instead of saving')
   .action(analyzeCommand);
 
@@ -129,15 +133,15 @@ program
 // ── expand ────────────────────────────────────────────────────────────────────
 program
   .command('expand <file>')
-  .description('Add new accompaniment tracks to an existing set using Claude')
+  .description('Add new accompaniment tracks to an existing set using an AI provider')
   .requiredOption('--add <tracks>',       'Comma-separated track names to add, e.g. "Strings,Cello,Bass"')
-  .option('-s, --style <hint>',           'Style description to guide Claude, e.g. "orchestral ambient"')
+  .option('-s, --style <hint>',           'Style description to guide the model, e.g. "orchestral ambient"')
   .option('--sections <names>',           'Only expand specific sections (comma-separated)')
   .option('--overwrite',                  'Replace tracks that already exist in a section')
-  .option('--dry-run',                    'Show what would be added without calling Claude')
+  .option('--dry-run',                    'Show what would be added without calling the model')
   .option('-o, --out <path>',             'Save to a new file instead of updating the source')
-  .option('--provider <name>',            'AI provider: "api" (default) or "cli"')
-  .option('-m, --model <model>',          'Claude model override')
+  .option('--provider <name>',            'AI provider: "api"/"anthropic", "openai", "codex", or "cli"/"claude-cli"')
+  .option('-m, --model <model>',          'Model override')
   .action(expandCommand);
 
 // ── import-xml ────────────────────────────────────────────────────────────────
@@ -194,6 +198,23 @@ presetCmd
   .command('list')
   .description('List saved presets')
   .action(presetListCommand);
+
+presetCmd
+  .command('analyze <dir>')
+  .description('Analyze a preset collection and extract a parameter profile')
+  .option('-n, --name <name>',    'Profile name (defaults to directory name)')
+  .option('-o, --out <path>',     'Save profile to a specific path')
+  .action(presetAnalyzeCommand);
+
+presetCmd
+  .command('generate <profile> [style]')
+  .description('Generate new preset(s) from a profile using an AI provider')
+  .option('-n, --name <name>',       'Preset name')
+  .option('-o, --out <path>',        'Output path')
+  .option('-c, --count <n>',         'Number of variants to generate', '1')
+  .option('--provider <name>',       'AI provider: "api"/"anthropic", "openai", "codex", or "cli"/"claude-cli"')
+  .option('-m, --model <model>',     'Model override')
+  .action(presetGenerateCommand);
 
 // ── list ──────────────────────────────────────────────────────────────────────
 program

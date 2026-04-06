@@ -12,6 +12,7 @@ import { join } from 'path';
 import { writeFile } from 'fs/promises';
 import { loadSong } from '../lib/storage.js';
 import { analyzeSong, compareProfiles } from '../lib/analysis.js';
+import { loadStyleProfile } from '../lib/profiles.js';
 
 export async function compareCommand(sourceArg, generatedArg, options) {
   try {
@@ -37,21 +38,71 @@ export async function compareCommand(sourceArg, generatedArg, options) {
 async function loadProfile(target) {
   const abs = target.startsWith('/') ? target : join(process.cwd(), target);
 
-  // If it looks like a saved profile JSON (in profiles/ or ends with .json and
-  // has a _meta.source key), load it directly
+  // Saved profile or bundle JSON
+  if (target.endsWith('.json') || target.endsWith('bundle.json')) {
+    try {
+      const loaded = await loadStyleProfile(abs);
+      return normalizeComparableProfile(loaded.profile);
+    } catch {
+      try {
+        const { readFile } = await import('fs/promises');
+        const raw = await readFile(abs, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed._meta || parsed.bpm_range || parsed.key_consensus) {
+          return normalizeComparableProfile(parsed);
+        }
+      } catch {}
+    }
+  }
+
+  // If it's a raw song json, treat as set path and analyze on the fly
   if (target.endsWith('.json')) {
     try {
-      const { readFile } = await import('fs/promises');
-      const raw = await readFile(abs, 'utf-8');
-      const parsed = JSON.parse(raw);
-      // A style profile has _meta.source; a song JSON has meta.bpm
-      if (parsed._meta?.source !== undefined) return parsed;
-    } catch { /* fall through to loadSong */ }
+      const { song, filepath } = await loadSong(target);
+      return analyzeSong(song, filepath);
+    } catch {}
   }
 
   // Otherwise treat as a set path and analyze on the fly
   const { song, filepath } = await loadSong(target);
   return analyzeSong(song, filepath);
+}
+
+function normalizeComparableProfile(profile) {
+  if (profile?.bpm != null && profile?.key && profile?.arrangement?.track_presence) {
+    return profile;
+  }
+
+  const rhythmByTrack = profile?.rhythm?.notes_per_bar
+    ? profile.rhythm.notes_per_bar
+    : Object.fromEntries(
+      Object.entries(profile?.rhythm?.by_track ?? {}).map(([name, info]) => [name, info.notes_per_bar])
+    );
+
+  const pitchByTrack = profile?.pitch?.by_track ?? {};
+  const chordsByTrack = profile?.pitch?.chords_by_track ?? {};
+
+  return {
+    _meta: profile._meta,
+    bpm: profile?.bpm ?? profile?.bpm_range?.avg ?? null,
+    key: profile?.key ?? profile?.key_consensus ?? 'unknown',
+    structure: {
+      section_count: profile?.structure?.section_count ?? profile?.structure?.section_count_range?.avg ?? null,
+      bars_per_section: profile?.structure?.bars_per_section ?? profile?.structure?.bars_per_section_avg ?? null,
+    },
+    arrangement: {
+      track_presence: profile?.arrangement?.track_presence ?? {},
+      role_presence: profile?.arrangement?.role_presence ?? {},
+    },
+    rhythm: {
+      notes_per_bar: rhythmByTrack ?? {},
+      notes_per_bar_by_role: profile?.rhythm?.notes_per_bar_by_role ?? {},
+    },
+    pitch: {
+      by_track: pitchByTrack,
+      chords_by_track: chordsByTrack,
+    },
+  };
 }
 
 // ─── print ────────────────────────────────────────────────────────────────────
@@ -89,6 +140,28 @@ function printReport(r, srcLabel, genLabel) {
       const ratioStr = d.ratio != null ? chalk.dim(` ×${d.ratio.toFixed(2)}`) : '';
       const icon     = ratio >= 0.75 && ratio <= 1.33 ? chalk.green('✓') : ratio >= 0.5 ? chalk.yellow('~') : chalk.red('✗');
       console.log(`    ${icon} ${t.padEnd(12)} ${d.source} → ${d.generated}${ratioStr}`);
+    }
+  }
+
+  const rhythmRoles = Object.keys(r.rhythm_roles ?? {});
+  if (rhythmRoles.length > 0) {
+    console.log(chalk.cyan('\n  Rhythm by Role  (notes/bar: source → generated)'));
+    for (const [role, d] of Object.entries(r.rhythm_roles)) {
+      const ratio = d.ratio ?? 0;
+      const ratioStr = d.ratio != null ? chalk.dim(` ×${d.ratio.toFixed(2)}`) : '';
+      const icon = ratio >= 0.75 && ratio <= 1.33 ? chalk.green('✓') : ratio >= 0.5 ? chalk.yellow('~') : chalk.red('✗');
+      console.log(`    ${icon} ${role.padEnd(12)} ${d.source} → ${d.generated}${ratioStr}`);
+    }
+  }
+
+  const rolePresence = Object.keys(r.role_presence ?? {});
+  if (rolePresence.length > 0) {
+    console.log(chalk.cyan('\n  Role Presence  (% sections active: source → generated)'));
+    for (const [role, d] of Object.entries(r.role_presence)) {
+      const deltaAbs = Math.abs(d.delta);
+      const icon = deltaAbs <= 20 ? chalk.green('✓') : deltaAbs <= 40 ? chalk.yellow('~') : chalk.red('✗');
+      const deltaStr = chalk.dim(`  (${d.delta > 0 ? '+' : ''}${d.delta}%)`);
+      console.log(`    ${icon} ${role.padEnd(12)} ${d.source}% → ${d.generated}%${deltaStr}`);
     }
   }
 

@@ -21,6 +21,7 @@ import { writeFile, readFile, readdir, stat, mkdir } from 'fs/promises';
 import { join, dirname, basename, relative } from 'path';
 import { fileURLToPath } from 'url';
 import { connect, disconnect } from '../lib/ableton.js';
+import { generatePresetObject, getProviderLabel, normalizeProvider } from '../lib/ai.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const PRESETS_DIR = join(__dirname, '../../presets');
@@ -584,4 +585,320 @@ function slugify(str) {
 function renderBar(value, width = 16) {
   const filled = Math.round(Math.max(0, Math.min(1, value)) * width);
   return chalk.cyan('█'.repeat(filled)) + chalk.dim('░'.repeat(width - filled));
+}
+
+// ─── analyze ──────────────────────────────────────────────────────────────────
+
+const PROFILES_DIR = join(__dirname, '../../profiles/presets');
+
+// Parameters to skip when building the generation prompt (system / MIDI internals)
+const SKIP_IN_PROMPT = /^(MPE_|VST3_Ctrl|Reserved)/;
+
+/**
+ * Compute per-parameter statistics across a collection of preset files.
+ * Returns { paramName: { mean, std, min, max, variance, values[] } }
+ */
+function computeStats(presets) {
+  const paramNames = [...new Set(presets.flatMap(p => Object.keys(p.parameters || {})))];
+  const stats = {};
+
+  for (const name of paramNames) {
+    const vals = presets.map(p => p.parameters?.[name]).filter(v => typeof v === 'number');
+    if (vals.length === 0) continue;
+
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const std  = Math.sqrt(vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length);
+    const min  = Math.min(...vals);
+    const max  = Math.max(...vals);
+
+    let variance = 'high';
+    if (std < 0.02)  variance = 'fixed';
+    else if (std < 0.1)  variance = 'low';
+    else if (std < 0.25) variance = 'medium';
+
+    stats[name] = { mean: +mean.toFixed(4), std: +std.toFixed(4), min: +min.toFixed(4), max: +max.toFixed(4), variance };
+  }
+
+  return stats;
+}
+
+export async function presetAnalyzeCommand(dirArg, options) {
+  try {
+    // ── Resolve directory ─────────────────────────────────────────────────────
+    const absDir = dirArg.startsWith('/')
+      ? dirArg
+      : join(process.cwd(), dirArg);
+
+    let info;
+    try { info = await stat(absDir); } catch {
+      throw new Error(`Directory not found: ${absDir}`);
+    }
+    if (!info.isDirectory()) throw new Error(`Not a directory: ${absDir}`);
+
+    const files = (await readdir(absDir)).filter(f => f.endsWith('.json'));
+    if (files.length === 0) throw new Error(`No JSON preset files found in ${absDir}`);
+
+    // ── Load all presets ──────────────────────────────────────────────────────
+    const presets = await Promise.all(
+      files.map(async f => {
+        const raw = await readFile(join(absDir, f), 'utf-8');
+        return JSON.parse(raw);
+      })
+    );
+
+    // Validate: all presets should be for the same device
+    const devices = [...new Set(presets.map(p => p.device).filter(Boolean))];
+    const device  = devices[0] || 'Unknown';
+    const brand   = presets.find(p => p.brand)?.brand || detectBrand(device).brand || 'Unknown';
+
+    if (devices.length > 1) {
+      console.log(chalk.yellow(`  ⚠ Mixed devices: ${devices.join(', ')}. Analyzing as "${device}".`));
+    }
+
+    // ── Compute stats ─────────────────────────────────────────────────────────
+    const paramStats = computeStats(presets);
+    const paramCount = Object.keys(paramStats).length;
+    const category   = options.name || basename(absDir);
+
+    const profile = {
+      _meta: {
+        type:         'preset-profile',
+        device,
+        brand,
+        category,
+        source_dir:   relative(process.cwd(), absDir),
+        preset_count: presets.length,
+        param_count:  paramCount,
+        created_at:   new Date().toISOString(),
+      },
+      parameters: paramStats,
+    };
+
+    // ── Save ──────────────────────────────────────────────────────────────────
+    let outPath;
+    if (options.out) {
+      outPath = options.out;
+    } else {
+      const brandSlug  = slugify(brand);
+      const deviceSlug = slugify(detectBrand(device).deviceDisplay || device);
+      const catSlug    = slugify(category);
+      const profileDir = join(PROFILES_DIR, brandSlug, deviceSlug);
+      await mkdir(profileDir, { recursive: true });
+      outPath = join(profileDir, `${catSlug}.json`);
+    }
+
+    await writeFile(outPath, JSON.stringify(profile, null, 2), 'utf-8');
+
+    // ── Summary ───────────────────────────────────────────────────────────────
+    const byVariance = Object.entries(paramStats).reduce((acc, [, s]) => {
+      acc[s.variance] = (acc[s.variance] || 0) + 1;
+      return acc;
+    }, {});
+
+    console.log('');
+    console.log(chalk.bold(`  ${brand}  /  ${device}  —  ${category}`));
+    console.log(chalk.dim(`  ${presets.length} presets  |  ${paramCount} params`));
+    console.log('');
+    console.log(chalk.dim(`  fixed: ${byVariance.fixed || 0}  low: ${byVariance.low || 0}  medium: ${byVariance.medium || 0}  high: ${byVariance.high || 0}`));
+    console.log('');
+
+    // Show top variable params
+    const topVar = Object.entries(paramStats)
+      .filter(([n, s]) => s.variance !== 'fixed' && !SKIP_IN_PROMPT.test(n))
+      .sort((a, b) => b[1].std - a[1].std)
+      .slice(0, 12);
+
+    console.log(chalk.dim('  Most variable parameters:'));
+    for (const [name, s] of topVar) {
+      const bar = renderBar(s.mean, 14);
+      console.log(`    ${chalk.dim(name.padEnd(28))} ${bar}  ±${s.std.toFixed(2)}`);
+    }
+
+    console.log('');
+    console.log(chalk.green(`✓ Profile saved → ${relative(process.cwd(), outPath)}`));
+    console.log(chalk.dim(`  Generate: ableton-composer preset generate "${relative(process.cwd(), outPath)}" "your style"`));
+
+  } catch (err) {
+    console.error(chalk.red(`✗ ${err.message}`));
+    process.exit(1);
+  }
+}
+
+// ─── generate (from profile) ──────────────────────────────────────────────────
+
+export async function presetGenerateCommand(profileArg, stylePrompt, options) {
+  const spinner = ora();
+
+  try {
+    // ── Load profile ──────────────────────────────────────────────────────────
+    const absProfile = profileArg.startsWith('/')
+      ? profileArg
+      : join(process.cwd(), profileArg);
+
+    const profileRaw = await readFile(absProfile, 'utf-8').catch(() => {
+      throw new Error(`Profile not found: ${absProfile}. Run \`preset analyze <dir>\` first.`);
+    });
+    const profile = JSON.parse(profileRaw);
+    const { _meta, parameters: paramStats } = profile;
+
+    const count         = Math.max(1, parseInt(options.count, 10) || 1);
+    const provider      = normalizeProvider(options.provider || 'api');
+    const providerLabel = getProviderLabel(provider, options.model);
+
+    console.log('');
+    console.log(chalk.bold(`  ${_meta.brand}  /  ${_meta.device}  —  ${_meta.category}`));
+    console.log(chalk.dim(`  Profile: ${_meta.preset_count} reference presets  |  style: "${stylePrompt || 'default'}"`));
+    console.log('');
+
+    // ── Split params: fixed (auto) vs variable (model-generated) ─────────────
+    const fixedParams    = {};  // param → value (always the mean)
+    const variableParams = {};  // param → { mean, min, max, variance }
+
+    for (const [name, s] of Object.entries(paramStats)) {
+      if (s.variance === 'fixed' || SKIP_IN_PROMPT.test(name) || shouldSkip(name, false)) {
+        fixedParams[name] = s.mean;
+      } else {
+        variableParams[name] = s;
+      }
+    }
+
+    // ── Build prompt ──────────────────────────────────────────────────────────
+    const systemPrompt = await readFile(
+      join(__dirname, '../../prompts/preset-generate.md'), 'utf-8'
+    );
+
+    const paramTable = Object.entries(variableParams)
+      .sort((a, b) => b[1].std - a[1].std)
+      .map(([name, s]) => {
+        const vLabel = s.variance.padEnd(6);
+        return `  ${name.padEnd(32)} mean=${s.mean.toFixed(3)}  min=${s.min.toFixed(3)}  max=${s.max.toFixed(3)}  variance=${vLabel}`;
+      })
+      .join('\n');
+
+    const allParamNames = Object.keys(paramStats)
+      .filter(n => !SKIP_IN_PROMPT.test(n) && !shouldSkip(n, false));
+
+    const userMessage = [
+      `## Device`,
+      `${_meta.device} (${_meta.brand}) — ${_meta.category} preset`,
+      '',
+      `## Reference collection`,
+      `${_meta.preset_count} presets analyzed from: ${_meta.source_dir}`,
+      '',
+      `## Variable parameter profile`,
+      `(${Object.keys(variableParams).length} parameters — these are the ones you should tune for the sound character)`,
+      '',
+      paramTable,
+      '',
+      `## Fixed parameters (set automatically — do NOT include these in your output)`,
+      Object.entries(fixedParams)
+        .filter(([n]) => !SKIP_IN_PROMPT.test(n))
+        .slice(0, 20)
+        .map(([n, v]) => `  ${n}: ${v}`)
+        .join('\n'),
+      '',
+      `## Style request`,
+      stylePrompt || `Create a ${_meta.category} preset in the style of the reference collection.`,
+      '',
+      `## Parameters to generate`,
+      `Output values for ONLY these ${Object.keys(variableParams).length} variable parameters:`,
+      Object.keys(variableParams).map(n => `  - ${n}`).join('\n'),
+    ].join('\n');
+
+    // ── Call model ────────────────────────────────────────────────────────────
+    const savedPaths = [];
+
+    for (let i = 1; i <= count; i++) {
+      const label = count > 1 ? ` [${i}/${count}]` : '';
+      spinner.start(`Generating preset${label} with ${providerLabel}...`);
+
+      // ── Call provider ──────────────────────────────────────────────────────
+      let generated;
+      try {
+        generated = await generatePresetObject({
+          systemPrompt,
+          userMessage,
+          model: options.model,
+          provider,
+        });
+      } catch (e) {
+        spinner.fail(`Failed to generate preset: ${e.message}`);
+        continue;
+      }
+
+      // ── Merge fixed + generated parameters ─────────────────────────────────
+      const parameters = {
+        ...fixedParams,
+        ...generated.parameters,
+      };
+
+      const presetName = options.name
+        ? (count > 1 ? `${options.name} ${i}` : options.name)
+        : (generated.name || `generated-${_meta.category}-${i}`);
+
+      const preset = {
+        name:         presetName,
+        device:       _meta.device,
+        device_class: _meta.device,
+        device_type:  'instrument',
+        brand:        _meta.brand,
+        category:     _meta.category,
+        generated:    true,
+        style_prompt: stylePrompt || null,
+        source_profile: relative(process.cwd(), absProfile),
+        created_at:   new Date().toISOString(),
+        parameters,
+      };
+
+      // ── Save ────────────────────────────────────────────────────────────────
+      let outPath;
+      if (options.out) {
+        outPath = count > 1
+          ? options.out.replace(/\.json$/, `${i}.json`)
+          : options.out;
+      } else {
+        const brandSlug  = slugify(_meta.brand);
+        const deviceSlug = slugify(detectBrand(_meta.device).deviceDisplay || _meta.device);
+        const catSlug    = slugify(_meta.category);
+        const outDir     = join(PRESETS_DIR, brandSlug, deviceSlug, catSlug);
+        await mkdir(outDir, { recursive: true });
+        outPath = join(outDir, `${slugify(presetName)}.json`);
+      }
+
+      await writeFile(outPath, JSON.stringify(preset, null, 2), 'utf-8');
+      savedPaths.push({ outPath, preset });
+
+      const varCount = Object.keys(generated.parameters || {}).length;
+      spinner.succeed(`Generated "${presetName}"${label}  (${varCount} variable params set)`);
+    }
+
+    // ── Print results ─────────────────────────────────────────────────────────
+    console.log('');
+    for (const { outPath, preset } of savedPaths) {
+      console.log(chalk.green(`✓ ${preset.name}`));
+      console.log(chalk.dim(`  ${relative(process.cwd(), outPath)}`));
+
+      // Show top params that differ most from the profile mean
+      const interesting = Object.entries(preset.parameters)
+        .filter(([n]) => variableParams[n] && !SKIP_IN_PROMPT.test(n))
+        .map(([n, v]) => ({ n, v, diff: Math.abs(v - variableParams[n].mean) }))
+        .sort((a, b) => b.diff - a.diff)
+        .slice(0, 8);
+
+      for (const { n, v } of interesting) {
+        const s = variableParams[n];
+        console.log(
+          `  ${chalk.dim(n.padEnd(28))} ${renderBar(v, 14)}` +
+          chalk.dim(`  ${v.toFixed(3)}  (mean ${s.mean.toFixed(3)})`)
+        );
+      }
+
+      console.log('');
+      console.log(chalk.dim(`  Load: ableton-composer preset load ${relative(process.cwd(), outPath)} --track "Your Track"`));
+    }
+
+  } catch (err) {
+    spinner.fail(err.message);
+    process.exit(1);
+  }
 }

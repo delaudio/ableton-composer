@@ -10,12 +10,12 @@
 
 import chalk from 'chalk';
 import ora from 'ora';
-import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { generateSong } from '../lib/claude.js';
+import { generateSong, getProviderLabel, normalizeProvider } from '../lib/ai.js';
 import { saveSetDirectory, loadSong, SETS_DIR, slugify } from '../lib/storage.js';
 import { fetchContext } from '../lib/fetchers/index.js';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
+import { loadStyleProfile } from '../lib/profiles.js';
 
 export async function generateCommand(prompt, options) {
   const spinner = ora();
@@ -35,11 +35,14 @@ export async function generateCommand(prompt, options) {
       const absStyle = options.style.startsWith('/')
         ? options.style
         : join(process.cwd(), options.style);
-      const raw = await readFile(absStyle, 'utf-8').catch(() => {
+      const loaded = await loadStyleProfile(absStyle).catch(() => {
         throw new Error(`Style profile not found: ${absStyle}`);
       });
-      styleProfile = JSON.parse(raw);
-      console.log(chalk.dim(`Style profile: ${styleProfile._meta?.source || absStyle}`));
+      styleProfile = loaded.profile;
+      const label = loaded.bundle
+        ? `${loaded.bundle.scope || 'bundle'} bundle -> ${loaded.resolvedPath} (${styleProfile._meta?.prompt_ready ? 'prompt profile' : 'merged profile'})`
+        : (styleProfile._meta?.source || loaded.resolvedPath);
+      console.log(chalk.dim(`Style profile: ${label}`));
     }
 
     // ── 1. Resolve track names ───────────────────────────────────────────────
@@ -71,7 +74,7 @@ export async function generateCommand(prompt, options) {
     }
 
     if (trackNames.length === 0) {
-      console.log(chalk.yellow('⚠ No track names provided. Claude will suggest track names — make sure your Live set matches them.'));
+      console.log(chalk.yellow('⚠ No track names provided. The selected model will suggest track names — make sure your Live set matches them.'));
       console.log(chalk.dim('  Tip: use --tracks "Bass,Drums,Chords,Lead" or --live-sync to auto-detect.'));
     }
 
@@ -90,12 +93,13 @@ export async function generateCommand(prompt, options) {
     const variationCount = Math.max(1, parseInt(options.variations, 10) || 1);
     const totalSections  = options.sections ? parseInt(options.sections, 10) : null;
     const chunkSize      = options.chunkSize ? parseInt(options.chunkSize, 10) : null;
-    const modelLabel     = options.model || process.env.CLAUDE_MODEL || 'claude-opus-4-5';
+    const provider       = normalizeProvider(options.provider || 'api');
+    const modelLabel     = getProviderLabel(provider, options.model);
     const savedPaths     = [];
 
     for (let v = 1; v <= variationCount; v++) {
       const label         = variationCount > 1 ? `v${v}/${variationCount}` : '';
-      const providerLabel = options.provider === 'cli' ? 'Claude Code CLI' : modelLabel;
+      const providerLabel = provider === 'claude-cli' ? 'Claude Code CLI' : modelLabel;
 
       let song;
 
@@ -124,7 +128,7 @@ export async function generateCommand(prompt, options) {
             styleProfile: chunk === 0 ? styleProfile : null,
             existingSong: accumulated,
             model:        options.model,
-            provider:     options.provider || 'api',
+            provider,
           });
 
           if (!accumulated) {
@@ -161,7 +165,7 @@ export async function generateCommand(prompt, options) {
           styleProfile,
           existingSong,
           model:        options.model,
-          provider:     options.provider || 'api',
+          provider,
         });
 
         if (existingSong) {

@@ -1,7 +1,7 @@
 {
   "name": "ableton-composer",
   "version": "0.1.0",
-  "description": "CLI to generate and push MIDI content into Ableton Live using Claude AI",
+  "description": "CLI to generate and push MIDI content into Ableton Live using AI models",
   "type": "module",
   "license": "MIT",
   "author": "Federico Del Gaudio <federico.delgaudio@gmail.com>",
@@ -11,6 +11,8 @@
     "midi",
     "claude",
     "anthropic",
+    "openai",
+    "codex",
     "ai",
     "music",
     "music-generation",
@@ -38,6 +40,7 @@
     "dotenv": "^16.4.5",
     "fast-xml-parser": "^5.5.10",
     "fflate": "^0.8.2",
+    "openai": "^6.6.0",
     "ora": "^8.0.1",
     "zod": "^3.23.8"
   },

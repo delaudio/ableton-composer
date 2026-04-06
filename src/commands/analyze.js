@@ -12,7 +12,8 @@ import chalk from 'chalk';
 import { writeFile, readdir } from 'fs/promises';
 import { join, resolve } from 'path';
 import { loadSong, isSetDirectory } from '../lib/storage.js';
-import { analyzeSong, aggregateProfiles } from '../lib/analysis.js';
+import { analyzeSong, aggregateProfiles, analyzeHarmony, aggregateHarmonyProfiles, analyzeRhythm, aggregateRhythmProfiles, analyzeArrangement, aggregateArrangementProfiles } from '../lib/analysis.js';
+import { enrichProfileMetadata, saveProfileSetWithBundle } from '../lib/profiles.js';
 
 export async function analyzeCommand(targets, options) {
   try {
@@ -50,10 +51,44 @@ export async function analyzeCommand(targets, options) {
 
 async function analyzeSingleSet(target, absTarget, options) {
   const { song, filepath } = await loadSong(target);
-  const profile = analyzeSong(song, filepath);
+  const profile = enrichProfileMetadata(analyzeSong(song, filepath), {
+    scope: options.scope || 'song',
+    domain: 'core',
+    artist: options.artist || null,
+    album: options.album || null,
+    song: options.song || target.replace(/.*\//, '').replace(/\.json$/, ''),
+    sourcePaths: [filepath],
+  });
+  const harmonyProfile = enrichProfileMetadata(analyzeHarmony(song, filepath), {
+    scope: options.scope || 'song',
+    domain: 'harmony',
+    artist: options.artist || null,
+    album: options.album || null,
+    song: options.song || target.replace(/.*\//, '').replace(/\.json$/, ''),
+    sourcePaths: [filepath],
+  });
+  const rhythmProfile = enrichProfileMetadata(analyzeRhythm(song, filepath), {
+    scope: options.scope || 'song',
+    domain: 'rhythm',
+    artist: options.artist || null,
+    album: options.album || null,
+    song: options.song || target.replace(/.*\//, '').replace(/\.json$/, ''),
+    sourcePaths: [filepath],
+  });
+  const arrangementProfile = enrichProfileMetadata(analyzeArrangement(song, filepath), {
+    scope: options.scope || 'song',
+    domain: 'arrangement',
+    artist: options.artist || null,
+    album: options.album || null,
+    song: options.song || target.replace(/.*\//, '').replace(/\.json$/, ''),
+    sourcePaths: [filepath],
+  });
 
   printProfile(profile);
-  await saveIfRequested(profile, options, target);
+  printHarmonyProfile(harmonyProfile);
+  printRhythmProfile(rhythmProfile);
+  printArrangementProfile(arrangementProfile);
+  await saveIfRequested({ core: profile, harmony: harmonyProfile, rhythm: rhythmProfile, arrangement: arrangementProfile }, options, target);
 }
 
 // ─── collection ───────────────────────────────────────────────────────────────
@@ -87,9 +122,82 @@ async function analyzeCollection(absTarget, subDirs, options) {
   }
 
   console.log('');
-  const aggregate = aggregateProfiles(profiles);
+  const aggregate = enrichProfileMetadata(aggregateProfiles(profiles), {
+    scope: options.scope || 'album',
+    domain: 'core',
+    artist: options.artist || null,
+    album: options.album || absTarget.replace(/.*\//, ''),
+    song: null,
+    sourcePaths: profiles.map(p => p._meta?.source).filter(Boolean),
+  });
+  const aggregateHarmony = enrichProfileMetadata(aggregateHarmonyProfiles(
+    await Promise.all(
+      subDirs
+        .filter(Boolean)
+        .map(async entry => {
+          const setPath = join(absTarget, entry.name);
+          const isSet = await isSetDirectory(setPath).catch(() => false);
+          if (!isSet) return null;
+          const relPath = join(absTarget, entry.name);
+          const { song, filepath } = await loadSong(relPath);
+          return analyzeHarmony(song, filepath);
+        })
+    ).then(items => items.filter(Boolean))
+  ), {
+    scope: options.scope || 'album',
+    domain: 'harmony',
+    artist: options.artist || null,
+    album: options.album || absTarget.replace(/.*\//, ''),
+    song: null,
+    sourcePaths: profiles.map(p => p._meta?.source).filter(Boolean),
+  });
+  const aggregateRhythm = enrichProfileMetadata(aggregateRhythmProfiles(
+    await Promise.all(
+      subDirs
+        .filter(Boolean)
+        .map(async entry => {
+          const setPath = join(absTarget, entry.name);
+          const isSet = await isSetDirectory(setPath).catch(() => false);
+          if (!isSet) return null;
+          const relPath = join(absTarget, entry.name);
+          const { song, filepath } = await loadSong(relPath);
+          return analyzeRhythm(song, filepath);
+        })
+    ).then(items => items.filter(Boolean))
+  ), {
+    scope: options.scope || 'album',
+    domain: 'rhythm',
+    artist: options.artist || null,
+    album: options.album || absTarget.replace(/.*\//, ''),
+    song: null,
+    sourcePaths: profiles.map(p => p._meta?.source).filter(Boolean),
+  });
+  const aggregateArrangement = enrichProfileMetadata(aggregateArrangementProfiles(
+    await Promise.all(
+      subDirs
+        .filter(Boolean)
+        .map(async entry => {
+          const setPath = join(absTarget, entry.name);
+          const isSet = await isSetDirectory(setPath).catch(() => false);
+          if (!isSet) return null;
+          const relPath = join(absTarget, entry.name);
+          const { song, filepath } = await loadSong(relPath);
+          return analyzeArrangement(song, filepath);
+        })
+    ).then(items => items.filter(Boolean))
+  ), {
+    scope: options.scope || 'album',
+    domain: 'arrangement',
+    artist: options.artist || null,
+    album: options.album || absTarget.replace(/.*\//, ''),
+    song: null,
+    sourcePaths: profiles.map(p => p._meta?.source).filter(Boolean),
+  });
   printAggregateProfile(aggregate);
-  await saveIfRequested(aggregate, options, absTarget);
+  printHarmonyProfile(aggregateHarmony);
+  printRhythmProfile(aggregateRhythm);
+  printArrangementProfile(aggregateArrangement);
+  await saveIfRequested({ core: aggregate, harmony: aggregateHarmony, rhythm: aggregateRhythm, arrangement: aggregateArrangement }, options, absTarget);
 }
 
 // ─── multiple explicit targets ───────────────────────────────────────────────
@@ -117,7 +225,59 @@ async function analyzeMultipleTargets(targets, options) {
   }
 
   console.log('');
-  const aggregate = aggregateProfiles(profiles);
+  const aggregate = enrichProfileMetadata(aggregateProfiles(profiles), {
+    scope: options.scope || 'collection',
+    domain: 'core',
+    artist: options.artist || null,
+    album: options.album || null,
+    song: null,
+    sourcePaths: profiles.map(p => p._meta?.source).filter(Boolean),
+  });
+  const harmonyProfiles = [];
+  for (const target of targets) {
+    try {
+      const { song, filepath } = await loadSong(target);
+      harmonyProfiles.push(analyzeHarmony(song, filepath));
+    } catch {}
+  }
+  const aggregateHarmony = enrichProfileMetadata(aggregateHarmonyProfiles(harmonyProfiles), {
+    scope: options.scope || 'collection',
+    domain: 'harmony',
+    artist: options.artist || null,
+    album: options.album || null,
+    song: null,
+    sourcePaths: profiles.map(p => p._meta?.source).filter(Boolean),
+  });
+  const rhythmProfiles = [];
+  for (const target of targets) {
+    try {
+      const { song, filepath } = await loadSong(target);
+      rhythmProfiles.push(analyzeRhythm(song, filepath));
+    } catch {}
+  }
+  const aggregateRhythm = enrichProfileMetadata(aggregateRhythmProfiles(rhythmProfiles), {
+    scope: options.scope || 'collection',
+    domain: 'rhythm',
+    artist: options.artist || null,
+    album: options.album || null,
+    song: null,
+    sourcePaths: profiles.map(p => p._meta?.source).filter(Boolean),
+  });
+  const arrangementProfiles = [];
+  for (const target of targets) {
+    try {
+      const { song, filepath } = await loadSong(target);
+      arrangementProfiles.push(analyzeArrangement(song, filepath));
+    } catch {}
+  }
+  const aggregateArrangement = enrichProfileMetadata(aggregateArrangementProfiles(arrangementProfiles), {
+    scope: options.scope || 'collection',
+    domain: 'arrangement',
+    artist: options.artist || null,
+    album: options.album || null,
+    song: null,
+    sourcePaths: profiles.map(p => p._meta?.source).filter(Boolean),
+  });
 
   // Use a combined label for the default output filename
   const label = targets
@@ -126,7 +286,10 @@ async function analyzeMultipleTargets(targets, options) {
     .slice(0, 60);
 
   printAggregateProfile(aggregate);
-  await saveIfRequested(aggregate, options, label);
+  printHarmonyProfile(aggregateHarmony);
+  printRhythmProfile(aggregateRhythm);
+  printArrangementProfile(aggregateArrangement);
+  await saveIfRequested({ core: aggregate, harmony: aggregateHarmony, rhythm: aggregateRhythm, arrangement: aggregateArrangement }, options, label);
 }
 
 // ─── output helpers ───────────────────────────────────────────────────────────
@@ -220,20 +383,97 @@ function printAggregateProfile(p) {
   console.log('');
 }
 
-async function saveIfRequested(profile, options, fallbackTarget) {
+function printHarmonyProfile(profile) {
+  const h = profile?.harmony;
+  if (!h) return;
+
+  console.log(chalk.cyan('  Harmony'));
+  console.log(`    Harmonic rhythm: ${h.harmonic_rhythm_avg ?? 0} changes/bar`);
+  if ((h.top_chords ?? []).length > 0) {
+    console.log(`    Top chords:      ${chalk.dim(h.top_chords.slice(0, 5).map(entry => `${entry.value}×${entry.count}`).join('  '))}`);
+  }
+  if ((h.top_progressions ?? []).length > 0) {
+    console.log(`    Progressions:    ${chalk.dim(h.top_progressions.slice(0, 5).map(entry => `${entry.value}×${entry.count}`).join('  '))}`);
+  }
+  if ((h.top_bass_root_motion ?? []).length > 0) {
+    console.log(`    Bass motion:     ${chalk.dim(h.top_bass_root_motion.slice(0, 5).map(entry => `${entry.value}×${entry.count}`).join('  '))}`);
+  }
+  console.log('');
+}
+
+function printRhythmProfile(profile) {
+  const r = profile?.rhythm;
+  if (!r) return;
+
+  console.log(chalk.cyan('  Rhythm fingerprint'));
+  console.log(`    Avg section density: ${r.avg_section_density ?? 0} notes/bar`);
+
+  const trackEntries = Object.entries(r.by_track ?? {}).slice(0, 6);
+  for (const [track, info] of trackEntries) {
+    const topSteps = (info.onset_histogram_16 ?? [])
+      .map((value, index) => ({ index, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 4)
+      .map(entry => entry.index)
+      .join(', ');
+    const dominantPatterns = (info.dominant_patterns_16 ?? [])
+      .slice(0, 2)
+      .map(entry => `${entry.value}×${entry.count}`)
+      .join('  ');
+    console.log(`    ${track.padEnd(12)} npb ${String(info.notes_per_bar ?? 0).padEnd(4)}  sync ${String(info.syncopation ?? 0).padEnd(4)}  top steps [${topSteps}]${dominantPatterns ? `  patterns ${chalk.dim(dominantPatterns)}` : ''}`);
+  }
+  console.log('');
+}
+
+function printArrangementProfile(profile) {
+  const a = profile?.arrangement;
+  if (!a) return;
+
+  console.log(chalk.cyan('  Arrangement fingerprint'));
+  if (a.avg_active_tracks_per_section != null) {
+    console.log(`    Avg active tracks/section: ${a.avg_active_tracks_per_section}`);
+  }
+  if (a.avg_section_energy != null) {
+    console.log(`    Avg section energy:        ${a.avg_section_energy}`);
+  }
+
+  const entryOrder = Object.entries(a.entry_order ?? {}).slice(0, 8);
+  for (const [track, entry] of entryOrder) {
+    const value = entry.first_section_name
+      ? `${entry.first_section_name} (#${entry.first_section_index})`
+      : entry.avg_first_section_index != null
+        ? `avg #${entry.avg_first_section_index}`
+        : 'n/a';
+    console.log(`    ${track.padEnd(12)} enters ${value}`);
+  }
+
+  if ((a.top_layer_combinations ?? []).length > 0) {
+    console.log(`    Layer combos: ${chalk.dim(a.top_layer_combinations.slice(0, 4).map(entry => `${entry.value}×${entry.count}`).join('  '))}`);
+  }
+  console.log('');
+}
+
+async function saveIfRequested(profileSet, options, fallbackTarget) {
+  const coreProfile = profileSet.core;
   if (!options.out && !options.print) {
-    // Default: save to profiles/ directory
-    const slug = fallbackTarget
-      .replace(/.*\//, '')
-      .replace(/\.json$/, '')
-      .replace(/[^a-z0-9_-]/gi, '-')
-      .toLowerCase();
-    const outPath = join(process.cwd(), 'profiles', `${slug}.json`);
-    const { mkdir } = await import('fs/promises');
-    await mkdir(join(process.cwd(), 'profiles'), { recursive: true });
-    await writeFile(outPath, JSON.stringify(profile, null, 2), 'utf-8');
-    console.log(chalk.green(`✓ Profile saved to ${outPath}`));
-    console.log(chalk.dim('  Use with: ableton-composer generate "<prompt>" --style ' + outPath));
+    const { paths, bundlePath } = await saveProfileSetWithBundle({
+      profiles: profileSet,
+      options,
+      fallbackTarget: fallbackTarget
+        .replace(/.*\//, '')
+        .replace(/\.json$/, ''),
+      defaultScope: coreProfile._meta?.scope || 'song',
+      writeBundle: true,
+    });
+    for (const [domain, path] of Object.entries(paths)) {
+      console.log(chalk.green(`✓ ${domain[0].toUpperCase() + domain.slice(1)} profile saved to ${path}`));
+    }
+    if (bundlePath) {
+      console.log(chalk.green(`✓ Bundle saved to ${bundlePath}`));
+      console.log(chalk.dim('  Use with: ableton-composer generate "<prompt>" --style ' + bundlePath));
+    } else {
+      console.log(chalk.dim('  Use with: ableton-composer generate "<prompt>" --style ' + paths.core));
+    }
     return;
   }
 
@@ -241,11 +481,11 @@ async function saveIfRequested(profile, options, fallbackTarget) {
     const outPath = options.out.startsWith('/') ? options.out : join(process.cwd(), options.out);
     const { mkdir } = await import('fs/promises');
     await mkdir(outPath.replace(/\/[^/]+$/, ''), { recursive: true });
-    await writeFile(outPath, JSON.stringify(profile, null, 2), 'utf-8');
-    console.log(chalk.green(`✓ Profile saved to ${outPath}`));
+    await writeFile(outPath, JSON.stringify(coreProfile, null, 2), 'utf-8');
+    console.log(chalk.green(`✓ Core profile saved to ${outPath}`));
   }
 
   if (options.print) {
-    console.log(JSON.stringify(profile, null, 2));
+    console.log(JSON.stringify(coreProfile, null, 2));
   }
 }

@@ -54,9 +54,25 @@ export function detectKey(pitchClassCounts) {
 // ── Track classification ──────────────────────────────────────────────────────
 
 const DRUM_TRACK_NAMES = /^(drums?|dr|kick|snare|perc|percussion|hh|hihat|hi.hat)$/i;
+const BASS_TRACK_NAMES = /(bass|sub|bajo|x-tra.?bass|acoustic bass|string bajo)/i;
+const PAD_TRACK_NAMES = /(pad|string|strings|atmosphere|choir|chour|halo)/i;
+const LEAD_TRACK_NAMES = /(lead|melody|hook|solo|celesta|knack|eco|blow)/i;
+const CHORD_TRACK_NAMES = /(chord|piano|keys|rhodes|organ|organo|nylon|guitarra)/i;
+const FX_TRACK_NAMES = /(fx|effekt|effect|efecto|breath|noise|sweep|rise|impact)/i;
 
 export function isDrumTrack(trackName) {
   return DRUM_TRACK_NAMES.test(trackName.trim());
+}
+
+export function classifyTrackRole(trackName) {
+  const name = trackName.trim();
+  if (isDrumTrack(name) || /drum|hihat|tambo|kit|reprizdr|bass drum/i.test(name)) return 'drums';
+  if (BASS_TRACK_NAMES.test(name)) return 'bass';
+  if (PAD_TRACK_NAMES.test(name)) return 'pad';
+  if (LEAD_TRACK_NAMES.test(name)) return 'lead';
+  if (CHORD_TRACK_NAMES.test(name)) return 'chords';
+  if (FX_TRACK_NAMES.test(name)) return 'fx';
+  return 'other';
 }
 
 // ── Pitch class counts ────────────────────────────────────────────────────────
@@ -91,6 +107,36 @@ export function syncopationRatio(notes) {
   if (notes.length === 0) return 0;
   const offbeat = notes.filter(n => n.time % 1 !== 0).length;
   return Math.round((offbeat / notes.length) * 100) / 100;
+}
+
+function quantizeStep(time, stepsPerBar = 16, beatsPerBar = 4) {
+  const stepSize = beatsPerBar / stepsPerBar;
+  return Math.round(time / stepSize) % stepsPerBar;
+}
+
+function onsetHistogram(notes, beatsPerBar = 4, stepsPerBar = 16) {
+  const histogram = new Array(stepsPerBar).fill(0);
+  for (const note of notes) {
+    histogram[quantizeStep(note.time, stepsPerBar, beatsPerBar)] += 1;
+  }
+  const total = histogram.reduce((sum, value) => sum + value, 0);
+  if (total === 0) return histogram;
+  return histogram.map(value => Math.round((value / total) * 100) / 100);
+}
+
+function dominantStepPattern(notes, beatsPerBar = 4, stepsPerBar = 16) {
+  const stepSet = [...new Set(notes.map(note => quantizeStep(note.time, stepsPerBar, beatsPerBar)))].sort((a, b) => a - b);
+  return stepSet.join('-');
+}
+
+function analyzeSectionRhythm(section, beatsPerBar) {
+  const notes = section.tracks.flatMap(track => track.clip?.notes ?? []);
+  return {
+    section: section.name,
+    bars: section.bars,
+    notes_per_bar: section.bars > 0 ? Math.round((notes.length / section.bars) * 10) / 10 : 0,
+    syncopation: syncopationRatio(notes),
+  };
 }
 
 // ── Pitch range ───────────────────────────────────────────────────────────────
@@ -160,6 +206,355 @@ export function avgDuration(notes) {
   return Math.round((total / notes.length) * 100) / 100;
 }
 
+function detectChordEvents(notes) {
+  if (notes.length < 2) return [];
+
+  const sorted = [...notes].sort((a, b) => a.time - b.time);
+  const events = [];
+  let cluster = [sorted[0]];
+
+  const pushCluster = current => {
+    if (current.length < 2) return;
+    const pcs = [...new Set(current.map(n => PITCH_CLASS_NAMES[n.pitch % 12]))].sort();
+    const lowest = current.reduce((lo, note) => note.pitch < lo.pitch ? note : lo, current[0]);
+    events.push({
+      time: current[0].time,
+      chord: pcs.join('-'),
+      bass_pc: PITCH_CLASS_NAMES[lowest.pitch % 12],
+    });
+  };
+
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].time - cluster[0].time <= CHORD_WINDOW) {
+      cluster.push(sorted[i]);
+    } else {
+      pushCluster(cluster);
+      cluster = [sorted[i]];
+    }
+  }
+  pushCluster(cluster);
+
+  return events;
+}
+
+function summarizeSectionHarmony(section, beatsPerBar) {
+  const pitchedNotes = section.tracks
+    .filter(track => !isDrumTrack(track.ableton_name))
+    .flatMap(track => track.clip?.notes ?? []);
+
+  const events = detectChordEvents(pitchedNotes);
+  const progressionByBar = Array.from({ length: section.bars || 0 }, (_, barIndex) => {
+    const inBar = events.filter(event => Math.floor(event.time / beatsPerBar) === barIndex);
+    const chord = inBar[0]?.chord || null;
+    return {
+      bar: barIndex + 1,
+      chord,
+      bass_pc: inBar[0]?.bass_pc || null,
+      event_count: inBar.length,
+    };
+  });
+
+  const chordEvents = progressionByBar.filter(entry => entry.chord);
+  const rootTransitions = [];
+  for (let i = 1; i < chordEvents.length; i++) {
+    rootTransitions.push(`${chordEvents[i - 1].bass_pc}->${chordEvents[i].bass_pc}`);
+  }
+
+  const harmonicRhythm = section.bars > 0
+    ? Math.round((events.length / section.bars) * 100) / 100
+    : 0;
+
+  return {
+    section: section.name,
+    bars: section.bars,
+    harmonic_rhythm_changes_per_bar: harmonicRhythm,
+    progression_by_bar: progressionByBar,
+    top_chords: topCounts(chordEvents.map(entry => entry.chord), 6),
+    bass_root_motion: topCounts(rootTransitions, 6),
+  };
+}
+
+function topCounts(values, topN = 5) {
+  const counts = {};
+  for (const value of values.filter(Boolean)) counts[value] = (counts[value] || 0) + 1;
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([value, count]) => ({ value, count }));
+}
+
+export function analyzeHarmony(song, source = '') {
+  const { meta, sections } = song;
+  const flatMeta = meta.bpm !== undefined ? meta : (meta.meta ?? meta);
+  const beatsPerBar = parseInt((flatMeta.time_signature || '4/4').split('/')[0], 10) || 4;
+
+  const sectionHarmony = sections.map(section => summarizeSectionHarmony(section, beatsPerBar));
+  const allChordTransitions = [];
+  const allBassTransitions = [];
+  const allTopChords = [];
+
+  for (const section of sectionHarmony) {
+    const sequence = section.progression_by_bar.filter(entry => entry.chord);
+    for (let i = 1; i < sequence.length; i++) {
+      allChordTransitions.push(`${sequence[i - 1].chord}->${sequence[i].chord}`);
+    }
+    allBassTransitions.push(...section.bass_root_motion.flatMap(entry => Array(entry.count).fill(entry.value)));
+    allTopChords.push(...section.top_chords.flatMap(entry => Array(entry.count).fill(entry.value)));
+  }
+
+  return {
+    _meta: {
+      source,
+      sections_analyzed: sections.length,
+      generated_at: new Date().toISOString(),
+    },
+    harmony: {
+      harmonic_rhythm_avg: sectionHarmony.length
+        ? Math.round((sectionHarmony.reduce((sum, section) => sum + section.harmonic_rhythm_changes_per_bar, 0) / sectionHarmony.length) * 100) / 100
+        : 0,
+      top_chords: topCounts(allTopChords, 10),
+      top_progressions: topCounts(allChordTransitions, 10),
+      top_bass_root_motion: topCounts(allBassTransitions, 10),
+      by_section: sectionHarmony,
+    },
+  };
+}
+
+export function aggregateHarmonyProfiles(profiles) {
+  if (profiles.length === 0) return null;
+
+  const harmonicRhythmValues = profiles
+    .map(profile => profile.harmony?.harmonic_rhythm_avg)
+    .filter(value => typeof value === 'number');
+
+  const topChords = [];
+  const topProgressions = [];
+  const topBassMotion = [];
+
+  for (const profile of profiles) {
+    topChords.push(...(profile.harmony?.top_chords ?? []).flatMap(entry => Array(entry.count).fill(entry.value)));
+    topProgressions.push(...(profile.harmony?.top_progressions ?? []).flatMap(entry => Array(entry.count).fill(entry.value)));
+    topBassMotion.push(...(profile.harmony?.top_bass_root_motion ?? []).flatMap(entry => Array(entry.count).fill(entry.value)));
+  }
+
+  return {
+    _meta: {
+      sources: profiles.map(profile => profile._meta?.source).filter(Boolean),
+      sets_analyzed: profiles.length,
+      generated_at: new Date().toISOString(),
+    },
+    harmony: {
+      harmonic_rhythm_avg: harmonicRhythmValues.length
+        ? Math.round((harmonicRhythmValues.reduce((sum, value) => sum + value, 0) / harmonicRhythmValues.length) * 100) / 100
+        : 0,
+      top_chords: topCounts(topChords, 12),
+      top_progressions: topCounts(topProgressions, 12),
+      top_bass_root_motion: topCounts(topBassMotion, 12),
+    },
+  };
+}
+
+export function analyzeRhythm(song, source = '') {
+  const { meta, sections } = song;
+  const flatMeta = meta.bpm !== undefined ? meta : (meta.meta ?? meta);
+  const beatsPerBar = parseInt((flatMeta.time_signature || '4/4').split('/')[0], 10) || 4;
+
+  const allNotesByTrack = new Map();
+  for (const section of sections) {
+    for (const track of section.tracks) {
+      const notes = track.clip?.notes ?? [];
+      if (!allNotesByTrack.has(track.ableton_name)) allNotesByTrack.set(track.ableton_name, []);
+      allNotesByTrack.get(track.ableton_name).push(...notes);
+    }
+  }
+
+  const byTrack = {};
+  for (const [name, notes] of allNotesByTrack.entries()) {
+    byTrack[name] = {
+      notes_per_bar: (() => {
+        const totalBars = sections.reduce((sum, section) => {
+          const track = section.tracks.find(item => item.ableton_name === name);
+          return sum + (track?.clip?.length_bars ?? 0);
+        }, 0);
+        return totalBars > 0 ? Math.round((notes.length / totalBars) * 10) / 10 : 0;
+      })(),
+      syncopation: syncopationRatio(notes),
+      onset_histogram_16: onsetHistogram(notes, beatsPerBar, 16),
+      dominant_pattern_16: dominantStepPattern(notes, beatsPerBar, 16),
+      avg_duration: avgDuration(notes),
+    };
+  }
+
+  return {
+    _meta: {
+      source,
+      sections_analyzed: sections.length,
+      generated_at: new Date().toISOString(),
+    },
+    rhythm: {
+      avg_section_density: sections.length
+        ? Math.round((sections.reduce((sum, section) => sum + ((section.tracks.flatMap(track => track.clip?.notes ?? []).length) / (section.bars || 1)), 0) / sections.length) * 10) / 10
+        : 0,
+      by_track: byTrack,
+      by_section: sections.map(section => analyzeSectionRhythm(section, beatsPerBar)),
+    },
+  };
+}
+
+export function aggregateRhythmProfiles(profiles) {
+  if (profiles.length === 0) return null;
+
+  const allTrackNames = [...new Set(profiles.flatMap(profile => Object.keys(profile.rhythm?.by_track ?? {})))];
+  const byTrack = {};
+
+  for (const track of allTrackNames) {
+    const trackProfiles = profiles
+      .map(profile => profile.rhythm?.by_track?.[track])
+      .filter(Boolean);
+
+    if (trackProfiles.length === 0) continue;
+
+    const avgHistogram = new Array(16).fill(0);
+    for (const entry of trackProfiles) {
+      (entry.onset_histogram_16 ?? []).forEach((value, index) => {
+        avgHistogram[index] += value;
+      });
+    }
+
+    byTrack[track] = {
+      notes_per_bar: Math.round((trackProfiles.reduce((sum, entry) => sum + (entry.notes_per_bar ?? 0), 0) / trackProfiles.length) * 10) / 10,
+      syncopation: Math.round((trackProfiles.reduce((sum, entry) => sum + (entry.syncopation ?? 0), 0) / trackProfiles.length) * 100) / 100,
+      avg_duration: Math.round((trackProfiles.reduce((sum, entry) => sum + (entry.avg_duration ?? 0), 0) / trackProfiles.length) * 100) / 100,
+      onset_histogram_16: avgHistogram.map(value => Math.round((value / trackProfiles.length) * 100) / 100),
+      dominant_patterns_16: topCounts(trackProfiles.map(entry => entry.dominant_pattern_16), 6),
+    };
+  }
+
+  const sectionDensities = profiles
+    .flatMap(profile => profile.rhythm?.by_section ?? [])
+    .map(entry => entry.notes_per_bar)
+    .filter(value => typeof value === 'number');
+
+  return {
+    _meta: {
+      sources: profiles.map(profile => profile._meta?.source).filter(Boolean),
+      sets_analyzed: profiles.length,
+      generated_at: new Date().toISOString(),
+    },
+    rhythm: {
+      avg_section_density: sectionDensities.length
+        ? Math.round((sectionDensities.reduce((sum, value) => sum + value, 0) / sectionDensities.length) * 10) / 10
+        : 0,
+      by_track: byTrack,
+    },
+  };
+}
+
+function activeTracksInSection(section) {
+  return section.tracks
+    .filter(track => (track.clip?.notes?.length ?? 0) > 0)
+    .map(track => track.ableton_name)
+    .sort();
+}
+
+function sectionEnergy(section) {
+  const noteCount = section.tracks.reduce((sum, track) => sum + (track.clip?.notes?.length ?? 0), 0);
+  const bars = section.bars || 1;
+  return Math.round((noteCount / bars) * 10) / 10;
+}
+
+export function analyzeArrangement(song, source = '') {
+  const { sections } = song;
+  const allTrackNames = [...new Set(sections.flatMap(section => section.tracks.map(track => track.ableton_name)))];
+  const sectionLayers = sections.map(section => {
+    const activeTracks = activeTracksInSection(section);
+    return {
+      section: section.name,
+      bars: section.bars,
+      active_tracks: activeTracks,
+      active_track_count: activeTracks.length,
+      energy: sectionEnergy(section),
+    };
+  });
+
+  const entryOrder = {};
+  for (const track of allTrackNames) {
+    const firstIndex = sectionLayers.findIndex(section => section.active_tracks.includes(track));
+    entryOrder[track] = firstIndex === -1 ? null : {
+      first_section_index: firstIndex,
+      first_section_name: sectionLayers[firstIndex]?.section || null,
+    };
+  }
+
+  const layerCombos = topCounts(sectionLayers.map(section => section.active_tracks.join('|')), 10);
+  const roleCombos = topCounts(sectionLayers.map(section => section.active_tracks.map(classifyTrackRole).sort().join('|')), 10);
+
+  return {
+    _meta: {
+      source,
+      sections_analyzed: sections.length,
+      generated_at: new Date().toISOString(),
+    },
+    arrangement: {
+      energy_curve: sectionLayers.map(section => ({
+        section: section.section,
+        energy: section.energy,
+        active_track_count: section.active_track_count,
+      })),
+      by_section: sectionLayers,
+      entry_order: entryOrder,
+      top_layer_combinations: layerCombos,
+      top_role_combinations: roleCombos,
+    },
+  };
+}
+
+export function aggregateArrangementProfiles(profiles) {
+  if (profiles.length === 0) return null;
+
+  const allTrackNames = [...new Set(profiles.flatMap(profile => Object.keys(profile.arrangement?.entry_order ?? {})))];
+  const entryOrder = {};
+
+  for (const track of allTrackNames) {
+    const entries = profiles
+      .map(profile => profile.arrangement?.entry_order?.[track]?.first_section_index)
+      .filter(value => typeof value === 'number');
+    if (entries.length === 0) continue;
+    entryOrder[track] = {
+      avg_first_section_index: Math.round((entries.reduce((sum, value) => sum + value, 0) / entries.length) * 10) / 10,
+    };
+  }
+
+  const energyPoints = profiles.flatMap(profile => profile.arrangement?.energy_curve ?? []);
+  const activeCounts = energyPoints.map(point => point.active_track_count).filter(value => typeof value === 'number');
+  const energies = energyPoints.map(point => point.energy).filter(value => typeof value === 'number');
+  const combos = profiles.flatMap(profile =>
+    (profile.arrangement?.top_layer_combinations ?? []).flatMap(entry => Array(entry.count).fill(entry.value))
+  );
+  const roleCombos = profiles.flatMap(profile =>
+    (profile.arrangement?.top_role_combinations ?? []).flatMap(entry => Array(entry.count).fill(entry.value))
+  );
+
+  return {
+    _meta: {
+      sources: profiles.map(profile => profile._meta?.source).filter(Boolean),
+      sets_analyzed: profiles.length,
+      generated_at: new Date().toISOString(),
+    },
+    arrangement: {
+      avg_active_tracks_per_section: activeCounts.length
+        ? Math.round((activeCounts.reduce((sum, value) => sum + value, 0) / activeCounts.length) * 10) / 10
+        : 0,
+      avg_section_energy: energies.length
+        ? Math.round((energies.reduce((sum, value) => sum + value, 0) / energies.length) * 10) / 10
+        : 0,
+      entry_order: entryOrder,
+      top_layer_combinations: topCounts(combos, 12),
+      top_role_combinations: topCounts(roleCombos, 12),
+    },
+  };
+}
+
 // ── Full set analysis ─────────────────────────────────────────────────────────
 
 /**
@@ -221,15 +616,20 @@ export function analyzeSong(song, source = '') {
 
   // Track presence ratio: fraction of sections where the track has notes
   const trackPresence = {};
+  const rolePresenceAcc = {};
   for (const name of trackNames) {
     const active = sections.filter(s =>
       s.tracks.some(t => t.ableton_name === name && t.clip?.notes?.length > 0)
     ).length;
     trackPresence[name] = Math.round((active / sections.length) * 100) / 100;
+    const role = classifyTrackRole(name);
+    rolePresenceAcc[role] = Math.max(rolePresenceAcc[role] || 0, trackPresence[name]);
   }
 
   // ── Rhythm ───────────────────────────────────────────────────────────────
   const notesPerBarByTrack = {};
+  const notesPerBarByRole = {};
+  const notesPerBarRoleCounts = {};
   for (const [name, notes] of allNotesByTrack) {
     const totalBarsForTrack = sections.reduce((sum, s) => {
       const track = s.tracks.find(t => t.ableton_name === name);
@@ -238,6 +638,12 @@ export function analyzeSong(song, source = '') {
     notesPerBarByTrack[name] = totalBarsForTrack > 0
       ? Math.round((notes.length / totalBarsForTrack) * 10) / 10
       : 0;
+    const role = classifyTrackRole(name);
+    notesPerBarByRole[role] = (notesPerBarByRole[role] || 0) + notesPerBarByTrack[name];
+    notesPerBarRoleCounts[role] = (notesPerBarRoleCounts[role] || 0) + 1;
+  }
+  for (const role of Object.keys(notesPerBarByRole)) {
+    notesPerBarByRole[role] = Math.round((notesPerBarByRole[role] / notesPerBarRoleCounts[role]) * 10) / 10;
   }
 
   // Drum syncopation (off-beat ratio for drum tracks)
@@ -311,9 +717,11 @@ export function analyzeSong(song, source = '') {
       tracks:        trackNames,
       by_section:    bySection,
       track_presence: trackPresence,
+      role_presence: rolePresenceAcc,
     },
     rhythm: {
       notes_per_bar:    notesPerBarByTrack,
+      notes_per_bar_by_role: notesPerBarByRole,
       drum_syncopation: drumSyncopation,
     },
     pitch: {
@@ -362,17 +770,29 @@ export function aggregateProfiles(profiles) {
   // Track presence: average across profiles
   const allTrackNames = [...new Set(profiles.flatMap(p => p.arrangement?.tracks ?? []))];
   const avgPresence   = {};
+  const rolePresence = {};
   for (const name of allTrackNames) {
     const vals = profiles.map(p => p.arrangement?.track_presence?.[name] ?? 0);
     avgPresence[name] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
   }
+  const allRoles = [...new Set(profiles.flatMap(p => Object.keys(p.arrangement?.role_presence ?? {})))];
+  for (const role of allRoles) {
+    const vals = profiles.map(p => p.arrangement?.role_presence?.[role] ?? 0);
+    rolePresence[role] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
+  }
 
   // Rhythm: avg notes per bar per track
   const avgNotesPerBar = {};
+  const avgNotesPerBarByRole = {};
   for (const name of allTrackNames) {
     const vals = profiles.map(p => p.rhythm?.notes_per_bar?.[name]).filter(v => v !== undefined);
     if (vals.length)
       avgNotesPerBar[name] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+  }
+  for (const role of allRoles) {
+    const vals = profiles.map(p => p.rhythm?.notes_per_bar_by_role?.[role]).filter(v => v !== undefined);
+    if (vals.length)
+      avgNotesPerBarByRole[role] = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
   }
 
   return {
@@ -396,9 +816,11 @@ export function aggregateProfiles(profiles) {
     arrangement: {
       tracks:         allTrackNames,
       track_presence: avgPresence,
+      role_presence:  rolePresence,
     },
     rhythm: {
       notes_per_bar: avgNotesPerBar,
+      notes_per_bar_by_role: avgNotesPerBarByRole,
     },
   };
 }
@@ -437,6 +859,9 @@ export function compareProfiles(source, generated) {
   const srcPresence = source.arrangement?.track_presence  ?? {};
   const genPresence = generated.arrangement?.track_presence ?? {};
   const sharedTracks = Object.keys(srcPresence).filter(t => t in genPresence);
+  const srcRolePresence = source.arrangement?.role_presence ?? {};
+  const genRolePresence = generated.arrangement?.role_presence ?? {};
+  const sharedRoles = Object.keys(srcRolePresence).filter(role => role in genRolePresence);
 
   report.track_presence = {};
   for (const t of sharedTracks) {
@@ -447,11 +872,23 @@ export function compareProfiles(source, generated) {
       delta: diff,
     };
   }
+  report.role_presence = {};
+  for (const role of sharedRoles) {
+    const diff = Math.round((genRolePresence[role] - srcRolePresence[role]) * 100);
+    report.role_presence[role] = {
+      source: Math.round(srcRolePresence[role] * 100),
+      generated: Math.round(genRolePresence[role] * 100),
+      delta: diff,
+    };
+  }
 
   // ── Rhythm density ───────────────────────────────────────────────────────
   const srcNpb = source.rhythm?.notes_per_bar    ?? {};
   const genNpb = generated.rhythm?.notes_per_bar ?? {};
   const rhythmTracks = Object.keys(srcNpb).filter(t => t in genNpb);
+  const srcRoleNpb = source.rhythm?.notes_per_bar_by_role ?? {};
+  const genRoleNpb = generated.rhythm?.notes_per_bar_by_role ?? {};
+  const rhythmRoles = Object.keys(srcRoleNpb).filter(role => role in genRoleNpb);
 
   report.rhythm = {};
   for (const t of rhythmTracks) {
@@ -460,6 +897,15 @@ export function compareProfiles(source, generated) {
       source:    srcNpb[t],
       generated: genNpb[t],
       ratio:     ratio != null ? Math.round(ratio * 100) / 100 : null,
+    };
+  }
+  report.rhythm_roles = {};
+  for (const role of rhythmRoles) {
+    const ratio = srcRoleNpb[role] > 0 ? genRoleNpb[role] / srcRoleNpb[role] : null;
+    report.rhythm_roles[role] = {
+      source: srcRoleNpb[role],
+      generated: genRoleNpb[role],
+      ratio: ratio != null ? Math.round(ratio * 100) / 100 : null,
     };
   }
 
@@ -511,11 +957,13 @@ export function compareProfiles(source, generated) {
   scores.push({ weight: 0.30, score: report.key.match ? 100 : report.key.mode_match ? 50 : 0 });
 
   // Rhythm: average ratio clamped to [0,1] per track
-  if (rhythmTracks.length > 0) {
-    const avg = rhythmTracks.reduce((s, t) => {
-      const r = report.rhythm[t].ratio ?? 0;
+  if (rhythmTracks.length > 0 || rhythmRoles.length > 0) {
+    const rhythmPool = rhythmTracks.length > 0 ? rhythmTracks.map(t => report.rhythm[t].ratio ?? 0) : [];
+    const rolePool = rhythmRoles.map(role => report.rhythm_roles[role].ratio ?? 0);
+    const pool = [...rhythmPool, ...rolePool];
+    const avg = pool.reduce((s, r) => {
       return s + Math.min(r, 1 / r || 0, 1);  // penalise both over and under
-    }, 0) / rhythmTracks.length;
+    }, 0) / pool.length;
     scores.push({ weight: 0.30, score: Math.round(avg * 100) });
   }
 

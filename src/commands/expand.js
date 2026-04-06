@@ -1,7 +1,7 @@
 /**
- * expand command — adds new accompaniment tracks to an existing set using Claude.
+ * expand command — adds new accompaniment tracks to an existing set using an AI provider.
  *
- * Claude receives a harmonic summary (pitch classes per bar) for each section
+ * The model receives a harmonic summary (pitch classes per bar) for each section
  * and writes complementary parts for the requested instruments.
  *
  * Usage:
@@ -16,7 +16,7 @@ import ora from 'ora';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { loadSong, saveSong } from '../lib/storage.js';
-import { expandSong } from '../lib/claude.js';
+import { expandSong, getProviderLabel, normalizeProvider } from '../lib/ai.js';
 
 export async function expandCommand(fileArg, options) {
   const spinner = ora();
@@ -28,6 +28,7 @@ export async function expandCommand(fileArg, options) {
     }
 
     const tracksToAdd = options.add.split(',').map(s => s.trim()).filter(Boolean);
+    const provider = normalizeProvider(options.provider || 'api');
 
     // ── Load set ──────────────────────────────────────────────────────────────
     spinner.start(`Loading ${fileArg}...`);
@@ -64,8 +65,9 @@ export async function expandCommand(fileArg, options) {
       return;
     }
 
-    // ── Ask Claude ────────────────────────────────────────────────────────────
-    spinner.start(`Asking Claude to write ${tracksToAdd.join(', ')} parts...`);
+    // ── Ask model ─────────────────────────────────────────────────────────────
+    const providerLabel = getProviderLabel(provider, options.model);
+    spinner.start(`Asking ${providerLabel} to write ${tracksToAdd.join(', ')} parts...`);
 
     const result = await expandSong({
       song,
@@ -73,13 +75,13 @@ export async function expandCommand(fileArg, options) {
       styleHint:      options.style || '',
       sectionsFilter,
       model:          options.model,
-      provider:       options.provider || 'api',
+      provider,
     });
 
-    spinner.succeed('Claude finished');
+    spinner.succeed(`${providerLabel} finished`);
 
     if (!result.sections || result.sections.length === 0) {
-      throw new Error('Claude returned no sections.');
+      throw new Error(`${providerLabel} returned no sections.`);
     }
 
     // ── Merge new tracks into the song ────────────────────────────────────────

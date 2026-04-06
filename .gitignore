@@ -11,7 +11,7 @@ snapshots/*
 !snapshots/.gitkeep
 mxls/*
 !mxls/.gitkeep
-profiles/*.json
+profiles/**/*.json
 !profiles/.gitkeep
 presets/**/*.json
 !presets/.gitkeep

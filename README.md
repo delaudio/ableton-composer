@@ -1,6 +1,6 @@
 # ableton-composer
 
-CLI that uses Claude AI to generate structured MIDI content for Ableton Live. Describe a song in natural language, get a JSON with notes for every track, push it directly into your Live set. Analyze existing sets to extract style profiles and use them to guide future generations.
+CLI that uses AI models to generate structured MIDI content for Ableton Live. Describe a song in natural language, get a JSON with notes for every track, push it directly into your Live set. Analyze existing sets to extract style profiles and use them to guide future generations.
 
 ```bash
 # Generate a set guided by an existing style
@@ -20,11 +20,11 @@ Existing sets / MIDI / MusicXML
       ↓
   analyze / import-midi / import-xml    ingest or extract style profiles
       ↓
-  profiles/*.json     editable style profile — curate before using
+  profiles/...        hierarchical song/album/artist profiles plus bundle.json
       ↓
-  generate --style    Claude generates a new set guided by the profile
+  generate --style    base task prompt + optional genre/harmony overlays + profile context
       ↓
-  expand              Claude adds new tracks to existing sections (harmonic-aware)
+  expand              The selected model adds new tracks to existing sections (harmonic-aware)
       ↓
   sets/*.json         saved to disk
       ↓
@@ -45,7 +45,7 @@ Each **section** in the JSON maps to a **scene row** in session view. Trigger a 
 
 - Node.js >=18
 - Ableton Live with the **ableton-js MIDI Remote Script** active (see Setup)
-- An Anthropic API key — or Claude Code CLI installed (`--provider cli`)
+- One of: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or Claude Code CLI installed (`--provider cli`)
 
 ---
 
@@ -57,7 +57,7 @@ cd ableton-composer
 npm install
 
 cp .env.example .env
-# Edit .env — add ANTHROPIC_API_KEY and optionally your coordinates for --weather
+# Edit .env — add ANTHROPIC_API_KEY and/or OPENAI_API_KEY, plus optional weather coordinates
 ```
 
 ### Install globally
@@ -104,12 +104,38 @@ ableton-composer generate "<prompt>" [options]
 | `-V, --variations <n>` | Generate N variations and save each one |
 | `-S, --sections <n>` | Total number of sections to generate |
 | `--chunk-size <n>` | Generate in chunks of N sections per API call (use with `--sections`) |
-| `--provider <name>` | `api` (default, uses Anthropic SDK) or `cli` (uses Claude Code CLI, no API key needed) |
+| `--provider <name>` | `api`/`anthropic` (default), `openai`, `codex`, or `cli`/`claude-cli` |
 | `-w, --weather` | Fetch current weather and include as context |
-| `-m, --model <model>` | Claude model (overrides `CLAUDE_MODEL` env var) |
+| `-m, --model <model>` | Model override (otherwise uses the provider default env var) |
 | `-n, --name <name>` | Name hint for the saved set directory |
 | `-o, --output <path>` | Save to a specific path — directory if no `.json` extension, flat file if `.json` |
 | `--no-save` | Print JSON to stdout without saving |
+
+OpenAI runtime env vars:
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` default `gpt-5.2`
+- `OPENAI_TIMEOUT_MS` default `120000`
+- `OPENAI_MAX_RETRIES` default `0`
+
+`generate` uses a modular prompt stack:
+- base task prompt: [prompts/song-generate.md](/Users/fdg/dev/side/ableton-composer/prompts/song-generate.md)
+- optional genre overlay: for example [prompts/genre/idm.md](/Users/fdg/dev/side/ableton-composer/prompts/genre/idm.md)
+- optional harmonic/compositional overlay: for example [prompts/harmony/jazz.md](/Users/fdg/dev/side/ableton-composer/prompts/harmony/jazz.md)
+- optional harmonic planning stage: [prompts/harmonic-plan.md](/Users/fdg/dev/side/ableton-composer/prompts/harmonic-plan.md)
+- optional arrangement planning stage: [prompts/arrangement-plan.md](/Users/fdg/dev/side/ableton-composer/prompts/arrangement-plan.md)
+- optional combined planning stage when both are needed: [prompts/song-blueprint.md](/Users/fdg/dev/side/ableton-composer/prompts/song-blueprint.md)
+- optional style profile from `--style`
+- the full song schema
+
+At the moment, the repo includes:
+- an automatic IDM genre overlay for cues like `idm`, `glitch`, `braindance`, or `leftfield`
+- an automatic trip-hop genre overlay for cues like `trip-hop`, `trip hop`, `Bristol`, or `downtempo noir`
+- an automatic Chicago house genre overlay for cues like `chicago house`, `jackin house`, `warehouse house`, or `classic house`
+- an automatic neo-soul harmonic overlay for cues like `neo-soul`, `neo soul`, `soul-jazz`, `modern r&b`, `D'Angelo`, or `Erykah Badu`
+- an automatic blues harmonic overlay for cues like `blues`, `blues-rock`, `shuffle blues`, `boogie`, or `12-bar`
+- an automatic jazz harmonic overlay for cues like `jazz`, `bebop`, `swing`, `modal jazz`, `ii-v-i`, or `2-5-1`
+
+When a harmonic overlay is active, `generate` now first asks the model for a compact harmonic plan, then includes that plan in the final song-generation request. This gives harmony-led genres more structure than prompt text alone.
 
 **Examples:**
 
@@ -126,8 +152,32 @@ ableton-composer generate "ambient drone, 4 sections" \
 ableton-composer generate "add breakdown, buildup, climax, and fade-out" \
   --continue sets/my-song.json --style profiles/saw85-92.json
 
-# Use Claude Code CLI instead of the API (no ANTHROPIC_API_KEY needed)
+# Use Claude Code CLI instead of the API (no API key needed)
 ableton-composer generate "trip-hop 90 BPM" --provider cli
+
+# Use OpenAI
+ableton-composer generate "glitchy IDM at 118 BPM" --provider openai
+
+# Use Codex via the OpenAI Responses API
+ableton-composer generate "minimal techno, 6 sections" --provider codex
+
+# IDM prompt overlay is inferred automatically from the request
+ableton-composer generate "braindance with glitchy drums and warped bass" --provider openai
+
+# Trip-hop genre overlay is inferred automatically from the request
+ableton-composer generate "dusty trip-hop with smoky keys and slow drums" --provider openai
+
+# Chicago house genre overlay is inferred automatically from the request
+ableton-composer generate "classic Chicago house with piano stabs and jackin bass" --provider openai
+
+# Jazz harmonic overlay is inferred automatically from the request
+ableton-composer generate "slow jazz ballad with ii-V-I movement" --provider openai
+
+# Neo-soul harmonic overlay is inferred automatically from the request
+ableton-composer generate "warm neo-soul with Rhodes chords and laid-back bass" --provider openai
+
+# Blues harmonic overlay is inferred automatically from the request
+ableton-composer generate "slow 12-bar blues with shuffle drums and electric piano" --provider openai
 
 # Auto-detect tracks from open Live set
 ableton-composer generate "slow cinematic ambient" --live-sync
@@ -145,7 +195,7 @@ ableton-composer generate "dark techno, 8 bars each" \
 
 ### `expand`
 
-Add new accompaniment tracks to an existing set using Claude. Claude receives a harmonic summary (pitch classes per bar) of each section and writes complementary parts for the requested instruments — without touching the existing tracks.
+Add new accompaniment tracks to an existing set using the selected AI provider. The model receives a harmonic summary (pitch classes per bar) of each section and writes complementary parts for the requested instruments without touching the existing tracks.
 
 ```bash
 ableton-composer expand <file> --add <tracks> [options]
@@ -154,13 +204,13 @@ ableton-composer expand <file> --add <tracks> [options]
 | Option | Description |
 |---|---|
 | `--add <tracks>` | **Required.** Comma-separated track names to add, e.g. `"Strings,Cello,Bass"` |
-| `-s, --style <hint>` | Style description to guide Claude, e.g. `"orchestral ambient"` |
+| `-s, --style <hint>` | Style description to guide the model, e.g. `"orchestral ambient"` |
 | `--sections <names>` | Only expand specific sections (comma-separated) |
 | `--overwrite` | Replace tracks that already exist in a section |
-| `--dry-run` | Show what would be added without calling Claude |
+| `--dry-run` | Show what would be added without calling the model |
 | `-o, --out <path>` | Save to a new file instead of updating the source |
-| `--provider <name>` | `api` (default) or `cli` |
-| `-m, --model <model>` | Claude model override |
+| `--provider <name>` | `api`/`anthropic` (default), `openai`, `codex`, or `cli`/`claude-cli` |
+| `-m, --model <model>` | Model override |
 
 **Examples:**
 
@@ -188,7 +238,11 @@ ableton-composer analyze <targets...> [options]
 
 | Option | Description |
 |---|---|
-| `--out <path>` | Save profile to a specific path |
+| `--out <path>` | Save profile to a specific path instead of the hierarchical `profiles/` tree |
+| `--scope <name>` | Profile scope: `song`, `album`, `artist`, or `collection` |
+| `--artist <name>` | Artist label for hierarchical profile output |
+| `--album <name>` | Album label for hierarchical profile output |
+| `--song <name>` | Song label for hierarchical profile output |
 | `--print` | Print JSON to stdout instead of saving |
 
 **Examples:**
@@ -196,6 +250,9 @@ ableton-composer analyze <targets...> [options]
 ```bash
 # Single set → profile saved to profiles/
 ableton-composer analyze sets/saw85-92-a-minor-110bpm/
+
+# Album-scoped profile bundle
+ableton-composer analyze sets/violator/ --scope album --artist "Depeche Mode" --album "Violator"
 
 # Multiple sets passed directly → aggregated profile
 ableton-composer analyze sets/song-a.json sets/song-b/ sets/song-c.json
@@ -234,6 +291,52 @@ ableton-composer analyze sets/my-song/ --print
 ```
 
 Use the saved profile with `generate --style` or `compare`.
+
+By default, `analyze` now saves into a hierarchical tree and writes both `core.json` and `bundle.json`. Example:
+
+```text
+profiles/
+  albums/
+    depeche-mode/
+      violator/
+        core.json
+        harmony.json
+        rhythm.json
+        arrangement.json
+        bundle.json
+```
+
+`generate --style` accepts either `core.json` or `bundle.json`.
+
+`bundle.json` is preferred because it can include multiple profile domains. Right now `analyze` writes:
+- `core.json`: key, tempo, structure, arrangement, rhythm, pitch summary
+- `harmony.json`: harmonic rhythm, top chord vocabulary, common chord transitions, and bass-root motion
+- `rhythm.json`: average section density, per-track syncopation, onset histograms, and dominant step patterns
+- `arrangement.json`: section energy, track entry order, and recurring layer combinations
+- `prompt.json`: compact prompt-ready profile distilled from the domains above for use in `generate`
+
+When you pass `bundle.json` to `generate`, the CLI now prefers `prompt.json` automatically instead of loading the full raw bundle into the prompt. This keeps large album bundles practical for OpenAI and chunked generation.
+
+---
+
+## Prompt Structure
+
+Song generation is now organized as composable prompt files instead of a single monolithic system prompt.
+
+- [prompts/song-generate.md](/Users/fdg/dev/side/ableton-composer/prompts/song-generate.md): base rules for writing full Ableton song JSON
+- [prompts/genre/idm.md](/Users/fdg/dev/side/ableton-composer/prompts/genre/idm.md): genre-specific stylistic overlay for IDM and glitch-oriented requests
+- [prompts/genre/trip-hop.md](/Users/fdg/dev/side/ableton-composer/prompts/genre/trip-hop.md): genre-specific overlay for slow, dusty, moody trip-hop writing
+- [prompts/genre/chicago-house.md](/Users/fdg/dev/side/ableton-composer/prompts/genre/chicago-house.md): genre-specific overlay for classic Chicago house groove, layering, and arrangement logic
+- [prompts/harmonic-plan.md](/Users/fdg/dev/side/ableton-composer/prompts/harmonic-plan.md): planning-stage prompt that creates a compact harmonic/compositional plan before note generation
+- [prompts/arrangement-plan.md](/Users/fdg/dev/side/ableton-composer/prompts/arrangement-plan.md): planning-stage prompt that creates a compact section-by-section role and layering plan before note generation
+- [prompts/song-blueprint.md](/Users/fdg/dev/side/ableton-composer/prompts/song-blueprint.md): planning-stage prompt that combines harmonic and arrangement planning into one compact blueprint when both are needed
+- [prompts/harmony/jazz.md](/Users/fdg/dev/side/ableton-composer/prompts/harmony/jazz.md): harmonic grammar overlay for jazz-influenced writing, including ii-V-I style motion
+- [prompts/harmony/neo-soul.md](/Users/fdg/dev/side/ableton-composer/prompts/harmony/neo-soul.md): harmonic grammar overlay for neo-soul and modern R&B-influenced chord language
+- [prompts/harmony/blues.md](/Users/fdg/dev/side/ableton-composer/prompts/harmony/blues.md): harmonic grammar overlay for 12-bar blues, dominant-function movement, and turnaround-driven writing
+- [prompts/preset-generate.md](/Users/fdg/dev/side/ableton-composer/prompts/preset-generate.md): dedicated system prompt for preset generation from preset profiles
+- [prompts/expand.md](/Users/fdg/dev/side/ableton-composer/prompts/expand.md): harmonic-aware track expansion prompt
+
+This makes it easier to add more genre behaviors and harmonic grammars later, while also giving harmony-led styles a more explicit intermediate plan before the final MIDI is written.
 
 ---
 
@@ -706,14 +809,17 @@ The numeric prefix maps directly to the Ableton session slot index. All commands
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `ANTHROPIC_API_KEY` | for `--provider api` | — | Your Anthropic API key |
-| `CLAUDE_MODEL` | no | `claude-opus-4-5` | Model for generation |
+| `ANTHROPIC_API_KEY` | for `--provider api` or `anthropic` | — | Your Anthropic API key |
+| `OPENAI_API_KEY` | for `--provider openai` or `codex` | — | Your OpenAI API key |
+| `CLAUDE_MODEL` | no | `claude-opus-4-5` | Default Anthropic model |
+| `OPENAI_MODEL` | no | `gpt-5.2` | Default OpenAI model |
+| `CODEX_MODEL` | no | `gpt-5-codex` | Default Codex model |
 | `WEATHER_LAT` | for `--weather` | — | Latitude |
 | `WEATHER_LON` | for `--weather` | — | Longitude |
 | `WEATHER_CITY` | no | — | City name (display only) |
 | `DEBUG` | no | — | Set to any value to enable ableton-js logging |
 
-`ANTHROPIC_API_KEY` is not needed when using `--provider cli` (Claude Code CLI authentication is used instead).
+`ANTHROPIC_API_KEY` and `OPENAI_API_KEY` are not needed when using `--provider cli` (`claude` CLI authentication is used instead).
 
 ---
 
