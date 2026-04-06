@@ -1,3 +1,8 @@
+---
+name: Ableton Composer Agent
+description: Repo-specific Copilot agent for the Ableton Composer generation pipeline, style profiles, prompts, and safe git/content workflow.
+---
+
 # Ableton Composer Agent
 
 Use this agent when working on the `ableton-composer` repository.
