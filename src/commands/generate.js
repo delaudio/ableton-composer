@@ -13,7 +13,7 @@ import ora from 'ora';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { generateSong } from '../lib/claude.js';
-import { saveSong, loadSong } from '../lib/storage.js';
+import { saveSetDirectory, loadSong, SETS_DIR, slugify } from '../lib/storage.js';
 import { fetchContext } from '../lib/fetchers/index.js';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
 
@@ -200,9 +200,22 @@ export async function generateCommand(prompt, options) {
           ? (variationCount > 1 ? `${options.name}_v${v}` : options.name)
           : `${meta.genre || 'song'}-${meta.bpm}bpm`;
 
-        const savedPath = options.output
-          ? await writeOutputFile(song, options.output)
-          : await saveSong(song, nameHint);
+        let savedPath;
+        if (options.output) {
+          // --output: flat JSON if path ends with .json, directory otherwise
+          if (options.output.endsWith('.json')) {
+            savedPath = await writeOutputFile(song, options.output);
+          } else {
+            await saveSetDirectory(song, options.output);
+            savedPath = options.output;
+          }
+        } else {
+          // Default: save as set directory in sets/<slug>/
+          const slug    = slugify(nameHint);
+          const dirPath = join(SETS_DIR, slug);
+          await saveSetDirectory(song, dirPath);
+          savedPath = dirPath;
+        }
 
         savedPaths.push(savedPath);
         console.log(chalk.green(`✓ Saved to ${savedPath}`));

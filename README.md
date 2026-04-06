@@ -107,8 +107,8 @@ ableton-composer generate "<prompt>" [options]
 | `--provider <name>` | `api` (default, uses Anthropic SDK) or `cli` (uses Claude Code CLI, no API key needed) |
 | `-w, --weather` | Fetch current weather and include as context |
 | `-m, --model <model>` | Claude model (overrides `CLAUDE_MODEL` env var) |
-| `-n, --name <name>` | Filename hint for the saved set |
-| `-o, --output <path>` | Save to a specific path instead of `sets/` |
+| `-n, --name <name>` | Name hint for the saved set directory |
+| `-o, --output <path>` | Save to a specific path — directory if no `.json` extension, flat file if `.json` |
 | `--no-save` | Print JSON to stdout without saving |
 
 **Examples:**
