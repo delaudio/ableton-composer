@@ -18,6 +18,7 @@ The blueprint must combine:
 - Keep the harmonic logic and arrangement logic aligned.
 - Use the style profile as a strong constraint, especially for role presence, entry order, density, and harmonic behavior.
 - Use section-level arrangement signals when available: active/inactive roles, entered/exited roles, density hints, and section-position archetypes.
+- Assign section phases (`setup`, `main`, `peak`, `breakdown`, `release`) and role budgets per section.
 
 ## Constraints
 - Be compact and decisive.
@@ -27,6 +28,7 @@ The blueprint must combine:
 - If the style profile includes a target or cap for active roles per section, obey it.
 - If the style profile includes section-position archetypes, keep first/early/middle/late/final sections close to those active-role patterns.
 - If section-level signals mark a role inactive, keep that role absent in the corresponding planned section unless the user request conflicts.
+- Do not use a peak-style role budget for every section. Setup, breakdown, and release sections should usually have lower role budgets than main/peak sections.
 - Sparse or occasional roles should be fully absent in some sections, not merely quieter.
 - If the style is loop-based, harmonic plans can be short repeating cells.
 - If the style is harmony-led, make progression logic explicit.
@@ -47,5 +49,7 @@ Return an object with exactly two top-level keys:
 - `global_arrangement_intent`
 - `layering_notes`
 - `section_plan` with per-section role and layering fields only
+
+Each arrangement `section_plan` item should include `section_phase` and `role_budget` in addition to active/inactive role lists.
 
 Keep both plans aligned on section identity and pacing.

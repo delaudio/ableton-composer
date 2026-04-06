@@ -30,8 +30,11 @@ Return ONLY a valid JSON object conforming to the AbletonSong schema provided in
 - If a section plan is provided with `active_roles` and `inactive_roles`, treat those as arrangement constraints.
 - Roles listed as inactive should either be absent or reduced to near-zero presence in that section.
 - If an arrangement plan is provided, follow it section by section unless it directly conflicts with the user request.
+- If an arrangement plan provides `section_phase`, use it to shape the section: setup=introduce, main=establish, peak=fullest point, breakdown=strip down, release=resolve or remove layers.
+- If an arrangement plan provides `role_budget`, keep each section within its own `max_active_roles` and aim for its `target_active_roles`.
 - Treat `required_roles` as must-have roles for that section.
 - Treat `forbidden_roles` as roles to omit unless the request explicitly overrides them.
+- Treat `role_budget.sparse_roles` as roles that should be silent or minimal in that section.
 - Use `density_hint`, `entry_behavior`, and `texture_hint` to shape section contrast and layering.
 - If the style profile includes a cap for active roles per section, do not exceed it except in a deliberate climax section.
 - Sparse roles should be fully absent in many sections, not merely reduced in note count.

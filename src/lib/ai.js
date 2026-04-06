@@ -136,6 +136,7 @@ const ARRANGEMENT_PLAN_RESPONSE_SCHEMA = {
         required: ['section_role', 'active_roles'],
         properties: {
           section_role: { type: 'string' },
+          section_phase: { type: 'string' },
           section_name_hint: { type: 'string' },
           bars_hint: { type: 'integer' },
           active_roles: {
@@ -155,6 +156,19 @@ const ARRANGEMENT_PLAN_RESPONSE_SCHEMA = {
             items: { type: 'string' },
           },
           density_hint: { type: 'string' },
+          role_budget: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              min_active_roles: { type: 'integer' },
+              target_active_roles: { type: 'integer' },
+              max_active_roles: { type: 'integer' },
+              sparse_roles: {
+                type: 'array',
+                items: { type: 'string' },
+              },
+            },
+          },
           entry_behavior: { type: 'string' },
           texture_hint: { type: 'string' },
         },
@@ -981,6 +995,14 @@ function buildStyleSection(p) {
     lines.push('- Pads and chords should not both become permanently dense unless the profile supports it.');
     lines.push('- Respect the active-role cap. If the profile says only 2-3 roles should be active, leave the rest silent.');
     lines.push('- Sparse or occasional roles should disappear completely in some sections, not just play fewer notes.');
+    lines.push('');
+    lines.push('**Section-phase role budgets**');
+    lines.push('- setup: sparse introduction; use anchor roles only; keep optional roles inactive.');
+    lines.push('- main: use the target role count; establish the groove without activating every role.');
+    lines.push('- peak: may reach the active-role cap; reserve this for one or two high-energy sections.');
+    lines.push('- breakdown: reduce low-end, drums, or harmony weight; keep the texture intentionally stripped.');
+    lines.push('- release: resolve or remove layers; avoid adding sparse roles unless the profile requests it.');
+    lines.push('- For every section plan, choose a phase and a role_budget with min/target/max active roles.');
     lines.push('');
   }
 

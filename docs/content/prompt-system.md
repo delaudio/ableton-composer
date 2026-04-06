@@ -38,6 +38,7 @@ The planning layer exists to make generation less vague:
 
 - harmonic plan for tonal and progression logic
 - arrangement plan for section-level role presence
+- arrangement plans also express section phases and per-section role budgets
 - combined blueprint when both are needed
 
 ## Preset Prompt
