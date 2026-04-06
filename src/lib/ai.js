@@ -7,12 +7,14 @@ import OpenAI from 'openai';
 import { readFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { classifyTrackRole } from './analysis.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROMPTS_DIR = join(__dirname, '../../prompts');
 const SCHEMA_DIR = join(__dirname, '../../schema');
 const GENRE_PROMPTS_DIR = join(PROMPTS_DIR, 'genre');
 const HARMONY_PROMPTS_DIR = join(PROMPTS_DIR, 'harmony');
+const CONTINUATION_RECENT_SECTION_LIMIT = 4;
 
 const PC_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -950,40 +952,92 @@ function buildStyleSection(p) {
   return lines.join('\n');
 }
 
-function buildContinuationSection(song) {
-  const sectionSummaries = (song.sections ?? []).map((section, index) => ({
-    index,
-    name: section.name,
-    bars: section.bars,
-    track_count: section.tracks?.length ?? 0,
-    tracks: (section.tracks ?? []).map(track => {
+export function summarizeContinuationContext(song, recentSectionLimit = CONTINUATION_RECENT_SECTION_LIMIT) {
+  const trackUsage = {};
+  const roleUsage = {};
+
+  const sectionSummaries = (song.sections ?? []).map((section, index) => {
+    const activeRoles = new Set();
+    const activeTracks = (section.tracks ?? []).flatMap(track => {
       const notes = track.clip?.notes ?? [];
+      if (notes.length === 0) return [];
+
       const pitches = notes.map(note => note.pitch);
-      return {
-        ableton_name: track.ableton_name,
-        note_count: notes.length,
-        min_pitch: pitches.length ? Math.min(...pitches) : null,
-        max_pitch: pitches.length ? Math.max(...pitches) : null,
-        first_note_time: notes.length ? notes[0].time : null,
+      const role = classifyTrackRole(track.ableton_name || '');
+
+      trackUsage[track.ableton_name] ??= {
+        active_sections: 0,
+        total_notes: 0,
+        first_section_index: index,
+        last_section_index: index,
       };
-    }),
-  }));
+      trackUsage[track.ableton_name].active_sections += 1;
+      trackUsage[track.ableton_name].total_notes += notes.length;
+      trackUsage[track.ableton_name].last_section_index = index;
+
+      activeRoles.add(role);
+
+      return [{
+        ableton_name: track.ableton_name,
+        role,
+        note_count: notes.length,
+        min_pitch: Math.min(...pitches),
+        max_pitch: Math.max(...pitches),
+        first_note_time: notes[0].time,
+      }];
+    });
+
+    for (const role of activeRoles) {
+      roleUsage[role] ??= { active_sections: 0, last_section_index: index };
+      roleUsage[role].active_sections += 1;
+      roleUsage[role].last_section_index = index;
+    }
+
+    return {
+      index,
+      name: section.name,
+      bars: section.bars,
+      active_track_count: activeTracks.length,
+      tracks: activeTracks,
+    };
+  });
+
+  const recentSections = sectionSummaries.slice(-Math.max(1, recentSectionLimit));
+
+  return {
+    meta: {
+      bpm: song.meta?.bpm,
+      scale: song.meta?.scale,
+      genre: song.meta?.genre,
+      mood: song.meta?.mood,
+      time_signature: song.meta?.time_signature,
+    },
+    continuity_summary: {
+      total_sections: sectionSummaries.length,
+      recent_sections_included: recentSections.length,
+      track_usage: Object.fromEntries(
+        Object.entries(trackUsage)
+          .sort(([, a], [, b]) => b.active_sections - a.active_sections || b.total_notes - a.total_notes)
+      ),
+      role_usage: Object.fromEntries(
+        Object.entries(roleUsage)
+          .sort(([, a], [, b]) => b.active_sections - a.active_sections)
+      ),
+    },
+    recent_sections: recentSections,
+  };
+}
+
+function buildContinuationSection(song) {
+  const summary = summarizeContinuationContext(song);
 
   return [
     '## Existing song to continue',
     'Append new sections that follow coherently from this material. Do not rewrite the existing sections.',
     'Use this as compact continuity context, not as source material to duplicate verbatim.',
+    'Recent sections are included in more detail; older material is summarized as aggregate track and role usage.',
     '```json',
-    JSON.stringify({
-      meta: {
-        bpm: song.meta?.bpm,
-        scale: song.meta?.scale,
-        genre: song.meta?.genre,
-        mood: song.meta?.mood,
-        time_signature: song.meta?.time_signature,
-      },
-      sections: sectionSummaries,
-    }, null, 2),
+    JSON.stringify(summary, null, 2),
     '```',
   ].join('\n');
 }
