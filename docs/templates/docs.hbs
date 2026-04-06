@@ -9,32 +9,88 @@
   <script defer src="/app.js"></script>
 </head>
 <body class="bg-ink text-paper antialiased">
-  <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,178,55,0.12),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(78,141,255,0.15),_transparent_26%),linear-gradient(180deg,_#111111_0%,_#181716_100%)]">
-    <div class="mx-auto grid min-h-screen max-w-7xl grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside id="site-nav" class="border-b border-white/10 bg-black/20 p-6 backdrop-blur lg:border-b-0 lg:border-r">
-        <a href="/" class="mb-8 block">
-          <div class="font-display text-xs uppercase tracking-[0.35em] text-amber-300/80">Ableton Composer</div>
-          <div class="mt-2 text-2xl font-semibold text-white">Docs</div>
-          <div class="mt-2 max-w-xs text-sm text-stone-300">Multi-provider MIDI generation, style analysis, and prompt-driven music planning.</div>
+  <div class="min-h-screen bg-ink">
+    <div class="border-b border-white/8 bg-[#121210]">
+      <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-6 px-5 py-4 sm:px-7 lg:px-10">
+        <div class="min-w-0">
+          <div class="font-mono text-[11px] uppercase tracking-[0.14em] text-stone-600">Ableton Composer Documentation</div>
+          <div class="mt-1 flex items-center gap-3">
+            <h1 class="truncate text-base font-medium tracking-[-0.03em] text-stone-100">{{title}}</h1>
+            <span class="hidden rounded-sm border border-white/8 bg-white/[0.03] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500 sm:inline-block">Tool Maker UI</span>
+          </div>
+        </div>
+        <div class="hidden items-center gap-6 lg:flex">
+          <a href="/workflows.html" class="top-link">workflows</a>
+          <a href="/prompt-system.html" class="top-link">prompt system</a>
+          <a href="https://github.com/delaudio/ableton-composer" class="top-link">github</a>
+        </div>
+        <button id="nav-toggle" class="rounded-sm border border-white/10 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-stone-300 lg:hidden">Menu</button>
+      </div>
+    </div>
+
+    <div class="mx-auto grid min-h-[calc(100vh-69px)] max-w-[1600px] grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
+      <aside id="site-nav" class="border-b border-white/8 bg-[#121210] px-5 py-6 lg:border-b-0 lg:border-r lg:px-6">
+        <a href="/index.html" class="mb-8 block border-b border-white/8 pb-6">
+          <div class="text-[13px] font-medium tracking-[0.01em] text-stone-100">Ableton Composer</div>
+          <div class="mt-2 max-w-xs text-sm leading-6 text-stone-400">Multi-provider MIDI generation, style analysis, and modular planning for Ableton Live.</div>
+          <div class="mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-stone-600">fors.fm × instrument shell</div>
         </a>
-        {{> nav}}
+        <div class="doc-nav-shell">
+          {{> nav}}
+        </div>
       </aside>
 
-      <main class="min-w-0 p-6 sm:p-10 lg:p-14">
+      <main class="min-w-0 bg-[linear-gradient(180deg,_#111110_0%,_#141412_100%)] px-5 py-7 sm:px-7 lg:px-10 lg:py-10">
         <div class="mx-auto max-w-4xl">
-          <div class="mb-8 flex items-center justify-between gap-4 lg:hidden">
-            <div>
-              <div class="font-display text-xs uppercase tracking-[0.3em] text-amber-300/70">Ableton Composer</div>
-              <div class="text-xl font-semibold text-white">{{title}}</div>
-            </div>
-            <button id="nav-toggle" class="rounded-full border border-white/15 px-4 py-2 text-sm text-stone-200">Menu</button>
+          <div class="mb-8 border-b border-white/8 pb-6">
+            <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-stone-500">Reference / Documentation</p>
+            <h2 class="max-w-3xl text-4xl font-light tracking-[-0.05em] text-stone-100 sm:text-5xl">{{title}}</h2>
+            <p class="mt-4 max-w-2xl text-[15px] leading-7 text-stone-400">{{description}}</p>
           </div>
 
-          <article class="prose prose-invert prose-pre:rounded-2xl prose-pre:border prose-pre:border-white/10 prose-code:text-amber-300 max-w-none">
-            {{{content}}}
-          </article>
+          <div class="doc-article-shell">
+            <article class="doc-prose">
+              {{{content}}}
+            </article>
+          </div>
         </div>
       </main>
+
+      <aside class="hidden border-l border-white/8 bg-[#121210] px-6 py-8 lg:block">
+        <div class="space-y-6">
+          <section class="spec-card">
+            <div class="spec-kicker">Current page</div>
+            <div class="spec-title">{{title}}</div>
+            <div class="spec-copy">{{description}}</div>
+          </section>
+
+          <section class="spec-card">
+            <div class="spec-kicker">Useful links</div>
+            <div class="space-y-3">
+              <a href="/getting-started.html" class="spec-link">Getting started</a>
+              <a href="/cli.html" class="spec-link">CLI reference</a>
+              <a href="/profiles.html" class="spec-link">Profiles</a>
+              <a href="/workflows.html" class="spec-link">Workflows</a>
+            </div>
+          </section>
+
+          <section class="spec-card">
+            <div class="spec-kicker">Runtime</div>
+            <div class="spec-row">
+              <span>Providers</span>
+              <span>Anthropic · OpenAI · Codex</span>
+            </div>
+            <div class="spec-row">
+              <span>Profiles</span>
+              <span>song · album · artist</span>
+            </div>
+            <div class="spec-row">
+              <span>Docs</span>
+              <span>Minuto static site</span>
+            </div>
+          </section>
+        </div>
+      </aside>
     </div>
   </div>
 </body>

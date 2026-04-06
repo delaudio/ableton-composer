@@ -1,6 +1,6 @@
 ---
 title: Getting Started
-description: Install and run Ableton Composer
+description: Install Ableton Composer, configure providers, and run the first generation.
 template: docs
 ---
 
@@ -28,6 +28,12 @@ cp .env.example .env
 
 Edit `.env` and add the provider keys you want to use.
 
+Useful OpenAI env vars:
+
+- `OPENAI_MODEL`
+- `OPENAI_TIMEOUT_MS`
+- `OPENAI_MAX_RETRIES`
+
 ## First Generation
 
 ```bash
@@ -36,6 +42,13 @@ ableton-composer generate "melancholic IDM, 8 sections" \
   --provider openai
 ```
 
+What this does:
+
+1. loads the base generation prompt
+2. optionally infers genre or harmony overlays
+3. generates structured song JSON
+4. saves the result under `sets/`
+
 ## Ableton Remote Script
 
 ```bash
@@ -43,9 +56,11 @@ cp -r node_modules/ableton-js/midi-script \
       ~/Music/Ableton/User\ Library/Remote\ Scripts/AbletonJS
 ```
 
-Then activate `AbletonJS` inside:
+Then activate `AbletonJS` in:
 
 `Preferences -> Link / MIDI -> Control Surfaces`
+
+Restart Live if needed.
 
 ## Push a Generated Set
 
@@ -54,3 +69,9 @@ ableton-composer push sets/my-song --setup
 ```
 
 Each generated section maps to one scene row in Ableton session view.
+
+## Next Steps
+
+- read [Providers](/providers.html) if you want to choose between Anthropic, OpenAI, Codex, or Claude CLI
+- read [Profiles](/profiles.html) if you want album-style conditioning
+- read [Workflows](/workflows.html) for end-to-end examples

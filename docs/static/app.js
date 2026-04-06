@@ -15,11 +15,37 @@ const nav = document.getElementById('site-nav');
 const toggle = document.getElementById('nav-toggle');
 
 if (nav && toggle) {
+  const setMobileState = open => {
+    if (window.innerWidth >= 1024) {
+      nav.classList.remove('hidden');
+      document.body.classList.remove('overflow-hidden');
+      return;
+    }
+    nav.classList.toggle('hidden', !open);
+    document.body.classList.toggle('overflow-hidden', open);
+  };
+
   toggle.addEventListener('click', () => {
-    nav.classList.toggle('hidden');
+    setMobileState(nav.classList.contains('hidden'));
   });
 
   if (window.innerWidth < 1024) {
-    nav.classList.add('hidden');
+    setMobileState(false);
+  }
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 1024) {
+      setMobileState(true);
+    }
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') setMobileState(false);
+  });
+
+  for (const link of nav.querySelectorAll('a')) {
+    link.addEventListener('click', () => {
+      if (window.innerWidth < 1024) setMobileState(false);
+    });
   }
 }
