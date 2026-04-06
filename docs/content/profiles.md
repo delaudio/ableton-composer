@@ -30,8 +30,8 @@ Example:
 ```text
 profiles/
   albums/
-    depeche-mode/
-      violator/
+    example-artist/
+      midnight-signals/
         core.json
         harmony.json
         rhythm.json

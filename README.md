@@ -8,7 +8,7 @@ CLI for generating structured MIDI content for Ableton Live with multiple AI pro
 - supports `anthropic`, `openai`, `codex`, and `claude-cli`
 - analyzes songs, albums, artists, and collections into hierarchical style profiles
 - uses modular prompt layers for genre, harmony, arrangement, and planning
-- compares generated material against source profiles
+- compares generated material against reference profiles
 - pushes clips into Ableton Live through `ableton-js`
 
 ## Quick Start
@@ -30,25 +30,27 @@ ableton-composer generate "melancholic IDM, 8 sections" \
   --provider openai
 ```
 
-Analyze an album into a reusable bundle:
+Analyze your own reference set into a reusable bundle:
 
 ```bash
-ableton-composer analyze sets/violator \
+ableton-composer analyze sets/reference-collection \
   --scope album \
-  --artist "Depeche Mode" \
-  --album "Violator"
+  --artist "Example Artist" \
+  --album "Midnight Signals"
 ```
 
-Generate from that bundle:
+Generate from the reference bundle:
 
 ```bash
-ableton-composer generate "dark synth-pop with restrained hooks" \
-  --style profiles/albums/depeche-mode/violator/bundle.json \
+ableton-composer generate "moody electronic sketch with restrained hooks" \
+  --style profiles/albums/example-artist/midnight-signals/bundle.json \
   --tracks "Bass,Drums,Pad,Lead,Chords,FX" \
   --provider openai \
   --sections 4 \
   --chunk-size 2
 ```
+
+Use reference sets only when you own the material, have permission to analyze it, or are working with synthetic/example material.
 
 ## Documentation
 

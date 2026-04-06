@@ -118,7 +118,7 @@ ableton-composer generate "melancholic IDM, 8 sections" \
 2. Use `generate` with explicit tracks
 3. Push the result into Live
 
-### I want to emulate an album or artist
+### I want to adapt a reference bundle
 
 1. Read [Profiles](/profiles.html)
 2. Run `analyze --scope album`
@@ -135,7 +135,7 @@ ableton-composer generate "melancholic IDM, 8 sections" \
 
 - `generate` creates song JSON from prompts, style bundles, and planning prompts
 - `analyze` extracts hierarchical style profiles from songs, albums, artists, or collections
-- `compare` measures fidelity between generated material and a source profile bundle
+- `compare` measures alignment and drift between generated material and a reference profile bundle
 - `expand` adds new tracks to existing sections without rewriting the originals
 - `preset generate` creates synth presets from preset profiles
 
@@ -151,24 +151,26 @@ ableton-composer generate "melancholic IDM, 8 sections" \
 <div class="command-panel">
 
 ```bash
-# 1. Analyze an album into a style bundle
-ableton-composer analyze sets/violator \
+# 1. Analyze your own reference set into a style bundle
+ableton-composer analyze sets/reference-collection \
   --scope album \
-  --artist "Depeche Mode" \
-  --album "Violator"
+  --artist "Example Artist" \
+  --album "Midnight Signals"
 
-# 2. Generate from that bundle
-ableton-composer generate "dark synth-pop with restrained hooks" \
-  --style profiles/albums/depeche-mode/violator/bundle.json \
+# 2. Generate from the reference bundle
+ableton-composer generate "moody electronic sketch with restrained hooks" \
+  --style profiles/albums/example-artist/midnight-signals/bundle.json \
   --tracks "Bass,Drums,Pad,Lead,Chords,FX" \
   --provider openai \
   --sections 4 \
   --chunk-size 2
 
-# 3. Compare the output against the source profile
+# 3. Compare the output against the reference profile
 ableton-composer compare \
-  profiles/albums/depeche-mode/violator/bundle.json \
+  profiles/albums/example-artist/midnight-signals/bundle.json \
   sets/my-generated-song
 ```
 
 </div>
+
+Use reference sets only when you own the material, have permission to analyze it, or are working with synthetic/example material.

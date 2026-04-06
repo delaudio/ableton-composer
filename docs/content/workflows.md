@@ -18,11 +18,13 @@ Use this when you want a fast prompt-to-set workflow without prior analysis.
 
 ## 2. Analyze an Album
 
+Use this workflow with your own material, licensed material, or synthetic/example sets. The reference bundle is meant to capture structural signals for your workflow, not to recreate a protected recording.
+
 ```bash
-ableton-composer analyze sets/violator \
+ableton-composer analyze sets/reference-collection \
   --scope album \
-  --artist "Depeche Mode" \
-  --album "Violator"
+  --artist "Example Artist" \
+  --album "Midnight Signals"
 ```
 
 This writes a hierarchical album bundle with:
@@ -37,8 +39,8 @@ This writes a hierarchical album bundle with:
 ## 3. Generate From an Album Bundle
 
 ```bash
-ableton-composer generate "dark synth-pop with restrained hooks" \
-  --style profiles/albums/depeche-mode/violator/bundle.json \
+ableton-composer generate "moody electronic sketch with restrained hooks" \
+  --style profiles/albums/example-artist/midnight-signals/bundle.json \
   --tracks "Bass,Drums,Pad,Lead,Chords,FX" \
   --provider openai \
   --sections 4 \
@@ -51,7 +53,7 @@ Use chunking for larger prompts or album-scale style bundles.
 
 ```bash
 ableton-composer preset generate \
-  profiles/presets/arturia/jun-6-v/bass.json \
+  profiles/presets/generic-analog-poly/bass.json \
   "deep analog bass" \
   --provider openai
 ```
@@ -68,11 +70,11 @@ ableton-composer expand sets/my-song \
 
 Useful when you already have a harmonic structure and only want new supporting parts.
 
-## 6. Compare Fidelity
+## 6. Compare Drift
 
 ```bash
 ableton-composer compare \
-  profiles/albums/depeche-mode/violator/bundle.json \
+  profiles/albums/example-artist/midnight-signals/bundle.json \
   sets/my-generated-song
 ```
 

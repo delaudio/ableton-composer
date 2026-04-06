@@ -11,7 +11,7 @@ template: docs
 - `generate` create a song from a prompt
 - `expand` add tracks to existing sections
 - `analyze` extract song, album, artist, or collection profiles
-- `compare` compare a generated set against a source profile or bundle
+- `compare` compare a generated set against a reference profile or bundle
 - `preset generate` create synth presets from preset profiles
 - `push` write notes into Ableton Live
 - `pull` import material from Live
@@ -54,7 +54,7 @@ Important options:
 ## Compare
 
 ```bash
-ableton-composer compare <source-profile-or-bundle> <generated-set>
+ableton-composer compare <reference-profile-or-bundle> <generated-set>
 ```
 
 ## Expand

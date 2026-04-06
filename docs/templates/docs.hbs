@@ -1,57 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{title}} | Ableton Composer Docs</title>
-  <meta name="description" content="{{description}}" />
-  <link rel="stylesheet" href="/styles.css" />
-  <script defer src="/app.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}} - Ableton Composer</title>
+    <meta name="description" content="{{description}}">
+    <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="bg-ink text-paper antialiased">
-  <div class="min-h-screen bg-ink">
-    <div class="border-b border-white/8 bg-[#121210]">
-      <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-6 px-5 py-4 sm:px-7 lg:px-10">
-        <div class="min-w-0">
-          <a href="/index.html" class="truncate text-base font-medium tracking-[-0.03em] text-stone-100">ableton composer</a>
-        </div>
-        <div class="hidden items-center gap-6 lg:flex">
-          <a href="/workflows.html" class="top-link">workflows</a>
-          <a href="/prompt-system.html" class="top-link">prompt system</a>
-          <a href="https://github.com/delaudio/ableton-composer" class="top-link">github</a>
-        </div>
-        <button id="nav-toggle" class="rounded-sm border border-white/10 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-stone-300 lg:hidden">Menu</button>
-      </div>
-    </div>
+<body class="bg-white dark:bg-black">
+    {{> header}}
 
-    <div class="mx-auto grid min-h-[calc(100vh-69px)] max-w-[1480px] grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)]">
-      <aside id="site-nav" class="border-b border-white/8 bg-[#121210] px-5 py-6 lg:border-b-0 lg:border-r lg:px-6">
-        <a href="/index.html" class="mb-8 block border-b border-white/8 pb-6">
-          <div class="text-[13px] font-medium tracking-[0.01em] text-stone-100">Ableton Composer</div>
-          <div class="mt-2 max-w-xs text-sm leading-6 text-stone-400">Multi-provider MIDI generation, style analysis, and modular planning for Ableton Live.</div>
-          <div class="mt-4 font-mono text-[11px] uppercase tracking-[0.12em] text-stone-600">fors.fm × instrument shell</div>
-        </a>
-        <div class="doc-nav-shell">
-          {{> nav}}
-        </div>
-      </aside>
+    <div class="docs-container flex">
+        <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden"></div>
 
-      <main class="min-w-0 bg-[linear-gradient(180deg,_#111110_0%,_#141412_100%)] px-5 py-7 sm:px-7 lg:px-10 lg:py-10">
-        <div class="mx-auto max-w-4xl">
-          <div class="mb-8 border-b border-white/8 pb-6">
-            <p class="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-stone-500">Reference / Documentation</p>
-            <h2 class="max-w-3xl text-4xl font-light tracking-[-0.05em] text-stone-100 sm:text-5xl">{{title}}</h2>
-            <p class="mt-4 max-w-2xl text-[15px] leading-7 text-stone-400">{{description}}</p>
-          </div>
+        <aside id="sidebar" class="sidebar w-64 bg-white dark:bg-black min-h-screen border-r border-gray-300 dark:border-gray-700 fixed left-0 top-14 overflow-y-auto md:block hidden z-50">
+            {{> sidebar}}
+        </aside>
 
-          <div class="doc-article-shell">
-            <article class="doc-prose">
-              {{{content}}}
+        <aside id="mobile-sidebar" class="mobile-sidebar w-64 bg-white dark:bg-black min-h-screen border-l border-gray-300 dark:border-gray-700 fixed right-0 top-14 overflow-y-auto transform translate-x-full transition-transform duration-300 z-50 md:hidden">
+            {{> sidebar}}
+        </aside>
+
+        <main class="main-content flex-1 ml-64 mr-64 p-12">
+            <article class="max-w-3xl mx-auto prose">
+                {{{content}}}
             </article>
-          </div>
-        </div>
-      </main>
+
+            <div class="mt-16 pt-6 border-t border-gray-300 dark:border-gray-700 max-w-3xl mx-auto">
+                <a href="https://github.com/delaudio/ableton-composer" class="text-xs text-gray-500 dark:text-gray-500 hover:text-black dark:hover:text-white">
+                    Edit this page
+                </a>
+            </div>
+        </main>
+
+        <aside class="toc-sidebar w-64 fixed right-0 top-14 h-screen overflow-y-auto border-l border-gray-300 dark:border-gray-700 bg-white dark:bg-black hidden xl:block">
+            <nav class="p-6">
+                <h3 class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500 mb-3">On this page</h3>
+                <div id="toc-content" class="toc-links space-y-2 text-sm"></div>
+            </nav>
+        </aside>
     </div>
-  </div>
+
+    <script src="/app.js"></script>
 </body>
 </html>

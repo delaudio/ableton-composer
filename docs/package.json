@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "minuto build",
-    "dev": "minuto dev",
-    "serve": "minuto serve"
+    "dev": "node dev.cjs",
+    "serve": "node serve.cjs"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.4",

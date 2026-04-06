@@ -1,229 +1,263 @@
 @import "tailwindcss";
 
-@theme {
-  --color-ink: #111110;
-  --color-paper: #e8e6e1;
-  --color-surface: #2a2a27;
-  --font-display: "Helvetica Neue", "Inter", "Arial", sans-serif;
-  --font-body: "Helvetica Neue", "Inter", "Arial", sans-serif;
-  --font-mono: "IBM Plex Mono", "SFMono-Regular", "Menlo", monospace;
+/* Minimal grayscale documentation styles */
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
 }
 
-@layer base {
-  html {
-    scroll-behavior: smooth;
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-700;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-600;
+}
+
+/* Sidebar styles */
+.sidebar-nav {
+  scrollbar-width: thin;
+}
+
+.sidebar-category-header {
+  cursor: pointer;
+}
+
+.category-arrow {
+  transition: transform 0.15s ease;
+}
+
+.category-arrow.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.sidebar-link.active-link {
+  position: relative;
+  @apply text-black dark:text-white;
+}
+
+/* Table of Contents */
+.toc-sidebar {
+  scrollbar-width: thin;
+}
+
+.toc-link {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.toc-link.toc-active {
+  @apply text-black dark:text-white;
+}
+
+/* Responsive layout adjustments */
+@media (max-width: 1280px) {
+  .toc-sidebar {
+    display: none;
   }
 
-  body {
-    font-family: var(--font-body);
-    background: var(--color-ink);
-    color: var(--color-paper);
-  }
-
-  h1,
-  h2,
-  h3,
-  h4 {
-    font-family: var(--font-display);
-    letter-spacing: -0.03em;
-  }
-
-  code,
-  pre,
-  kbd,
-  samp {
-    font-family: var(--font-mono);
-  }
-
-  a {
-    text-decoration: none;
+  .main-content {
+    margin-right: 0 !important;
   }
 }
 
-@layer components {
-  .top-link {
-    @apply text-[12px] tracking-[0.02em] text-stone-500 transition;
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
   }
 
-  .top-link:hover {
-    @apply text-stone-100;
+  .main-content {
+    margin-left: 0 !important;
   }
+}
 
-  .doc-nav-shell {
-    @apply rounded-sm border border-white/8 bg-white/[0.02] p-3;
-  }
+/* Prose (content) styles - minimal grayscale */
+.prose {
+  @apply text-gray-700 dark:text-gray-300;
+}
 
-  .doc-link {
-    @apply block border-l border-transparent px-3 py-2 text-[13px] tracking-[0.01em] text-stone-400 transition;
-  }
+.prose h1 {
+  @apply text-3xl mb-6 text-black dark:text-white border-b border-gray-300 dark:border-gray-700 pb-4;
+  scroll-margin-top: 4rem;
+}
 
-  .doc-link:hover {
-    @apply border-stone-500/50 bg-white/[0.03] text-stone-100;
-  }
+.prose h2 {
+  @apply text-2xl mt-10 mb-4 text-black dark:text-white;
+  scroll-margin-top: 4rem;
+}
 
-  .doc-link.is-active {
-    @apply border-stone-300 bg-white/[0.04] text-stone-100;
-  }
+.prose h2::before {
+  content: "";
+  display: block;
+  height: 4rem;
+  margin-top: -4rem;
+  visibility: hidden;
+}
 
-  .doc-article-shell {
-    @apply border border-white/8 bg-[#171716] px-6 py-7 shadow-[0_20px_60px_rgba(0,0,0,0.22)] sm:px-8 sm:py-9;
-  }
+.prose h3 {
+  @apply text-xl mt-8 mb-3 text-black dark:text-white;
+  scroll-margin-top: 4rem;
+}
 
-  .doc-prose {
-    @apply max-w-none text-[15px] leading-7 text-stone-300;
-  }
+.prose h3::before {
+  content: "";
+  display: block;
+  height: 4rem;
+  margin-top: -4rem;
+  visibility: hidden;
+}
 
-  .doc-prose h1,
-  .doc-prose h2,
-  .doc-prose h3,
-  .doc-prose h4 {
-    @apply mb-4 mt-10 font-medium tracking-[-0.04em] text-stone-100;
-  }
+.prose p {
+  @apply mb-4 leading-relaxed;
+}
 
-  .doc-prose h1 {
-    @apply text-4xl;
-  }
+.prose a {
+  @apply text-gray-700 dark:text-gray-300 underline hover:text-black dark:hover:text-white;
+}
 
-  .doc-prose h2 {
-    @apply border-b border-white/8 pb-3 text-3xl;
-  }
+.prose code {
+  @apply bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-sm font-mono text-gray-800 dark:text-gray-200;
+}
 
-  .doc-prose h3 {
-    @apply text-2xl;
-  }
+.prose pre {
+  @apply bg-black dark:bg-gray-950 text-white p-4 overflow-x-auto mb-6 border border-gray-300 dark:border-gray-800;
+}
 
-  .doc-prose p,
-  .doc-prose ul,
-  .doc-prose ol {
-    @apply my-4;
-  }
+.prose pre code {
+  @apply bg-transparent text-white p-0;
+}
 
-  .doc-prose ul,
-  .doc-prose ol {
-    @apply pl-5;
-  }
+.prose ul {
+  @apply list-disc ml-6 mb-4 space-y-2;
+}
 
-  .doc-prose li {
-    @apply my-2;
-  }
+.prose ol {
+  @apply list-decimal ml-6 mb-4 space-y-2;
+}
 
-  .doc-prose a {
-    @apply text-stone-100 underline decoration-stone-600 underline-offset-3 transition;
-  }
+.prose li {
+  @apply pl-2;
+}
 
-  .doc-prose a:hover {
-    @apply decoration-stone-300;
-  }
+.prose blockquote {
+  @apply border-l-2 border-gray-400 dark:border-gray-600 pl-4 text-gray-600 dark:text-gray-400 my-4;
+}
 
-  .doc-prose code {
-    @apply rounded-sm border border-white/8 bg-black/20 px-1.5 py-0.5 text-[0.9em] text-stone-100;
-  }
+.prose table {
+  @apply w-full border-collapse mb-6;
+}
 
-  .doc-prose pre {
-    @apply overflow-x-auto border border-white/8 bg-[#111110] px-4 py-4 text-sm text-stone-200;
-  }
+.prose th {
+  @apply bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 px-4 py-2 text-left;
+}
 
-  .doc-prose pre code {
-    @apply border-0 bg-transparent p-0;
-  }
+.prose td {
+  @apply border border-gray-300 dark:border-gray-700 px-4 py-2;
+}
 
-  .doc-prose hr {
-    @apply my-10 border-white/8;
-  }
+.prose img {
+  @apply mb-4;
+}
 
-  .doc-prose blockquote {
-    @apply border-l border-stone-500 pl-4 text-stone-400;
-  }
+.prose hr {
+  @apply border-gray-300 dark:border-gray-700 my-8;
+}
 
-  .doc-prose > :first-child {
-    @apply mt-0;
-  }
+/* Ableton Composer content blocks, matched to the Minuto grayscale system. */
+.hero-panel,
+.spec-card,
+.quick-link-card,
+.hero-spec,
+.command-panel {
+  @apply border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-950;
+}
 
-  .spec-card {
-    @apply border border-white/8 bg-white/[0.02] p-4;
-  }
+.hero-panel {
+  @apply mb-8 p-5 sm:p-6;
+}
 
-  .spec-kicker {
-    @apply mb-3 font-mono text-[11px] uppercase tracking-[0.12em] text-stone-600;
-  }
+.hero-kicker,
+.spec-kicker {
+  @apply mb-3 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-500;
+}
 
-  .spec-title {
-    @apply text-lg font-medium tracking-[-0.03em] text-stone-100;
-  }
+.hero-grid {
+  @apply grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)];
+}
 
-  .spec-copy {
-    @apply mt-2 text-sm leading-6 text-stone-400;
-  }
+.hero-title {
+  @apply text-3xl text-black dark:text-white sm:text-4xl;
+}
 
-  .hero-panel {
-    @apply mb-8 border border-white/8 bg-[linear-gradient(180deg,_rgba(255,255,255,0.03),_rgba(255,255,255,0.01))] p-5 sm:p-6;
-  }
+.hero-copy,
+.spec-copy {
+  @apply mt-2 text-sm leading-6 text-gray-600 dark:text-gray-400;
+}
 
-  .hero-kicker {
-    @apply mb-4 font-mono text-[11px] uppercase tracking-[0.14em] text-stone-600;
-  }
+.hero-actions {
+  @apply mt-6 flex flex-wrap gap-3;
+}
 
-  .hero-grid {
-    @apply grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.9fr)];
-  }
+.hero-button {
+  @apply inline-flex items-center justify-center border border-gray-300 dark:border-gray-700 px-4 py-2 text-xs text-gray-700 dark:text-gray-300 no-underline hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white;
+}
 
-  .hero-title {
-    @apply text-3xl font-light tracking-[-0.05em] text-stone-100 sm:text-4xl;
-  }
+.prose a.hero-button {
+  @apply no-underline;
+}
 
-  .hero-copy {
-    @apply mt-4 max-w-2xl text-[15px] leading-7 text-stone-400;
-  }
+.hero-button-primary {
+  @apply border-black bg-black text-white dark:border-white dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200;
+}
 
-  .hero-actions {
-    @apply mt-6 flex flex-wrap gap-3;
-  }
+.prose a.hero-button-primary {
+  @apply text-white dark:text-black hover:text-white dark:hover:text-black;
+}
 
-  .hero-button {
-    @apply inline-flex items-center justify-center border border-white/10 px-4 py-2 text-[12px] tracking-[0.06em] text-stone-200 transition;
-  }
+.hero-spec {
+  @apply p-4;
+}
 
-  .hero-button:hover {
-    @apply border-stone-300/40 bg-white/[0.04];
-  }
+.hero-spec .spec-row {
+  @apply flex items-start justify-between gap-4 border-b border-gray-300 dark:border-gray-700 py-3 text-xs leading-5 text-gray-600 dark:text-gray-400 last:border-b-0 last:pb-0;
+}
 
-  .hero-button-primary {
-    @apply border-stone-200 bg-stone-100 text-stone-900;
-  }
+.hero-spec .spec-row span:last-child {
+  @apply max-w-[180px] text-right text-black dark:text-white;
+}
 
-  .hero-button-primary:hover {
-    @apply border-stone-100 bg-white text-stone-950;
-  }
+.spec-card,
+.quick-link-card {
+  @apply p-4;
+}
 
-  .hero-spec {
-    @apply border border-white/8 bg-black/20 p-4;
-  }
+.spec-title {
+  @apply text-lg text-black dark:text-white;
+}
 
-  .hero-spec .spec-row {
-    @apply flex items-start justify-between gap-4 border-b border-white/8 py-3 text-[12px] leading-5 text-stone-400 last:border-b-0 last:pb-0;
-  }
+.quick-link-grid {
+  @apply my-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3;
+}
 
-  .hero-spec .spec-row span:last-child {
-    @apply max-w-[180px] text-right text-stone-200;
-  }
+.quick-link-card {
+  @apply block no-underline hover:border-black dark:hover:border-white;
+}
 
-  .quick-link-grid {
-    @apply my-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3;
-  }
+.quick-link-card .spec-copy {
+  @apply max-w-none;
+}
 
-  .quick-link-card {
-    @apply block border border-white/8 bg-white/[0.02] p-4 transition;
-  }
-
-  .quick-link-card:hover {
-    @apply border-stone-400/40 bg-white/[0.04];
-  }
-
-  .quick-link-card .spec-copy {
-    @apply max-w-none;
-  }
-
-  .command-panel {
-    @apply border border-white/8 bg-black/15 p-1;
-  }
+.command-panel {
+  @apply p-1;
 }
