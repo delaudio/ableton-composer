@@ -2,7 +2,8 @@
  * preset command — save and restore single-device parameter presets.
  *
  * Presets are stored as:
- *   presets/<brand>/<device>/<name>.json
+ *   presets/<brand>/<device>/<name>.json            (flat)
+ *   presets/<brand>/<device>/<category>/<name>.json (with subcategory)
  *
  * Works with native Ableton devices and VST/AU plugins.
  *
@@ -65,7 +66,7 @@ const BRAND_PATTERNS = [
   { brand: 'Native Instruments', pattern: /^(Massive|Reaktor|Kontakt|Battery|Absynth|FM8|Razor|Monark|Prism|Session Guitarist|Strummed Acoustic|Super 8|Retro Machines|Polyplex|Rounds|Damage|Driver|Replika|Raum|Phasis|Flair|Supercharger|Transient Master)/i },
 
   // ── Arturia ───────────────────────────────────────────────────────────────
-  { brand: 'Arturia', pattern: /^(Arturia|Mini V|SEM V|Jup-8 V|Matrix-12 V|Jupiter-8V|CS-80 V|Prophet V|Prophet 5|ARP 2600|Moog Modular|Buchla Easel|CMI V|DX7 V|Analog Lab|Pigments|OB-Xa V|MS-20 V|B-3 V|Stage-73 V|Farfisa V|Vocoder V|Mini V|Solina V)/i },
+  { brand: 'Arturia', pattern: /^(Arturia|Analog Lab|Pigments|ARP 2600|Jun-6 V|Jup-8 V|Jupiter-8 V|CS-80 V|Prophet V|Prophet-5 V|Prophet-VS V|Mini V|SEM V|OB-Xa V|Matrix-12 V|MS-20 V|B-3 V|Stage-73 V|Farfisa V|Vocoder V|Solina V|CMI V|DX7 V|CZ V|Buchla Easel V|Mellotron V|Synclavier V|Synthi V|Emulator II V|Vox Continental V|Clavinet V|Modular V|OP-Xa V|Piano V|Wurli V|D-50 V)/i },
 
   // ── u-he ─────────────────────────────────────────────────────────────────
   { brand: 'u-he', pattern: /^(Diva|Zebra|Hive|Repro|Bazille|ACE|Podolski|Triple Cheese|Uhbik|Colour Copy|Presswerk|Satin|Twangström|MFM2)/i },
@@ -406,8 +407,11 @@ export async function presetListCommand() {
 
     for (const { brand, devices } of tree) {
       console.log(chalk.bold(`  ${brand}`));
-      for (const { device, presets } of devices) {
+
+      for (const { device, presets, categories } of devices) {
         console.log(`    ${chalk.cyan(device)}`);
+
+        // Direct presets (no category)
         for (const p of presets) {
           const paramCount = p.data.parameters ? Object.keys(p.data.parameters).length : '?';
           const rel = relative(PRESETS_DIR, p.filepath);
@@ -417,7 +421,21 @@ export async function presetListCommand() {
           );
           total++;
         }
+
+        // Subcategory presets
+        for (const { name: catName, presets: catPresets } of categories) {
+          console.log(`      ${chalk.dim(catName)}  ${chalk.dim(`(${catPresets.length})`)}`);
+          for (const p of catPresets) {
+            const paramCount = p.data.parameters ? Object.keys(p.data.parameters).length : '?';
+            console.log(
+              `        ${chalk.white(p.data.name || p.filename.replace('.json', ''))}` +
+              chalk.dim(`  — ${paramCount} params`)
+            );
+            total++;
+          }
+        }
       }
+
       console.log('');
     }
 
@@ -433,8 +451,18 @@ export async function presetListCommand() {
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Walk presets/ and return a grouped tree:
- * [{ brand, devices: [{ device, presets: [{ filename, filepath, data }] }] }]
+ * Walk presets/ and return a grouped tree.
+ *
+ * Supports two structures:
+ *   presets/<brand>/<device>/<preset>.json
+ *   presets/<brand>/<device>/<category>/<preset>.json
+ *
+ * Result shape:
+ * [{ brand, brandSlug, devices: [{
+ *   device, deviceSlug,
+ *   presets: [{ filename, filepath, data }],        ← direct presets
+ *   categories: [{ name, presets: [...] }]          ← sub-categorised presets
+ * }] }]
  */
 async function buildPresetTree(root) {
   let brandDirs;
@@ -445,8 +473,7 @@ async function buildPresetTree(root) {
   for (const brandName of brandDirs.sort()) {
     if (brandName.startsWith('.')) continue;
     const brandPath = join(root, brandName);
-    const brandStat = await stat(brandPath).catch(() => null);
-    if (!brandStat?.isDirectory()) continue;
+    if (!(await stat(brandPath).catch(() => null))?.isDirectory()) continue;
 
     const deviceDirs = await readdir(brandPath).catch(() => []);
     const devices = [];
@@ -454,30 +481,53 @@ async function buildPresetTree(root) {
     for (const deviceName of deviceDirs.sort()) {
       if (deviceName.startsWith('.')) continue;
       const devicePath = join(brandPath, deviceName);
-      const deviceStat = await stat(devicePath).catch(() => null);
-      if (!deviceStat?.isDirectory()) continue;
+      if (!(await stat(devicePath).catch(() => null))?.isDirectory()) continue;
 
-      const files = await readdir(devicePath).catch(() => []);
-      const presets = [];
+      const entries = await readdir(devicePath).catch(() => []);
+      const directPresets = [];
+      const categories = [];
 
-      for (const f of files.filter(f => f.endsWith('.json')).sort()) {
-        const filepath = join(devicePath, f);
-        let data = {};
-        try { data = JSON.parse(await readFile(filepath, 'utf-8')); } catch {}
-        presets.push({ filename: f, filepath, data });
+      for (const entry of entries.sort()) {
+        if (entry.startsWith('.')) continue;
+        const entryPath = join(devicePath, entry);
+        const entryStat = await stat(entryPath).catch(() => null);
+
+        if (entryStat?.isFile() && entry.endsWith('.json')) {
+          // Direct preset at device level
+          let data = {};
+          try { data = JSON.parse(await readFile(entryPath, 'utf-8')); } catch {}
+          directPresets.push({ filename: entry, filepath: entryPath, data });
+
+        } else if (entryStat?.isDirectory()) {
+          // Subcategory folder
+          const catFiles = await readdir(entryPath).catch(() => []);
+          const catPresets = [];
+          for (const f of catFiles.filter(f => f.endsWith('.json')).sort()) {
+            const fp = join(entryPath, f);
+            let data = {};
+            try { data = JSON.parse(await readFile(fp, 'utf-8')); } catch {}
+            catPresets.push({ filename: f, filepath: fp, data });
+          }
+          if (catPresets.length > 0) categories.push({ name: entry, presets: catPresets });
+        }
       }
 
-      if (presets.length > 0) {
-        // Use the device display name from the first preset JSON
-        const auto = detectBrand(presets[0].data.device || deviceName);
-        const displayDevice = auto.deviceDisplay || deviceName;
-        devices.push({ device: displayDevice, deviceSlug: deviceName, presets });
+      if (directPresets.length > 0 || categories.length > 0) {
+        // Use display name from first available preset JSON
+        const firstPreset = directPresets[0] ?? categories[0]?.presets[0];
+        const auto = detectBrand(firstPreset?.data?.device || deviceName);
+        devices.push({
+          device:     auto.deviceDisplay || deviceName,
+          deviceSlug: deviceName,
+          presets:    directPresets,
+          categories,
+        });
       }
     }
 
     if (devices.length > 0) {
-      // Use the brand from the first preset JSON as the display name
-      const displayBrand = devices[0]?.presets[0]?.data?.brand || brandName;
+      const firstPreset = devices[0].presets[0] ?? devices[0].categories[0]?.presets[0];
+      const displayBrand = firstPreset?.data?.brand || brandName;
       tree.push({ brand: displayBrand, brandSlug: brandName, devices });
     }
   }
@@ -507,12 +557,16 @@ async function resolvePresetPath(arg) {
     } catch {}
   }
 
-  // Walk the tree for a partial name match
+  // Walk the tree for a partial name match (direct presets + categories)
   const tree = await buildPresetTree(PRESETS_DIR);
   const lower = arg.toLowerCase();
   for (const { devices } of tree) {
-    for (const { presets } of devices) {
-      const match = presets.find(
+    for (const { presets, categories } of devices) {
+      const allPresets = [
+        ...presets,
+        ...categories.flatMap(c => c.presets),
+      ];
+      const match = allPresets.find(
         p => p.filename.toLowerCase().includes(lower) ||
              (p.data.name || '').toLowerCase().includes(lower)
       );
