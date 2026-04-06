@@ -23,6 +23,7 @@ import { importMidiCommand } from '../src/commands/import-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
 import { snapshotCommand }  from '../src/commands/snapshot.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
+import { presetSaveCommand, presetLoadCommand, presetListCommand } from '../src/commands/preset.js';
 
 const program = new Command();
 
@@ -167,6 +168,32 @@ program
   .option('-o, --out <path>',      'Save snapshot to a specific path')
   .option('--restore <file>',      'Restore device parameters from a snapshot file')
   .action(snapshotCommand);
+
+// ── preset ────────────────────────────────────────────────────────────────────
+const presetCmd = program
+  .command('preset')
+  .description('Save and restore single-device parameter presets (native and VST/AU)');
+
+presetCmd
+  .command('save <track>')
+  .description('Save a device preset from a track')
+  .option('-d, --device <name>',  'Device name (required if track has multiple devices)')
+  .option('-n, --name <name>',    'Preset name (defaults to device name)')
+  .option('-o, --out <path>',     'Save to a specific path instead of presets/')
+  .option('--all-params',         'Include system params (Device On, Reserved…)')
+  .action(presetSaveCommand);
+
+presetCmd
+  .command('load <file>')
+  .description('Apply a preset to a device on a track')
+  .requiredOption('-t, --track <name>',   'Target track name')
+  .option('-d, --device <name>',          'Device name override (defaults to preset device name)')
+  .action(presetLoadCommand);
+
+presetCmd
+  .command('list')
+  .description('List saved presets')
+  .action(presetListCommand);
 
 // ── list ──────────────────────────────────────────────────────────────────────
 program

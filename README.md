@@ -527,6 +527,74 @@ Snapshots are stored as JSON and kept local (not committed to git).
 
 ---
 
+### `preset`
+
+Save and restore parameter presets for individual devices — native Ableton instruments (Analog, Operator, Wavetable…) and VST/AU plugins. A preset captures one device from one track; unlike `snapshot`, it's named and reusable across any track that has the same device.
+
+Parameters are captured as normalized values (0–1 range) via the Live API, the same mechanism used by automation lanes. System parameters (`Device On`, `Reserved*`) are excluded by default.
+
+```bash
+# Save a preset from a track (auto-detects the device)
+ableton-composer preset save "Synth 1" --name "warm-pad"
+
+# Save a specific device when a track has multiple
+ableton-composer preset save "FX Bus" --device "ValhallaSupermassive" --name "lush-hall"
+
+# List saved presets
+ableton-composer preset list
+
+# Apply a preset to a track (targets the device by name from the preset)
+ableton-composer preset load presets/warm-pad.json --track "Synth 1"
+
+# Apply to a different track or device
+ableton-composer preset load presets/warm-pad.json --track "Synth 2" --device "Wavetable"
+```
+
+| Subcommand | Description |
+|---|---|
+| `save <track>` | Read a device's parameters and save as a named preset |
+| `load <file>` | Apply a preset's parameters to a device on a track |
+| `list` | List all presets in `presets/` |
+
+**`save` options:**
+
+| Option | Description |
+|---|---|
+| `-d, --device <name>` | Device name (required if track has multiple devices) |
+| `-n, --name <name>` | Preset name (defaults to device name) |
+| `-o, --out <path>` | Save to a specific path instead of `presets/` |
+| `--all-params` | Include system params (`Device On`, `Reserved*`) |
+
+**`load` options:**
+
+| Option | Description |
+|---|---|
+| `-t, --track <name>` | **Required.** Target track name |
+| `-d, --device <name>` | Device name override (defaults to preset's device name) |
+
+**Preset format:**
+
+```json
+{
+  "name": "lush-hall",
+  "device": "ValhallaSupermassive",
+  "device_class": "ValhallaSupermassive",
+  "device_type": "audio_effect",
+  "source_track": "FX Bus",
+  "created_at": "2026-04-06T10:00:00.000Z",
+  "parameters": {
+    "Mix": 0.5,
+    "Feedback": 0.6,
+    "Width": 1.0,
+    "Mode": 0.04
+  }
+}
+```
+
+Presets are stored in `presets/` and kept local (not committed to git). If a plugin version changes and some parameters no longer exist, they are skipped with a warning.
+
+---
+
 ### `split` / `compile`
 
 Convert between flat JSON and set directory format.
