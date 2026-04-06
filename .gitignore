@@ -5,3 +5,12 @@ sets/*/
 !sets/example/
 !sets/example/**
 !sets/.gitkeep
+midis/*
+!midis/.gitkeep
+snapshots/*
+!snapshots/.gitkeep
+mxls/*
+!mxls/.gitkeep
+profiles/*.json
+!profiles/.gitkeep
+.claude/

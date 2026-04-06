@@ -121,6 +121,102 @@ function parseJsonResponse(raw) {
   }
 }
 
+// ─── Expand: add new tracks to existing sections ─────────────────────────────
+
+const PC_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+/**
+ * Ask Claude to generate new accompaniment tracks for an existing set of sections.
+ *
+ * @param {object}   options
+ * @param {object}   options.song          - Full AbletonSong
+ * @param {string[]} options.tracksToAdd   - Names of tracks to create (e.g. ['Strings','Cello'])
+ * @param {string}   [options.styleHint]   - Free-form style description
+ * @param {string[]} [options.sectionsFilter] - Only expand these section names (null = all)
+ * @param {string}   [options.model]
+ * @param {string}   [options.provider]
+ */
+export async function expandSong({ song, tracksToAdd, styleHint = '', sectionsFilter = null, model, provider = 'api' }) {
+  const systemPrompt = await readFile(join(PROMPTS_DIR, 'expand.md'), 'utf-8');
+  const { meta, sections } = song;
+  const beatsPerBar = parseInt((meta.time_signature || '4/4').split('/')[0], 10) || 4;
+
+  const targetSections = sectionsFilter
+    ? sections.filter(s => sectionsFilter.includes(s.name))
+    : sections;
+
+  if (targetSections.length === 0) throw new Error('No matching sections found.');
+
+  const parts = [];
+
+  // ── Song metadata ────────────────────────────────────────────────────────
+  parts.push([
+    '## Song metadata',
+    `BPM: ${meta.bpm}  |  Key: ${meta.scale || 'unknown'}  |  Time signature: ${meta.time_signature || '4/4'}  |  Genre: ${meta.genre || 'unknown'}`,
+  ].join('\n'));
+
+  // ── Existing tracks ──────────────────────────────────────────────────────
+  const existingTrackNames = [...new Set(sections.flatMap(s => s.tracks.map(t => t.ableton_name)))];
+  parts.push(`## Existing tracks (DO NOT re-generate these)\n${existingTrackNames.map(n => `- ${n}`).join('\n')}`);
+
+  // ── Tracks to add ────────────────────────────────────────────────────────
+  parts.push(`## Tracks to add\n${tracksToAdd.map(n => `- ${n}`).join('\n')}`);
+
+  if (styleHint) {
+    parts.push(`## Style\n${styleHint}`);
+  }
+
+  // ── Harmonic summary per section ─────────────────────────────────────────
+  const summaryLines = ['## Sections with harmonic context\n'];
+  for (const section of targetSections) {
+    const harmony = buildHarmonicSummary(section, beatsPerBar);
+    summaryLines.push(`**${section.name}** (${section.bars} bars):`);
+    summaryLines.push(`  ${harmony}`);
+    summaryLines.push('');
+  }
+  parts.push(summaryLines.join('\n'));
+
+  parts.push(`beatsPerBar: ${beatsPerBar}`);
+
+  const userMessage = parts.join('\n\n');
+
+  if (provider !== 'cli') {
+    const client     = getClient();
+    const modelToUse = model || process.env.CLAUDE_MODEL || 'claude-opus-4-5';
+    const response   = await client.messages.create({
+      model: modelToUse,
+      max_tokens: 16384,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }],
+    });
+    return parseJsonResponse(response.content[0].text.trim());
+  }
+
+  return generateWithClaudeCodeCLI(systemPrompt, userMessage);
+}
+
+/**
+ * Build a compact per-bar harmonic summary for one section.
+ * Groups all pitch classes present in each bar and lists them.
+ */
+function buildHarmonicSummary(section, beatsPerBar) {
+  const barPcs = {};  // barIndex → Set of pitch class names
+  for (const track of section.tracks) {
+    for (const note of (track.clip?.notes ?? [])) {
+      const bar = Math.floor(note.time / beatsPerBar);
+      if (!barPcs[bar]) barPcs[bar] = new Set();
+      barPcs[bar].add(PC_NAMES[note.pitch % 12]);
+    }
+  }
+
+  const bars = Object.keys(barPcs).map(Number).sort((a, b) => a - b);
+  if (bars.length === 0) return '(no notes)';
+
+  return bars
+    .map(b => `bar${b}:[${[...barPcs[b]].join('-')}]`)
+    .join('  ');
+}
+
 // ─── Style profile → prompt section ──────────────────────────────────────────
 
 /**

@@ -16,19 +16,23 @@ ableton-composer push sets/idm-110bpm_2026-04-05.json --setup
 ## How it works
 
 ```
-Existing sets
+Existing sets / MIDI / MusicXML
       ↓
-  analyze             extracts style profile (key, BPM, rhythm, chords, pitch ranges)
+  analyze / import-midi / import-xml    ingest or extract style profiles
       ↓
   profiles/*.json     editable style profile — curate before using
       ↓
   generate --style    Claude generates a new set guided by the profile
+      ↓
+  expand              Claude adds new tracks to existing sections (harmonic-aware)
       ↓
   sets/*.json         saved to disk
       ↓
   push                writes notes into Live clip slots via ableton-js
       ↓
   Ableton Live        clips ready in session view, one row per section
+      ↓
+  snapshot            save/restore device parameter states per track
       ↓
   compare             measure how faithful the generation is to the source style
 ```
@@ -98,6 +102,8 @@ ableton-composer generate "<prompt>" [options]
 | `-s, --style <path>` | Style profile JSON to guide generation (from `analyze`) |
 | `-c, --continue <file>` | Existing set to extend — new sections are appended |
 | `-V, --variations <n>` | Generate N variations and save each one |
+| `-S, --sections <n>` | Total number of sections to generate |
+| `--chunk-size <n>` | Generate in chunks of N sections per API call (use with `--sections`) |
 | `--provider <name>` | `api` (default, uses Anthropic SDK) or `cli` (uses Claude Code CLI, no API key needed) |
 | `-w, --weather` | Fetch current weather and include as context |
 | `-m, --model <model>` | Claude model (overrides `CLAUDE_MODEL` env var) |
@@ -129,6 +135,45 @@ ableton-composer generate "slow cinematic ambient" --live-sync
 # Weather as generative seed
 ableton-composer generate "reflect today's weather as ambient" \
   --tracks "Pad,Bass,Melody" --weather
+
+# Generate exactly 16 sections in two API calls (avoids token limits)
+ableton-composer generate "dark techno, 8 bars each" \
+  --sections 16 --chunk-size 8
+```
+
+---
+
+### `expand`
+
+Add new accompaniment tracks to an existing set using Claude. Claude receives a harmonic summary (pitch classes per bar) of each section and writes complementary parts for the requested instruments — without touching the existing tracks.
+
+```bash
+ableton-composer expand <file> --add <tracks> [options]
+```
+
+| Option | Description |
+|---|---|
+| `--add <tracks>` | **Required.** Comma-separated track names to add, e.g. `"Strings,Cello,Bass"` |
+| `-s, --style <hint>` | Style description to guide Claude, e.g. `"orchestral ambient"` |
+| `--sections <names>` | Only expand specific sections (comma-separated) |
+| `--overwrite` | Replace tracks that already exist in a section |
+| `--dry-run` | Show what would be added without calling Claude |
+| `-o, --out <path>` | Save to a new file instead of updating the source |
+| `--provider <name>` | `api` (default) or `cli` |
+| `-m, --model <model>` | Claude model override |
+
+**Examples:**
+
+```bash
+# Add strings and cello to every section
+ableton-composer expand sets/my-song.json --add "Strings,Cello"
+
+# Add bass with an orchestral style hint
+ableton-composer expand sets/my-song.json --add "Bass" --style "orchestral ambient"
+
+# Only expand the intro and verse, save to a new file
+ableton-composer expand sets/my-song.json --add "Strings,Bass" \
+  --sections "intro,verse" --out sets/my-song-orchestrated.json
 ```
 
 ---
@@ -417,6 +462,71 @@ ableton-composer push sets/jazz-blues_<timestamp>.json --setup
 
 ---
 
+### `import-xml`
+
+Convert a MusicXML (`.xml`, `.musicxml`, `.mxl`) file to an AbletonSong JSON — no Ableton Live required. Handles ties, chord notes, grace notes, rests, and multi-part scores.
+
+```bash
+ableton-composer import-xml <file> [options]
+```
+
+| Option | Description |
+|---|---|
+| `-n, --name <name>` | Name hint for the output file and section(s) |
+| `-o, --out <path>` | Save to a specific path (directory or `.json` file) |
+| `--split-every <measures>` | Split into sections every N measures (default: one section) |
+| `-t, --tracks <names>` | Rename parts: positional `"Piano,Violin"` or mapped `"Part 1:Lead"` |
+
+**Examples:**
+
+```bash
+# Convert a MusicXML file → saves to sets/
+ableton-composer import-xml score.musicxml --name "bach-invention"
+
+# Split into 8-measure sections, rename parts
+ableton-composer import-xml score.xml --split-every 8 \
+  --tracks "Piano Right:Lead,Piano Left:Bass"
+
+# Compressed .mxl format also supported
+ableton-composer import-xml score.mxl --name "ensemble"
+```
+
+---
+
+### `snapshot`
+
+Save or restore Ableton Live device parameter snapshots. Useful for capturing synth patch states (filter cutoff, resonance, envelopes…) and recalling them later.
+
+```bash
+ableton-composer snapshot [options]
+```
+
+| Option | Description |
+|---|---|
+| `-t, --tracks <names>` | Only snapshot specific tracks (comma-separated) |
+| `-o, --out <path>` | Save snapshot to a specific path |
+| `--restore <file>` | Restore device parameters from a snapshot file |
+
+**Examples:**
+
+```bash
+# Save all device params from the open Live set
+ableton-composer snapshot
+
+# Snapshot only specific tracks
+ableton-composer snapshot --tracks "Bass,Pad,Lead"
+
+# Save to a specific path
+ableton-composer snapshot --out snapshots/my-patch.json
+
+# Restore a saved snapshot
+ableton-composer snapshot --restore snapshots/my-patch.json
+```
+
+Snapshots are stored as JSON and kept local (not committed to git).
+
+---
+
 ### `split` / `compile`
 
 Convert between flat JSON and set directory format.
@@ -544,7 +654,3 @@ The numeric prefix maps directly to the Ableton session slot index. All commands
 ### `ableton-js-extended` — fork with device loading
 
 `ableton-js` does not expose an API for loading instruments or presets into tracks. The plan is to fork the library into a separate npm package (`ableton-js-extended`) that adds this capability, allowing `push --setup` to optionally load instruments from an `instrument` field in the song JSON.
-
-### Device parameter control
-
-`ableton-js` already exposes `DeviceParameter` with a settable `value` property. A future `params` key in the section JSON could apply parameter snapshots (filter cutoff, reverb decay, etc.) at push time.

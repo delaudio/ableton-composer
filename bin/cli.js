@@ -20,6 +20,9 @@ import { infoCommand }     from '../src/commands/info.js';
 import { analyzeCommand }  from '../src/commands/analyze.js';
 import { compareCommand }  from '../src/commands/compare.js';
 import { importMidiCommand } from '../src/commands/import-midi.js';
+import { expandCommand }    from '../src/commands/expand.js';
+import { snapshotCommand }  from '../src/commands/snapshot.js';
+import { importXmlCommand } from '../src/commands/import-xml.js';
 
 const program = new Command();
 
@@ -42,6 +45,8 @@ program
   .option('-s, --style <path>',    'Style profile JSON to guide generation (from "analyze" command)')
   .option('-c, --continue <file>', 'Existing set to continue — new sections are appended')
   .option('-V, --variations <n>',  'Generate N variations and save each one', '1')
+  .option('-S, --sections <n>',    'Total number of sections to generate')
+  .option('--chunk-size <n>',      'Generate in chunks of N sections per API call (use with --sections)')
   .option('--provider <name>',     'AI provider: "api" (Anthropic SDK, default) or "cli" (Claude Code CLI)')
   .option('--no-save',             'Print JSON to stdout without saving to disk')
   .action(generateCommand);
@@ -120,6 +125,30 @@ program
   .option('--out <path>', 'Save the comparison report as JSON')
   .action(compareCommand);
 
+// ── expand ────────────────────────────────────────────────────────────────────
+program
+  .command('expand <file>')
+  .description('Add new accompaniment tracks to an existing set using Claude')
+  .requiredOption('--add <tracks>',       'Comma-separated track names to add, e.g. "Strings,Cello,Bass"')
+  .option('-s, --style <hint>',           'Style description to guide Claude, e.g. "orchestral ambient"')
+  .option('--sections <names>',           'Only expand specific sections (comma-separated)')
+  .option('--overwrite',                  'Replace tracks that already exist in a section')
+  .option('--dry-run',                    'Show what would be added without calling Claude')
+  .option('-o, --out <path>',             'Save to a new file instead of updating the source')
+  .option('--provider <name>',            'AI provider: "api" (default) or "cli"')
+  .option('-m, --model <model>',          'Claude model override')
+  .action(expandCommand);
+
+// ── import-xml ────────────────────────────────────────────────────────────────
+program
+  .command('import-xml <file>')
+  .description('Convert a MusicXML (.xml, .musicxml, .mxl) file to an AbletonSong JSON (no Ableton required)')
+  .option('-n, --name <name>',        'Name hint for the output file and section(s)')
+  .option('-o, --out <path>',         'Save to a specific path (directory or .json file)')
+  .option('--split-every <measures>', 'Split into sections every N measures (default: one section)')
+  .option('-t, --tracks <names>',     'Rename parts: positional "Piano,Violin" or mapped "Part 1:Lead"')
+  .action(importXmlCommand);
+
 // ── import-midi ───────────────────────────────────────────────────────────────
 program
   .command('import-midi <file>')
@@ -129,6 +158,15 @@ program
   .option('--split-every <bars>',        'Split into sections every N bars (default: one section)')
   .option('-t, --tracks <names>',        'Rename tracks: positional "Bass,Drums" or mapped "Piano:Pad,Bass:Bass"')
   .action(importMidiCommand);
+
+// ── snapshot ──────────────────────────────────────────────────────────────────
+program
+  .command('snapshot')
+  .description('Save or restore Ableton Live device parameter snapshots')
+  .option('-t, --tracks <names>',  'Only snapshot specific tracks (comma-separated)')
+  .option('-o, --out <path>',      'Save snapshot to a specific path')
+  .option('--restore <file>',      'Restore device parameters from a snapshot file')
+  .action(snapshotCommand);
 
 // ── list ──────────────────────────────────────────────────────────────────────
 program

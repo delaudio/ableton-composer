@@ -55,7 +55,7 @@ export async function importMidiCommand(midiFile, options) {
 
     // ── Filter tracks that contain notes ─────────────────────────────────────
     const activeTracks = midi.tracks
-      .map((track, i) => ({ track, index: i, name: track.name || `Track ${i + 1}` }))
+      .map((track, i) => ({ track, index: i, name: (track.name || `Track ${i + 1}`).trim() }))
       .filter(({ track }) => track.notes && track.notes.length > 0);
 
     if (activeTracks.length === 0) {

@@ -46,6 +46,35 @@ Clip naming convention in this project: `"${section.name} — ${trackDef.ableton
 - **Session view clips**: full deletion supported via `slot.deleteClip()`
 - **Arrangement clips**: only note removal via `clip.removeNotes(0, 0, length, 128)` — the empty container cannot be deleted via ableton-js. Workaround: Cmd+A in arrangement, then Delete in Live.
 
+### Device parameters (read + write)
+
+Device parameters are read via `track.get('devices')` → `device.get('parameters')` → `param.get('name')` + `param.get('value')`. Write back with `param.set('value', v)`.
+
+Some parameters are read-only (e.g. `"Device On"`, output meters). Always wrap `set` in try/catch:
+
+```js
+try {
+  await param.set('value', savedValue);
+} catch {
+  // Read-only param — skip silently
+}
+```
+
+Snapshot JSON format used by `snapshot` command:
+```json
+{
+  "created_at": "<ISO datetime>",
+  "tracks": [
+    {
+      "name": "Bass",
+      "devices": [
+        { "name": "Analog", "parameters": { "Filter Cutoff": 0.7, "Resonance": 0.3 } }
+      ]
+    }
+  ]
+}
+```
+
 ### Non-fatal operations
 
 Scene naming and clip naming failures MUST NOT abort a push. Wrap in try/catch and continue:
@@ -88,6 +117,59 @@ A set directory (`sets/my-song/`) must contain:
 ```
 
 `storage.js` (`loadSong`, `isSetDirectory`) and `analyzeSong()` both rely on the flat format. The double-wrapped form was introduced by a one-off generation script — do not repeat it.
+
+---
+
+## fast-xml-parser — Verified Usage (MusicXML)
+
+Used by `import-xml` to parse `.xml` / `.musicxml` files. Pure ESM, no CJS workaround needed.
+
+### Import
+
+```js
+const { XMLParser } = await import('fast-xml-parser');
+```
+
+### Critical options for MusicXML
+
+```js
+const parser = new XMLParser({
+  ignoreAttributes:    false,       // expose XML attributes
+  attributeNamePrefix: '@_',        // attributes as @_id, @_type, etc.
+  parseAttributeValue: true,        // numbers stay numbers (not strings)
+  isArray: tagName => [             // REQUIRED: tags that can repeat must be arrays
+    'part', 'measure', 'note', 'direction', 'score-part',
+    'tie', 'beam', 'slur', 'attributes', 'direction-type',
+  ].includes(tagName),
+});
+```
+
+**Without `isArray`**: single-child tags return a plain object; multi-child return an array.
+This causes silent bugs (iterating an object instead of an array). Always use `isArray` + an `asArray()` guard:
+
+```js
+function asArray(val) {
+  if (!val) return [];
+  return Array.isArray(val) ? val : [val];
+}
+```
+
+### MusicXML → beat conversion
+
+```
+beat_duration = note.duration / measure.attributes.divisions   // divisions = ticks per quarter note
+```
+
+Key signature: `<key><fifths>-1</fifths><mode>major</mode></key>` → `fifths + 7` = index into MAJOR_KEYS / MINOR_KEYS arrays (range 0–14).
+
+Tempo: look for `<direction><sound tempo="120"/>` or `<direction-type><metronome><per-minute>120</per-minute>`.
+
+### Chord notes, rests, ties
+
+- `<chord/>` present → same start time as previous note (don't advance cursor)
+- `<rest/>` present → advance cursor but emit no note
+- `<grace/>` present → skip entirely
+- `<tie type="start"/>` / `<tie type="stop"/>` → merge durations (extend the existing note object)
 
 ---
 
