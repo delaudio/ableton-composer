@@ -45,7 +45,7 @@ profiles/
 - `core.json` key, tempo, structure, arrangement, pitch summaries
 - `harmony.json` harmonic rhythm, chord vocabulary, progressions, bass motion
 - `rhythm.json` onset density, syncopation, step patterns
-- `arrangement.json` energy curve, layer combinations, entry order
+- `arrangement.json` energy curve, layer combinations, entry order, section-level role signals
 - `prompt.json` compact prompt-ready profile distilled from the domains above
 - `bundle.json` manifest that links the profile domains together
 
@@ -55,6 +55,8 @@ Album bundles can be too large for clean prompting. `prompt.json` compresses the
 
 - role presence
 - role constraints
+- section-level active/inactive role signals
+- section-position archetypes for aggregate bundles
 - harmonic behavior
 - rhythmic fingerprints
 - arrangement hints

@@ -404,7 +404,13 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
   });
   const schema = JSON.parse(await readFile(join(SCHEMA_DIR, 'song.schema.json'), 'utf-8'));
   const needsHarmonicPlan = Boolean(inferredHarmonyKey || styleProfile?.harmony?.top_progressions || styleProfile?.harmony?.top_chords);
-  const needsArrangementPlan = Boolean(styleProfile?.arrangement?.role_presence || styleProfile?.arrangement?.entry_order || styleProfile?.arrangement?.top_role_combinations);
+  const needsArrangementPlan = Boolean(
+    styleProfile?.arrangement?.role_presence ||
+    styleProfile?.arrangement?.entry_order ||
+    styleProfile?.arrangement?.top_role_combinations ||
+    styleProfile?.arrangement?.section_signals ||
+    styleProfile?.arrangement?.section_archetypes
+  );
   let harmonicPlan = null;
   let arrangementPlan = null;
 
@@ -912,7 +918,14 @@ function buildStyleSection(p) {
   }
 
   const arrangementSummary = p.arrangement;
-  if (arrangementSummary?.avg_active_tracks_per_section != null || arrangementSummary?.entry_order || arrangementSummary?.top_layer_combinations) {
+  if (
+    arrangementSummary?.avg_active_tracks_per_section != null ||
+    arrangementSummary?.entry_order ||
+    arrangementSummary?.top_layer_combinations ||
+    arrangementSummary?.top_role_combinations ||
+    arrangementSummary?.section_signals ||
+    arrangementSummary?.section_archetypes
+  ) {
     lines.push('**Arrangement fingerprint**');
     if (arrangementSummary?.avg_active_tracks_per_section != null) {
       lines.push(`- Avg active tracks per section: ${arrangementSummary.avg_active_tracks_per_section}`);
@@ -937,6 +950,28 @@ function buildStyleSection(p) {
     }
     if ((arrangementSummary?.top_role_combinations ?? []).length > 0) {
       lines.push(`- Top role combinations: ${arrangementSummary.top_role_combinations.slice(0, 5).map(entry => `${entry.value}x${entry.count}`).join('  ')}`);
+    }
+    if ((arrangementSummary?.section_signals ?? []).length > 0) {
+      lines.push('- Section-level signals:');
+      for (const section of arrangementSummary.section_signals.slice(0, 8)) {
+        const label = section.section || section.position_bucket || `section ${section.section_index}`;
+        const active = (section.active_roles ?? []).join(', ') || 'none';
+        const inactive = (section.inactive_roles ?? []).slice(0, 6).join(', ') || 'none';
+        const transitions = [
+          (section.entered_roles ?? []).length > 0 ? `enter: ${(section.entered_roles ?? []).join(',')}` : null,
+          (section.exited_roles ?? []).length > 0 ? `exit: ${(section.exited_roles ?? []).join(',')}` : null,
+        ].filter(Boolean).join('; ');
+        lines.push(`  - ${label}: active=[${active}] inactive=[${inactive}] density=${section.density_hint ?? 'unknown'} energy=${section.energy ?? 'n/a'}${transitions ? ` (${transitions})` : ''}`);
+      }
+    }
+    if ((arrangementSummary?.section_archetypes ?? []).length > 0) {
+      lines.push('- Section-position archetypes:');
+      for (const archetype of arrangementSummary.section_archetypes.slice(0, 6)) {
+        const active = (archetype.common_active_roles ?? []).join(', ') || 'none';
+        const inactive = (archetype.common_inactive_roles ?? []).slice(0, 6).join(', ') || 'none';
+        const density = (archetype.dominant_density_hints ?? []).map(entry => `${entry.value}x${entry.count}`).join(' ') || 'unknown';
+        lines.push(`  - ${archetype.bucket}: avg_tracks=${archetype.avg_active_tracks ?? 'n/a'} avg_energy=${archetype.avg_energy ?? 'n/a'} active=[${active}] inactive=[${inactive}] density=${density}`);
+      }
     }
     lines.push('');
     lines.push('**Role discipline rules**');

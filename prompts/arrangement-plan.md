@@ -13,6 +13,7 @@ The plan must be compact, decisive, and useful for later note generation.
 ## Planning goals
 - Decide which musical roles should be active, absent, or sparse in each section.
 - Reflect the style profile's role presence, entry order, average arrangement density, and top role combinations.
+- Use section-level signals when available: active/inactive roles, density hints, entered/exited roles, and section-position archetypes.
 - Create contrast between sections through selective layering, not just note density.
 - Keep the arrangement plausible for the requested style and instrumentation.
 
@@ -21,6 +22,8 @@ The plan must be compact, decisive, and useful for later note generation.
 - Respect low-presence roles by leaving them absent in many sections.
 - Use FX, pads, and chords selectively unless the profile strongly indicates persistence.
 - Follow entry-order hints when they exist.
+- Follow section archetypes by position: first/early/middle/late/final sections should inherit their common active and inactive roles unless the user request conflicts.
+- Treat section-level inactive roles as deliberate absences, not as low-volume parts.
 - Prefer a restrained arrangement if the style profile indicates modest average section density.
 - Produce only arrangement information here. Do not produce harmony analysis or MIDI notes.
 

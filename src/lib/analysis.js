@@ -457,6 +457,30 @@ function activeTracksInSection(section) {
     .sort();
 }
 
+function uniqueSorted(values) {
+  return [...new Set(values.filter(Boolean))].sort();
+}
+
+function sectionPositionBucket(index, total) {
+  if (total <= 1) return 'single';
+  if (index === 0) return 'first';
+  if (index === total - 1) return 'final';
+
+  const ratio = index / (total - 1);
+  if (ratio < 0.34) return 'early';
+  if (ratio < 0.67) return 'middle';
+  return 'late';
+}
+
+function densityHint(activeCount, totalCount) {
+  if (totalCount <= 0 || activeCount <= 0) return 'empty';
+  const ratio = activeCount / totalCount;
+  if (ratio <= 0.25) return 'sparse';
+  if (ratio <= 0.5) return 'restrained';
+  if (ratio <= 0.75) return 'medium';
+  return 'dense';
+}
+
 function sectionEnergy(section) {
   const noteCount = section.tracks.reduce((sum, track) => sum + (track.clip?.notes?.length ?? 0), 0);
   const bars = section.bars || 1;
@@ -466,14 +490,28 @@ function sectionEnergy(section) {
 export function analyzeArrangement(song, source = '') {
   const { sections } = song;
   const allTrackNames = [...new Set(sections.flatMap(section => section.tracks.map(track => track.ableton_name)))];
-  const sectionLayers = sections.map(section => {
+  const allRoles = uniqueSorted(allTrackNames.map(classifyTrackRole));
+  const sectionLayers = sections.map((section, index) => {
     const activeTracks = activeTracksInSection(section);
+    const activeRoles = uniqueSorted(activeTracks.map(classifyTrackRole));
+    const inactiveRoles = allRoles.filter(role => !activeRoles.includes(role));
+    const previousActiveRoles = index > 0
+      ? uniqueSorted(activeTracksInSection(sections[index - 1]).map(classifyTrackRole))
+      : [];
     return {
       section: section.name,
+      section_index: index,
+      position_bucket: sectionPositionBucket(index, sections.length),
       bars: section.bars,
       active_tracks: activeTracks,
+      active_roles: activeRoles,
+      inactive_roles: inactiveRoles,
       active_track_count: activeTracks.length,
+      active_role_count: activeRoles.length,
+      density_hint: densityHint(activeTracks.length, allTrackNames.length),
       energy: sectionEnergy(section),
+      entered_roles: activeRoles.filter(role => !previousActiveRoles.includes(role)),
+      exited_roles: previousActiveRoles.filter(role => !activeRoles.includes(role)),
     };
   });
 
@@ -513,6 +551,15 @@ export function aggregateArrangementProfiles(profiles) {
   if (profiles.length === 0) return null;
 
   const allTrackNames = [...new Set(profiles.flatMap(profile => Object.keys(profile.arrangement?.entry_order ?? {})))];
+  const allRoles = uniqueSorted(profiles.flatMap(profile => {
+    const roleCombos = profile.arrangement?.top_role_combinations ?? [];
+    const comboRoles = roleCombos.flatMap(entry => String(entry.value || '').split('|'));
+    const sectionRoles = (profile.arrangement?.by_section ?? []).flatMap(section => {
+      if (Array.isArray(section.active_roles)) return section.active_roles;
+      return (section.active_tracks ?? []).map(classifyTrackRole);
+    });
+    return [...comboRoles, ...sectionRoles];
+  }));
   const entryOrder = {};
 
   for (const track of allTrackNames) {
@@ -534,6 +581,7 @@ export function aggregateArrangementProfiles(profiles) {
   const roleCombos = profiles.flatMap(profile =>
     (profile.arrangement?.top_role_combinations ?? []).flatMap(entry => Array(entry.count).fill(entry.value))
   );
+  const sectionArchetypes = aggregateSectionArchetypes(profiles, allRoles);
 
   return {
     _meta: {
@@ -551,8 +599,78 @@ export function aggregateArrangementProfiles(profiles) {
       entry_order: entryOrder,
       top_layer_combinations: topCounts(combos, 12),
       top_role_combinations: topCounts(roleCombos, 12),
+      section_archetypes: sectionArchetypes,
     },
   };
+}
+
+function aggregateSectionArchetypes(profiles, allRoles) {
+  const buckets = new Map();
+
+  for (const profile of profiles) {
+    const sections = profile.arrangement?.by_section ?? [];
+    sections.forEach((section, index) => {
+      const bucket = section.position_bucket || sectionPositionBucket(index, sections.length);
+      if (!buckets.has(bucket)) {
+        buckets.set(bucket, {
+          bucket,
+          samples: 0,
+          activeCounts: [],
+          roleCounts: {},
+          energies: [],
+          roleCombos: [],
+          densityHints: [],
+        });
+      }
+
+      const target = buckets.get(bucket);
+      const activeRoles = Array.isArray(section.active_roles)
+        ? section.active_roles
+        : uniqueSorted((section.active_tracks ?? []).map(classifyTrackRole));
+
+      target.samples += 1;
+      target.activeCounts.push(section.active_track_count ?? (section.active_tracks ?? []).length);
+      if (typeof section.energy === 'number') target.energies.push(section.energy);
+      if (section.density_hint) target.densityHints.push(section.density_hint);
+      target.roleCombos.push(activeRoles.join('|'));
+      for (const role of activeRoles) {
+        target.roleCounts[role] = (target.roleCounts[role] || 0) + 1;
+      }
+    });
+  }
+
+  const bucketOrder = ['single', 'first', 'early', 'middle', 'late', 'final'];
+  return [...buckets.values()]
+    .sort((a, b) => bucketOrder.indexOf(a.bucket) - bucketOrder.indexOf(b.bucket))
+    .map(bucket => {
+      const activeRoleRatios = Object.fromEntries(
+        allRoles.map(role => [role, Math.round(((bucket.roleCounts[role] || 0) / bucket.samples) * 100) / 100])
+      );
+      const commonActiveRoles = Object.entries(activeRoleRatios)
+        .filter(([, ratio]) => ratio >= 0.5)
+        .sort((a, b) => b[1] - a[1])
+        .map(([role]) => role);
+      const commonInactiveRoles = Object.entries(activeRoleRatios)
+        .filter(([, ratio]) => ratio <= 0.25)
+        .sort((a, b) => a[1] - b[1])
+        .map(([role]) => role);
+
+      return {
+        bucket: bucket.bucket,
+        samples: bucket.samples,
+        avg_active_tracks: bucket.activeCounts.length
+          ? Math.round((bucket.activeCounts.reduce((sum, value) => sum + value, 0) / bucket.activeCounts.length) * 10) / 10
+          : 0,
+        avg_energy: bucket.energies.length
+          ? Math.round((bucket.energies.reduce((sum, value) => sum + value, 0) / bucket.energies.length) * 10) / 10
+          : 0,
+        common_active_roles: commonActiveRoles,
+        common_inactive_roles: commonInactiveRoles,
+        role_presence: activeRoleRatios,
+        dominant_density_hints: topCounts(bucket.densityHints, 3),
+        top_role_combinations: topCounts(bucket.roleCombos, 5),
+      };
+    });
 }
 
 // ── Full set analysis ─────────────────────────────────────────────────────────

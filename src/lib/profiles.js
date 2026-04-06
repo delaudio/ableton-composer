@@ -237,11 +237,44 @@ function buildPromptProfile(profiles) {
     avg_active_tracks_per_section: arrangement.avg_active_tracks_per_section,
     avg_section_energy: arrangement.avg_section_energy,
     energy_curve: (arrangement.energy_curve ?? []).slice(0, 8),
+    section_signals: compactSectionSignals(arrangement.by_section ?? [], 8),
+    section_archetypes: (arrangement.section_archetypes ?? []).slice(0, 6).map(compactSectionArchetype),
     entry_order: pickObjectEntriesByKeys(arrangement.entry_order ?? {}, selectTopKeys(core.arrangement?.track_presence ?? {}, 10)),
     top_layer_combinations: (arrangement.top_layer_combinations ?? []).slice(0, 6),
+    top_role_combinations: (arrangement.top_role_combinations ?? []).slice(0, 6),
   };
 
   return compact;
+}
+
+function compactSectionSignals(sections, count = 8) {
+  return sections.slice(0, count).map(section => ({
+    section: section.section,
+    section_index: section.section_index,
+    position_bucket: section.position_bucket,
+    bars: section.bars,
+    active_roles: (section.active_roles ?? []).slice(0, 8),
+    inactive_roles: (section.inactive_roles ?? []).slice(0, 8),
+    entered_roles: (section.entered_roles ?? []).slice(0, 6),
+    exited_roles: (section.exited_roles ?? []).slice(0, 6),
+    active_track_count: section.active_track_count,
+    active_role_count: section.active_role_count,
+    density_hint: section.density_hint,
+    energy: section.energy,
+  }));
+}
+
+function compactSectionArchetype(archetype) {
+  return {
+    bucket: archetype.bucket,
+    samples: archetype.samples,
+    avg_active_tracks: archetype.avg_active_tracks,
+    avg_energy: archetype.avg_energy,
+    common_active_roles: (archetype.common_active_roles ?? []).slice(0, 8),
+    common_inactive_roles: (archetype.common_inactive_roles ?? []).slice(0, 8),
+    dominant_density_hints: (archetype.dominant_density_hints ?? []).slice(0, 3),
+    top_role_combinations: (archetype.top_role_combinations ?? []).slice(0, 4),
+  };
 }
 
 function deriveRoleConstraints({ rolePresence = {}, avgActiveTracksPerSection = null }) {
