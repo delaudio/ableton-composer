@@ -29,7 +29,11 @@
     "generate": "node bin/cli.js generate",
     "push": "node bin/cli.js push",
     "list": "node bin/cli.js list",
-    "info": "node bin/cli.js info"
+    "info": "node bin/cli.js info",
+    "docs:install": "npm --prefix docs install",
+    "docs:dev": "npm --prefix docs run dev",
+    "docs:build": "npm --prefix docs run build",
+    "docs:serve": "npm --prefix docs run serve"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

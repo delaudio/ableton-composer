@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{title}} | Ableton Composer Docs</title>
+  <meta name="description" content="{{description}}" />
+  <link rel="stylesheet" href="/styles.css" />
+  <script defer src="/app.js"></script>
+</head>
+<body class="bg-ink text-paper antialiased">
+  <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(255,178,55,0.12),_transparent_30%),radial-gradient(circle_at_top_right,_rgba(78,141,255,0.15),_transparent_26%),linear-gradient(180deg,_#111111_0%,_#181716_100%)]">
+    <div class="mx-auto grid min-h-screen max-w-7xl grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <aside id="site-nav" class="border-b border-white/10 bg-black/20 p-6 backdrop-blur lg:border-b-0 lg:border-r">
+        <a href="/" class="mb-8 block">
+          <div class="font-display text-xs uppercase tracking-[0.35em] text-amber-300/80">Ableton Composer</div>
+          <div class="mt-2 text-2xl font-semibold text-white">Docs</div>
+          <div class="mt-2 max-w-xs text-sm text-stone-300">Multi-provider MIDI generation, style analysis, and prompt-driven music planning.</div>
+        </a>
+        {{> nav}}
+      </aside>
+
+      <main class="min-w-0 p-6 sm:p-10 lg:p-14">
+        <div class="mx-auto max-w-4xl">
+          <div class="mb-8 flex items-center justify-between gap-4 lg:hidden">
+            <div>
+              <div class="font-display text-xs uppercase tracking-[0.3em] text-amber-300/70">Ableton Composer</div>
+              <div class="text-xl font-semibold text-white">{{title}}</div>
+            </div>
+            <button id="nav-toggle" class="rounded-full border border-white/15 px-4 py-2 text-sm text-stone-200">Menu</button>
+          </div>
+
+          <article class="prose prose-invert prose-pre:rounded-2xl prose-pre:border prose-pre:border-white/10 prose-code:text-amber-300 max-w-none">
+            {{{content}}}
+          </article>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

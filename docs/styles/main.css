@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #171614;
+  --color-paper: #f6f0e8;
+  --color-amber-accent: #ffb237;
+  --color-electric: #79a6ff;
+  --font-display: "Avenir Next Condensed", "Franklin Gothic Medium", "Arial Narrow", sans-serif;
+  --font-body: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", "Menlo", monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-body);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+  }
+}
+
+@layer components {
+  .doc-link {
+    @apply block rounded-xl border border-transparent px-3 py-2 text-stone-300 transition;
+  }
+
+  .doc-link:hover {
+    @apply border-white/10 bg-white/5 text-white;
+  }
+
+  .doc-link.is-active {
+    @apply border-amber-300/30 bg-amber-300/10 text-amber-200;
+  }
+}
