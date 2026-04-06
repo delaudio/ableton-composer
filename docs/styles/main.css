@@ -155,18 +155,6 @@
     @apply mt-2 text-sm leading-6 text-stone-400;
   }
 
-  .spec-link {
-    @apply block border-b border-white/8 pb-3 text-[13px] text-stone-300 transition last:border-b-0 last:pb-0 hover:text-stone-100;
-  }
-
-  .spec-row {
-    @apply flex items-start justify-between gap-4 border-b border-white/8 py-3 text-[12px] leading-5 text-stone-400 last:border-b-0 last:pb-0;
-  }
-
-  .spec-row span:last-child {
-    @apply max-w-[150px] text-right text-stone-200;
-  }
-
   .hero-panel {
     @apply mb-8 border border-white/8 bg-[linear-gradient(180deg,_rgba(255,255,255,0.03),_rgba(255,255,255,0.01))] p-5 sm:p-6;
   }
@@ -209,6 +197,14 @@
 
   .hero-spec {
     @apply border border-white/8 bg-black/20 p-4;
+  }
+
+  .hero-spec .spec-row {
+    @apply flex items-start justify-between gap-4 border-b border-white/8 py-3 text-[12px] leading-5 text-stone-400 last:border-b-0 last:pb-0;
+  }
+
+  .hero-spec .spec-row span:last-child {
+    @apply max-w-[180px] text-right text-stone-200;
   }
 
   .quick-link-grid {

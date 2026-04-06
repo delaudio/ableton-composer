@@ -13,11 +13,7 @@
     <div class="border-b border-white/8 bg-[#121210]">
       <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-6 px-5 py-4 sm:px-7 lg:px-10">
         <div class="min-w-0">
-          <div class="font-mono text-[11px] uppercase tracking-[0.14em] text-stone-600">Ableton Composer Documentation</div>
-          <div class="mt-1 flex items-center gap-3">
-            <h1 class="truncate text-base font-medium tracking-[-0.03em] text-stone-100">{{title}}</h1>
-            <span class="hidden rounded-sm border border-white/8 bg-white/[0.03] px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-stone-500 sm:inline-block">Tool Maker UI</span>
-          </div>
+          <a href="/index.html" class="truncate text-base font-medium tracking-[-0.03em] text-stone-100">ableton composer</a>
         </div>
         <div class="hidden items-center gap-6 lg:flex">
           <a href="/workflows.html" class="top-link">workflows</a>
@@ -28,7 +24,7 @@
       </div>
     </div>
 
-    <div class="mx-auto grid min-h-[calc(100vh-69px)] max-w-[1600px] grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
+    <div class="mx-auto grid min-h-[calc(100vh-69px)] max-w-[1480px] grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside id="site-nav" class="border-b border-white/8 bg-[#121210] px-5 py-6 lg:border-b-0 lg:border-r lg:px-6">
         <a href="/index.html" class="mb-8 block border-b border-white/8 pb-6">
           <div class="text-[13px] font-medium tracking-[0.01em] text-stone-100">Ableton Composer</div>
@@ -55,42 +51,6 @@
           </div>
         </div>
       </main>
-
-      <aside class="hidden border-l border-white/8 bg-[#121210] px-6 py-8 lg:block">
-        <div class="space-y-6">
-          <section class="spec-card">
-            <div class="spec-kicker">Current page</div>
-            <div class="spec-title">{{title}}</div>
-            <div class="spec-copy">{{description}}</div>
-          </section>
-
-          <section class="spec-card">
-            <div class="spec-kicker">Useful links</div>
-            <div class="space-y-3">
-              <a href="/getting-started.html" class="spec-link">Getting started</a>
-              <a href="/cli.html" class="spec-link">CLI reference</a>
-              <a href="/profiles.html" class="spec-link">Profiles</a>
-              <a href="/workflows.html" class="spec-link">Workflows</a>
-            </div>
-          </section>
-
-          <section class="spec-card">
-            <div class="spec-kicker">Runtime</div>
-            <div class="spec-row">
-              <span>Providers</span>
-              <span>Anthropic · OpenAI · Codex</span>
-            </div>
-            <div class="spec-row">
-              <span>Profiles</span>
-              <span>song · album · artist</span>
-            </div>
-            <div class="spec-row">
-              <span>Docs</span>
-              <span>Minuto static site</span>
-            </div>
-          </section>
-        </div>
-      </aside>
     </div>
   </div>
 </body>
