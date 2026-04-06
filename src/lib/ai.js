@@ -962,27 +962,28 @@ export function summarizeContinuationContext(song, recentSectionLimit = CONTINUA
       const notes = track.clip?.notes ?? [];
       if (notes.length === 0) return [];
 
-      const pitches = notes.map(note => note.pitch);
-      const role = classifyTrackRole(track.ableton_name || '');
+      const trackName = track.ableton_name || '';
+      const pitches = notes.map(note => note.pitch).filter(pitch => Number.isFinite(pitch));
+      const role = classifyTrackRole(trackName);
 
-      trackUsage[track.ableton_name] ??= {
+      trackUsage[trackName] ??= {
         active_sections: 0,
         total_notes: 0,
         first_section_index: index,
         last_section_index: index,
       };
-      trackUsage[track.ableton_name].active_sections += 1;
-      trackUsage[track.ableton_name].total_notes += notes.length;
-      trackUsage[track.ableton_name].last_section_index = index;
+      trackUsage[trackName].active_sections += 1;
+      trackUsage[trackName].total_notes += notes.length;
+      trackUsage[trackName].last_section_index = index;
 
       activeRoles.add(role);
 
       return [{
-        ableton_name: track.ableton_name,
+        ableton_name: trackName,
         role,
         note_count: notes.length,
-        min_pitch: Math.min(...pitches),
-        max_pitch: Math.max(...pitches),
+        min_pitch: pitches.length ? Math.min(...pitches) : null,
+        max_pitch: pitches.length ? Math.max(...pitches) : null,
         first_note_time: notes[0].time,
       }];
     });
