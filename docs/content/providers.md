@@ -60,3 +60,5 @@ For large style bundles, especially album-level bundles, use:
 ```
 
 This keeps prompt size and response latency under control.
+
+Chunked generation keeps the selected style profile and tonal continuity lock active across chunks, so later chunks still receive role-presence and arrangement constraints.

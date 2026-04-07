@@ -129,7 +129,7 @@ export async function generateCommand(prompt, options) {
             prompt:       chunkPrompt,
             trackNames,
             context:      chunk === 0 ? context : {},
-            styleProfile: chunk === 0 ? styleProfile : null,
+            styleProfile,
             existingSong: accumulated,
             tonalState,
             model:        options.model,
