@@ -24,6 +24,7 @@ The blueprint must combine:
 ## Constraints
 - Be compact and decisive.
 - Do not write MIDI notes.
+- If a tonal continuity lock is provided, preserve that exact tonal center in the harmonic plan and section progression hints.
 - Do not keep every role active in every section unless the profile clearly indicates that behavior.
 - Do not treat anchor roles as universal unless their role presence is close to 100%.
 - Respect sparse roles such as FX, pads, and hooks when the profile suggests low presence.

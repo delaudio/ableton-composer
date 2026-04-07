@@ -11,7 +11,7 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import { join } from 'path';
-import { generateSong, getProviderLabel, normalizeProvider } from '../lib/ai.js';
+import { deriveTonalState, generateSong, getProviderLabel, normalizeProvider } from '../lib/ai.js';
 import { saveSetDirectory, loadSong, SETS_DIR, slugify } from '../lib/storage.js';
 import { fetchContext } from '../lib/fetchers/index.js';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
@@ -107,6 +107,7 @@ export async function generateCommand(prompt, options) {
       if (chunkSize && totalSections) {
         const totalChunks = Math.ceil(totalSections / chunkSize);
         let accumulated   = existingSong ? { ...existingSong, sections: [...existingSong.sections] } : null;
+        let tonalState    = deriveTonalState(existingSong, styleProfile) ?? null;
 
         for (let chunk = 0; chunk < totalChunks; chunk++) {
           const from      = chunk * chunkSize + 1;
@@ -117,9 +118,12 @@ export async function generateCommand(prompt, options) {
             `${providerLabel}${label ? `  [${label}]` : ''}  ${chalk.dim(chunkInfo)}`
           );
 
+          const tonalInstruction = tonalState
+            ? ` Maintain tonal center exactly: ${tonalState.scale || tonalState.key || tonalState.tonal_center}. Do not shift to a different root unless explicitly requested.`
+            : '';
           const chunkPrompt = chunk === 0
-            ? `${prompt}\n\nGenerate ONLY the first ${to - from + 1} sections (${chunkInfo.slice(1, -1)}).`
-            : `${prompt}\n\nGenerate ONLY sections ${from}–${to} (${chunkInfo.slice(1, -1)}). Continue coherently from the existing sections.`;
+            ? `${prompt}\n\nGenerate ONLY the first ${to - from + 1} sections (${chunkInfo.slice(1, -1)}).${tonalInstruction}`
+            : `${prompt}\n\nGenerate ONLY sections ${from}–${to} (${chunkInfo.slice(1, -1)}). Continue coherently from the existing sections.${tonalInstruction}`;
 
           const chunkResult = await generateSong({
             prompt:       chunkPrompt,
@@ -127,9 +131,12 @@ export async function generateCommand(prompt, options) {
             context:      chunk === 0 ? context : {},
             styleProfile: chunk === 0 ? styleProfile : null,
             existingSong: accumulated,
+            tonalState,
             model:        options.model,
             provider,
           });
+
+          tonalState = deriveTonalState(tonalState, accumulated, chunkResult);
 
           if (!accumulated) {
             accumulated = chunkResult;

@@ -10,13 +10,14 @@ Return ONLY a valid JSON object conforming to the AbletonSong schema provided in
 
 ## Core musical rules
 1. Stay in key unless the user explicitly asks for chromaticism or tension notes.
-2. Keep track roles distinct. Bass, drums, harmony, pads, leads, and texture tracks should not all occupy the same register or rhythmic density.
-3. Write clips that loop cleanly and feel intentional when repeated.
-4. Use velocity variation. Do not output robotic flat-velocity note streams unless the style explicitly calls for it.
-5. Respect track names exactly. Do not invent `ableton_name` values outside the provided list.
-6. Prefer simple, convincing motifs over noisy over-composition.
-7. Create section-to-section contrast through density, register, arrangement, and rhythm, not just random note changes.
-8. If a style profile is provided, treat it as a strong constraint on arrangement, density, ranges, and harmony.
+2. If a tonal continuity lock is provided, preserve that root and mode across all generated sections; do not drift to a same-mode different-root key.
+3. Keep track roles distinct. Bass, drums, harmony, pads, leads, and texture tracks should not all occupy the same register or rhythmic density.
+4. Write clips that loop cleanly and feel intentional when repeated.
+5. Use velocity variation. Do not output robotic flat-velocity note streams unless the style explicitly calls for it.
+6. Respect track names exactly. Do not invent `ableton_name` values outside the provided list.
+7. Prefer simple, convincing motifs over noisy over-composition.
+8. Create section-to-section contrast through density, register, arrangement, and rhythm, not just random note changes.
+9. If a style profile is provided, treat it as a strong constraint on arrangement, density, ranges, and harmony.
 
 ## Arrangement guidance
 - Intros should usually be sparser than main sections.

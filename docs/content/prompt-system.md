@@ -37,6 +37,7 @@ These encode genre-specific harmonic grammar.
 The planning layer exists to make generation less vague:
 
 - harmonic plan for tonal and progression logic
+- tonal continuity lock for chunked generation and continued songs
 - arrangement plan for section-level role presence
 - arrangement plans also express section phases and per-section role budgets
 - combined blueprint when both are needed

@@ -17,6 +17,7 @@ The plan must be practical for later note generation. Keep it musically specific
 - Keep the plan aligned with the requested style and any style profile hints.
 
 ## Constraints
+- If a tonal continuity lock is provided, preserve that exact tonal center. Do not move to a different root just because the mode or mood still fits.
 - If the style is loop-based, the plan can use short repeating harmonic cells.
 - If the style is harmony-led, the plan should state progression logic more explicitly.
 - If the request suggests jazz, neo-soul, or blues language, make the idiom obvious in the plan.

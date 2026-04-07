@@ -407,7 +407,7 @@ function parseJsonResponse(raw) {
   }
 }
 
-export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, model, provider = 'anthropic' }) {
+export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, model, provider = 'anthropic', tonalState = null }) {
   const inferredGenreKey = inferGenrePromptKey(prompt, styleProfile);
   const inferredHarmonyKey = inferHarmonyPromptKey(prompt, styleProfile);
   const systemPrompt = await buildSongGenerationPrompt({
@@ -435,6 +435,7 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
       context,
       styleProfile,
       existingSong,
+      tonalState,
       model,
       provider,
       genreKey: inferredGenreKey,
@@ -450,6 +451,7 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
         context,
         styleProfile,
         existingSong,
+        tonalState,
         model,
         provider,
         genreKey: inferredGenreKey,
@@ -461,6 +463,7 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
         context,
         styleProfile,
         existingSong,
+        tonalState,
         model,
         provider,
         genreKey: inferredGenreKey,
@@ -482,6 +485,11 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
 
   if (existingSong) {
     parts.push(buildContinuationSection(existingSong));
+  }
+
+  const resolvedTonalState = tonalState ?? deriveTonalState(existingSong);
+  if (resolvedTonalState) {
+    parts.push(buildTonalStateSection(resolvedTonalState));
   }
 
   if (harmonicPlan) {
@@ -535,7 +543,7 @@ async function buildSongGenerationPrompt({ prompt, styleProfile, genreKey = null
   return sections.join('\n\n');
 }
 
-async function generateHarmonicPlan({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, model, provider, genreKey = null, harmonyKey = null }) {
+async function generateHarmonicPlan({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, tonalState = null, model, provider, genreKey = null, harmonyKey = null }) {
   const systemPrompt = await buildHarmonicPlanPrompt({ genreKey, harmonyKey });
   const parts = [];
 
@@ -553,6 +561,11 @@ async function generateHarmonicPlan({ prompt, trackNames, context = {}, stylePro
     parts.push(buildContinuationSection(existingSong));
   }
 
+  const resolvedTonalState = tonalState ?? deriveTonalState(existingSong);
+  if (resolvedTonalState) {
+    parts.push(buildTonalStateSection(resolvedTonalState));
+  }
+
   parts.push('## Planning task\nCreate a concise harmonic/compositional plan that the final MIDI generation should follow.');
   parts.push(`## Request\n${prompt}`);
 
@@ -567,7 +580,7 @@ async function generateHarmonicPlan({ prompt, trackNames, context = {}, stylePro
   });
 }
 
-async function generateSongBlueprint({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, model, provider, genreKey = null, harmonyKey = null }) {
+async function generateSongBlueprint({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, tonalState = null, model, provider, genreKey = null, harmonyKey = null }) {
   const systemPrompt = await buildSongBlueprintPrompt({ genreKey, harmonyKey });
   const parts = [];
 
@@ -583,6 +596,11 @@ async function generateSongBlueprint({ prompt, trackNames, context = {}, stylePr
 
   if (existingSong) {
     parts.push(buildContinuationSection(existingSong));
+  }
+
+  const resolvedTonalState = tonalState ?? deriveTonalState(existingSong);
+  if (resolvedTonalState) {
+    parts.push(buildTonalStateSection(resolvedTonalState));
   }
 
   parts.push('## Planning task\nCreate one compact song blueprint that contains both harmonic intent and section-by-section arrangement constraints before MIDI notes are written.');
@@ -1121,6 +1139,7 @@ function findPlanByName(planSections, sectionName) {
 export function summarizeContinuationContext(song, recentSectionLimit = CONTINUATION_RECENT_SECTION_LIMIT) {
   const trackUsage = {};
   const roleUsage = {};
+  const tonalState = deriveTonalState(song);
 
   const sectionSummaries = (song.sections ?? []).map((section, index) => {
     const activeRoles = new Set();
@@ -1178,6 +1197,7 @@ export function summarizeContinuationContext(song, recentSectionLimit = CONTINUA
       genre: song.meta?.genre,
       mood: song.meta?.mood,
       time_signature: song.meta?.time_signature,
+      tonal_state: tonalState,
     },
     continuity_summary: {
       total_sections: sectionSummaries.length,
@@ -1207,4 +1227,81 @@ function buildContinuationSection(song) {
     JSON.stringify(summary, null, 2),
     '```',
   ].join('\n');
+}
+
+export function deriveTonalState(...sources) {
+  for (const source of sources) {
+    const state = normalizeTonalState(source);
+    if (state) return state;
+  }
+  return null;
+}
+
+function normalizeTonalState(source) {
+  if (!source) return null;
+
+  if (source.tonal_center || source.scale || source.key) {
+    return buildTonalState({
+      tonalCenter: source.tonal_center,
+      scale: source.scale,
+      key: source.key,
+      mode: source.mode,
+      rootNote: source.root_note,
+      confidence: source.key_confidence,
+    });
+  }
+
+  if (source.meta || source._meta || source.structure || source.arrangement) {
+    return buildTonalState({
+      tonalCenter: source.meta?.tonal_center,
+      scale: source.meta?.scale,
+      key: source.key ?? source.meta?.key,
+      mode: source.mode ?? source.meta?.mode,
+      rootNote: source.meta?.root_note ?? source.root_note,
+      confidence: source.key_confidence ?? source.meta?.key_confidence,
+    });
+  }
+
+  return null;
+}
+
+function buildTonalState({ tonalCenter, scale, key, mode, rootNote, confidence }) {
+  const resolvedScale = scale || key || tonalCenter;
+  if (!resolvedScale) return null;
+
+  const parsed = parseScaleName(resolvedScale);
+  return {
+    tonal_center: tonalCenter || resolvedScale,
+    scale: resolvedScale,
+    root: parsed.root,
+    mode: mode || parsed.mode,
+    root_note: Number.isFinite(rootNote) ? rootNote : null,
+    key_confidence: confidence ?? null,
+  };
+}
+
+function buildTonalStateSection(tonalState) {
+  return [
+    '## Tonal continuity lock',
+    'Treat this as a hard continuity constraint for chunked or continued generation.',
+    `- Tonal center / scale: ${tonalState.scale || tonalState.tonal_center}`,
+    tonalState.root ? `- Root: ${tonalState.root}` : null,
+    tonalState.mode ? `- Mode: ${tonalState.mode}` : null,
+    '- Later chunks must preserve this root and mode unless the user explicitly requests modulation.',
+    '- Same-mode but different-root drift is not acceptable.',
+  ].filter(Boolean).join('\n');
+}
+
+function parseScaleName(scale) {
+  const match = String(scale || '').trim().match(/^([A-G](?:#|b)?)(?:\s+(.+))?$/i);
+  if (!match) return { root: null, mode: null };
+  return {
+    root: normalizePitchName(match[1]),
+    mode: match[2]?.trim().toLowerCase() || null,
+  };
+}
+
+function normalizePitchName(name) {
+  if (!name) return null;
+  return name[0].toUpperCase() + name.slice(1);
 }
