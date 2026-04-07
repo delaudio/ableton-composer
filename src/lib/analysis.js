@@ -955,6 +955,12 @@ export function aggregateProfiles(profiles) {
  */
 export function compareProfiles(source, generated) {
   const report = {};
+  const aggregateSource = isAggregateComparable(source);
+
+  report.context = {
+    source_kind: source._meta?.compare_source_kind || (aggregateSource ? 'aggregate' : 'single'),
+    aggregate_source: aggregateSource,
+  };
 
   // ── Key ──────────────────────────────────────────────────────────────────
   report.key = {
@@ -971,15 +977,35 @@ export function compareProfiles(source, generated) {
     delta:     source.bpm != null && generated.bpm != null
       ? generated.bpm - source.bpm
       : null,
+    in_range: source.bpm_range && generated.bpm != null
+      ? generated.bpm >= source.bpm_range.min && generated.bpm <= source.bpm_range.max
+      : null,
+  };
+
+  // ── Structure ────────────────────────────────────────────────────────────
+  report.structure = {
+    section_count: compareNumericTarget({
+      source: source.structure?.section_count,
+      generated: generated.structure?.section_count,
+      range: source.structure?.section_count_range,
+      tolerance: aggregateSource ? 1 : 0,
+    }),
+    bars_per_section: compareNumericTarget({
+      source: source.structure?.bars_per_section ?? source.structure?.bars_per_section_avg,
+      generated: generated.structure?.bars_per_section,
+      tolerance: aggregateSource ? 2 : 1,
+    }),
   };
 
   // ── Track presence ───────────────────────────────────────────────────────
   const srcPresence = source.arrangement?.track_presence  ?? {};
   const genPresence = generated.arrangement?.track_presence ?? {};
-  const sharedTracks = Object.keys(srcPresence).filter(t => t in genPresence);
+  const sharedTracks = aggregateSource
+    ? Object.keys(srcPresence).filter(t => t in genPresence)
+    : Object.keys(srcPresence).filter(t => t in genPresence);
   const srcRolePresence = source.arrangement?.role_presence ?? {};
   const genRolePresence = generated.arrangement?.role_presence ?? {};
-  const sharedRoles = Object.keys(srcRolePresence).filter(role => role in genRolePresence);
+  const sharedRoles = [...new Set([...Object.keys(srcRolePresence), ...Object.keys(genRolePresence)])];
 
   report.track_presence = {};
   for (const t of sharedTracks) {
@@ -992,11 +1018,14 @@ export function compareProfiles(source, generated) {
   }
   report.role_presence = {};
   for (const role of sharedRoles) {
-    const diff = Math.round((genRolePresence[role] - srcRolePresence[role]) * 100);
+    const srcRatio = srcRolePresence[role] ?? 0;
+    const genRatio = genRolePresence[role] ?? 0;
+    const diff = Math.round((genRatio - srcRatio) * 100);
     report.role_presence[role] = {
-      source: Math.round(srcRolePresence[role] * 100),
-      generated: Math.round(genRolePresence[role] * 100),
+      source: Math.round(srcRatio * 100),
+      generated: Math.round(genRatio * 100),
       delta: diff,
+      score: scorePresenceDelta(diff),
     };
   }
 
@@ -1006,7 +1035,7 @@ export function compareProfiles(source, generated) {
   const rhythmTracks = Object.keys(srcNpb).filter(t => t in genNpb);
   const srcRoleNpb = source.rhythm?.notes_per_bar_by_role ?? {};
   const genRoleNpb = generated.rhythm?.notes_per_bar_by_role ?? {};
-  const rhythmRoles = Object.keys(srcRoleNpb).filter(role => role in genRoleNpb);
+  const rhythmRoles = [...new Set([...Object.keys(srcRoleNpb), ...Object.keys(genRoleNpb)])];
 
   report.rhythm = {};
   for (const t of rhythmTracks) {
@@ -1014,16 +1043,19 @@ export function compareProfiles(source, generated) {
     report.rhythm[t] = {
       source:    srcNpb[t],
       generated: genNpb[t],
-      ratio:     ratio != null ? Math.round(ratio * 100) / 100 : null,
+      ratio:     Number.isFinite(ratio) ? Math.round(ratio * 100) / 100 : null,
     };
   }
   report.rhythm_roles = {};
   for (const role of rhythmRoles) {
-    const ratio = srcRoleNpb[role] > 0 ? genRoleNpb[role] / srcRoleNpb[role] : null;
+    const src = srcRoleNpb[role] ?? 0;
+    const gen = genRoleNpb[role] ?? 0;
+    const ratio = src > 0 ? gen / src : gen > 0 ? Infinity : null;
     report.rhythm_roles[role] = {
-      source: srcRoleNpb[role],
-      generated: genRoleNpb[role],
-      ratio: ratio != null ? Math.round(ratio * 100) / 100 : null,
+      source: src,
+      generated: gen,
+      ratio: Number.isFinite(ratio) ? Math.round(ratio * 100) / 100 : null,
+      score: scoreRatio(ratio),
     };
   }
 
@@ -1068,33 +1100,49 @@ export function compareProfiles(source, generated) {
   }
 
   // ── Overall fidelity score ────────────────────────────────────────────────
-  // Weighted average: key (30%), rhythm (30%), pitch range (20%), chords (20%)
   const scores = [];
 
-  // Key: 100 if exact match, 50 if same mode, 0 otherwise
-  scores.push({ weight: 0.30, score: report.key.match ? 100 : report.key.mode_match ? 50 : 0 });
+  const keyScore = report.key.match ? 100 : report.key.mode_match ? (aggregateSource ? 65 : 50) : 0;
+  scores.push({ name: 'key', weight: aggregateSource ? 0.15 : 0.25, score: keyScore });
 
-  // Rhythm: average ratio clamped to [0,1] per track
+  if (report.bpm.source != null && report.bpm.generated != null) {
+    scores.push({ name: 'bpm', weight: 0.10, score: scoreBpm(report.bpm, aggregateSource) });
+  }
+
+  const structureScores = [report.structure.section_count.score, report.structure.bars_per_section.score]
+    .filter(Number.isFinite);
+  if (structureScores.length > 0) {
+    const avg = structureScores.reduce((sum, score) => sum + score, 0) / structureScores.length;
+    scores.push({ name: 'structure', weight: aggregateSource ? 0.15 : 0.10, score: Math.round(avg) });
+  }
+
+  if (sharedRoles.length > 0) {
+    const avg = sharedRoles.reduce((sum, role) => sum + report.role_presence[role].score, 0) / sharedRoles.length;
+    scores.push({ name: 'role_presence', weight: aggregateSource ? 0.25 : 0.15, score: Math.round(avg) });
+  }
+
   if (rhythmTracks.length > 0 || rhythmRoles.length > 0) {
-    const rhythmPool = rhythmTracks.length > 0 ? rhythmTracks.map(t => report.rhythm[t].ratio ?? 0) : [];
-    const rolePool = rhythmRoles.map(role => report.rhythm_roles[role].ratio ?? 0);
-    const pool = [...rhythmPool, ...rolePool];
-    const avg = pool.reduce((s, r) => {
-      return s + Math.min(r, 1 / r || 0, 1);  // penalise both over and under
-    }, 0) / pool.length;
-    scores.push({ weight: 0.30, score: Math.round(avg * 100) });
+    const rhythmTrackScores = rhythmTracks.map(t => scoreRatio(report.rhythm[t].ratio));
+    const rhythmRoleScores = rhythmRoles.map(role => report.rhythm_roles[role].score);
+    if (rhythmRoleScores.length > 0) {
+      const avg = rhythmRoleScores.reduce((sum, score) => sum + score, 0) / rhythmRoleScores.length;
+      scores.push({ name: 'rhythm_roles', weight: aggregateSource ? 0.20 : 0.15, score: Math.round(avg) });
+    } else if (rhythmTrackScores.length > 0) {
+      const avg = rhythmTrackScores.reduce((sum, score) => sum + score, 0) / rhythmTrackScores.length;
+      scores.push({ name: 'rhythm_tracks', weight: 0.15, score: Math.round(avg) });
+    }
   }
 
   // Pitch range overlap: average across tracks
   if (pitchTracks.length > 0) {
     const avg = pitchTracks.reduce((s, t) => s + report.pitch[t].overlap_pct, 0) / pitchTracks.length;
-    scores.push({ weight: 0.20, score: avg });
+    scores.push({ name: 'pitch_range', weight: aggregateSource ? 0.05 : 0.15, score: avg });
   }
 
   // Chord overlap: average across tracks
   if (chordTracks.length > 0) {
     const avg = chordTracks.reduce((s, t) => s + report.chords[t].overlap_pct, 0) / chordTracks.length;
-    scores.push({ weight: 0.20, score: avg });
+    scores.push({ name: 'chords', weight: aggregateSource ? 0.10 : 0.15, score: avg });
   }
 
   const totalWeight = scores.reduce((s, x) => s + x.weight, 0);
@@ -1103,5 +1151,69 @@ export function compareProfiles(source, generated) {
     : 0;
 
   report.fidelity_score = fidelity;
+  report.component_scores = scores.map(item => ({ ...item, score: Math.round(item.score) }));
   return report;
+}
+
+function isAggregateComparable(profile) {
+  return Boolean(
+    profile?._meta?.compare_source_kind === 'aggregate' ||
+    profile?.bpm_range ||
+    profile?.key_consensus ||
+    profile?.mode_consensus ||
+    profile?.structure?.section_count_range ||
+    profile?._meta?.sets_analyzed ||
+    ['album', 'artist', 'collection'].includes(profile?._meta?.scope)
+  );
+}
+
+function compareNumericTarget({ source, generated, range = null, tolerance = 0 }) {
+  const sourceLabel = range
+    ? `${range.min}-${range.max} (avg ${range.avg})`
+    : source ?? 'unknown';
+
+  if (generated == null || (source == null && !range)) {
+    return { source, source_label: sourceLabel, generated, delta: null, in_range: null, score: 0 };
+  }
+
+  if (range) {
+    const inRange = generated >= range.min && generated <= range.max;
+    const distance = inRange ? 0 : Math.min(Math.abs(generated - range.min), Math.abs(generated - range.max));
+    return {
+      source: range.avg,
+      source_label: sourceLabel,
+      generated,
+      delta: generated - range.avg,
+      in_range: inRange,
+      score: inRange ? 100 : Math.max(0, 100 - distance * 25),
+    };
+  }
+
+  const delta = generated - source;
+  const distance = Math.max(0, Math.abs(delta) - tolerance);
+  return {
+    source,
+    source_label: sourceLabel,
+    generated,
+    delta,
+    in_range: Math.abs(delta) <= tolerance,
+    score: Math.max(0, 100 - distance * 25),
+  };
+}
+
+function scorePresenceDelta(deltaPct) {
+  return Math.max(0, 100 - Math.abs(deltaPct) * 1.5);
+}
+
+function scoreRatio(ratio) {
+  if (ratio == null || !Number.isFinite(ratio) || ratio <= 0) return 0;
+  return Math.round(Math.min(ratio, 1 / ratio, 1) * 100);
+}
+
+function scoreBpm(bpm, aggregateSource) {
+  if (bpm.in_range === true) return 100;
+  if (bpm.delta == null) return 0;
+  const tolerance = aggregateSource ? 5 : 2;
+  const distance = Math.max(0, Math.abs(bpm.delta) - tolerance);
+  return Math.max(0, 100 - distance * 5);
 }

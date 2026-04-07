@@ -38,28 +38,24 @@ export async function compareCommand(sourceArg, generatedArg, options) {
 async function loadProfile(target) {
   const abs = target.startsWith('/') ? target : join(process.cwd(), target);
 
-  // Saved profile or bundle JSON
-  if (target.endsWith('.json') || target.endsWith('bundle.json')) {
-    try {
-      const loaded = await loadStyleProfile(abs);
-      return normalizeComparableProfile(loaded.profile);
-    } catch {
-      try {
-        const { readFile } = await import('fs/promises');
-        const raw = await readFile(abs, 'utf-8');
-        const parsed = JSON.parse(raw);
-        if (parsed._meta || parsed.bpm_range || parsed.key_consensus) {
-          return normalizeComparableProfile(parsed);
-        }
-      } catch {}
-    }
-  }
-
-  // If it's a raw song json, treat as set path and analyze on the fly
   if (target.endsWith('.json')) {
     try {
-      const { song, filepath } = await loadSong(target);
-      return analyzeSong(song, filepath);
+      const { readFile } = await import('fs/promises');
+      const raw = await readFile(abs, 'utf-8');
+      const parsed = JSON.parse(raw);
+
+      if (parsed?.type === 'profile-bundle') {
+        const loaded = await loadStyleProfile(abs);
+        return normalizeComparableProfile(loaded.profile);
+      }
+
+      if (parsed?.meta && Array.isArray(parsed.sections)) {
+        return analyzeSong(parsed, abs);
+      }
+
+      if (parsed._meta || parsed.bpm_range || parsed.key_consensus || parsed.arrangement || parsed.rhythm) {
+        return normalizeComparableProfile(parsed);
+      }
     } catch {}
   }
 
@@ -83,12 +79,21 @@ function normalizeComparableProfile(profile) {
   const chordsByTrack = profile?.pitch?.chords_by_track ?? {};
 
   return {
-    _meta: profile._meta,
+    _meta: {
+      ...(profile._meta ?? {}),
+      compare_source_kind: isAggregateProfile(profile) ? 'aggregate' : 'single',
+    },
     bpm: profile?.bpm ?? profile?.bpm_range?.avg ?? null,
+    bpm_range: profile?.bpm_range ?? null,
     key: profile?.key ?? profile?.key_consensus ?? 'unknown',
+    key_confidence: profile?.key_confidence ?? null,
+    key_consensus: profile?.key_consensus ?? null,
+    mode_consensus: profile?.mode_consensus ?? null,
     structure: {
       section_count: profile?.structure?.section_count ?? profile?.structure?.section_count_range?.avg ?? null,
+      section_count_range: profile?.structure?.section_count_range ?? null,
       bars_per_section: profile?.structure?.bars_per_section ?? profile?.structure?.bars_per_section_avg ?? null,
+      bars_per_section_avg: profile?.structure?.bars_per_section_avg ?? null,
     },
     arrangement: {
       track_presence: profile?.arrangement?.track_presence ?? {},
@@ -105,6 +110,17 @@ function normalizeComparableProfile(profile) {
   };
 }
 
+function isAggregateProfile(profile) {
+  return Boolean(
+    profile?.bpm_range ||
+    profile?.key_consensus ||
+    profile?.mode_consensus ||
+    profile?.structure?.section_count_range ||
+    profile?._meta?.sets_analyzed ||
+    ['album', 'artist', 'collection'].includes(profile?._meta?.scope)
+  );
+}
+
 // ─── print ────────────────────────────────────────────────────────────────────
 
 function printReport(r, srcLabel, genLabel) {
@@ -118,9 +134,30 @@ function printReport(r, srcLabel, genLabel) {
   const bar = '█'.repeat(Math.round(score / 10)) + '░'.repeat(10 - Math.round(score / 10));
   console.log(`  Fidelity   ${scoreColor(bar)}  ${scoreColor(`${score}%`)}\n`);
 
+  if ((r.component_scores ?? []).length > 0) {
+    console.log(chalk.cyan('  Score Components'));
+    for (const item of r.component_scores) {
+      const color = item.score >= 80 ? chalk.green : item.score >= 55 ? chalk.yellow : chalk.red;
+      console.log(`    ${color(String(item.score).padStart(3) + '%')}  ${item.name.padEnd(18)} ${chalk.dim(`weight ${Math.round(item.weight * 100)}%`)}`);
+    }
+    console.log('');
+  }
+
+  if (r.context?.aggregate_source) {
+    console.log(chalk.dim('  Aggregate source: scoring emphasizes role presence, structure, and role-level rhythm over exact track matches.\n'));
+  }
+
+  if (r.structure) {
+    const countIcon = r.structure.section_count.score >= 80 ? chalk.green('✓') : r.structure.section_count.score >= 55 ? chalk.yellow('~') : chalk.red('✗');
+    const barsIcon = r.structure.bars_per_section.score >= 80 ? chalk.green('✓') : r.structure.bars_per_section.score >= 55 ? chalk.yellow('~') : chalk.red('✗');
+    console.log(chalk.cyan('  Structure'));
+    console.log(`    ${countIcon} sections        ${r.structure.section_count.source_label} → ${r.structure.section_count.generated}`);
+    console.log(`    ${barsIcon} bars/section    ${r.structure.bars_per_section.source_label} → ${r.structure.bars_per_section.generated}`);
+  }
+
   // Key
   const keyOk = r.key.match ? chalk.green('✓') : r.key.mode_match ? chalk.yellow('~') : chalk.red('✗');
-  console.log(chalk.cyan('  Key'));
+  console.log(chalk.cyan('\n  Key'));
   console.log(`    ${keyOk} ${r.key.source}  →  ${r.key.generated}${r.key.match ? '' : r.key.mode_match ? '  (same mode)' : '  (different key)'}`);
 
   // BPM

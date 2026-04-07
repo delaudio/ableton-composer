@@ -100,10 +100,13 @@ ableton-composer compare \
 
 This reports:
 
+- component scores for key, BPM, structure, role presence, and rhythm
 - key agreement
 - BPM drift
 - rhythm by role
 - role presence drift
+
+When the source is an album, artist, or collection bundle, compare weights role presence, structure, and role-level rhythm more heavily than exact track-name matches.
 
 ## 8. Typical Album-Style Loop
 

@@ -58,6 +58,8 @@ Important options:
 ableton-composer compare <reference-profile-or-bundle> <generated-set>
 ```
 
+For aggregate bundles, compare emphasizes structure, role presence, and role-level rhythm so album/artist references are not scored like exact song-to-song copies.
+
 ## Expand
 
 ```bash
