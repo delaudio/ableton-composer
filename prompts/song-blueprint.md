@@ -17,6 +17,7 @@ The blueprint must combine:
 - Decide which roles should be active, absent, required, or forbidden in each section.
 - Keep the harmonic logic and arrangement logic aligned.
 - Use the style profile as a strong constraint, especially for role presence, entry order, density, and harmonic behavior.
+- Convert role presence percentages into section-count budgets; recurring roles should not become always-on parts unless the profile says nearly always active.
 - Use section-level arrangement signals when available: active/inactive roles, entered/exited roles, density hints, and section-position archetypes.
 - Assign section phases (`setup`, `main`, `peak`, `breakdown`, `release`) and role budgets per section.
 
@@ -24,6 +25,7 @@ The blueprint must combine:
 - Be compact and decisive.
 - Do not write MIDI notes.
 - Do not keep every role active in every section unless the profile clearly indicates that behavior.
+- Do not treat anchor roles as universal unless their role presence is close to 100%.
 - Respect sparse roles such as FX, pads, and hooks when the profile suggests low presence.
 - If the style profile includes a target or cap for active roles per section, obey it.
 - If the style profile includes section-position archetypes, keep first/early/middle/late/final sections close to those active-role patterns.

@@ -25,6 +25,7 @@ Return ONLY a valid JSON object conforming to the AbletonSong schema provided in
 - Outros should either resolve or deliberately strip elements away.
 - Do not keep every role active in every section unless the profile explicitly indicates that behavior.
 - When a style profile includes role presence or entry-order data, follow it closely.
+- Treat role presence percentages as section-count budgets. A 50% role should be absent from about half the sections, not reduced in note count everywhere.
 - Sparse roles such as FX, pads, hooks, or chord stabs should appear selectively unless the profile says otherwise.
 - If average active tracks per section is limited, do not over-orchestrate all sections.
 - If a section plan is provided with `active_roles` and `inactive_roles`, treat those as arrangement constraints.
@@ -38,6 +39,7 @@ Return ONLY a valid JSON object conforming to the AbletonSong schema provided in
 - Use `density_hint`, `entry_behavior`, and `texture_hint` to shape section contrast and layering.
 - If the style profile includes a cap for active roles per section, do not exceed it except in a deliberate climax section.
 - Sparse roles should be fully absent in many sections, not merely reduced in note count.
+- Recurring or anchor roles are not automatically universal. Only keep a role active in every section when the profile shows near-constant presence or the user explicitly asks for it.
 
 ## MIDI reference
 - Pitch: MIDI note numbers. C3=60, C2=48, C1=36.

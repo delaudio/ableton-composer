@@ -290,7 +290,8 @@ function deriveRoleConstraints({ rolePresence = {}, avgActiveTracksPerSection = 
     target_active_roles_per_section: roleCountTarget,
     max_active_roles_per_section: roleCountCap,
     avg_active_tracks_per_section: avgActiveTracksPerSection,
-    anchor_roles: entries.filter(([, ratio]) => ratio >= 0.4).map(([role]) => role).slice(0, 4),
+    anchor_roles: entries.filter(([, ratio]) => ratio >= 0.75).map(([role]) => role).slice(0, 4),
+    recurring_roles: entries.filter(([, ratio]) => ratio >= 0.4 && ratio < 0.75).map(([role]) => role).slice(0, 6),
     occasional_roles: entries.filter(([, ratio]) => ratio > 0.15 && ratio < 0.4).map(([role]) => role).slice(0, 6),
     sparse_roles: entries.filter(([, ratio]) => ratio <= 0.15).map(([role]) => role).slice(0, 6),
   };

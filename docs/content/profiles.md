@@ -54,7 +54,7 @@ profiles/
 Album bundles can be too large for clean prompting. `prompt.json` compresses the useful musical signals into a smaller context:
 
 - role presence
-- role constraints
+- role constraints, including anchor, recurring, occasional, and sparse roles
 - section-level active/inactive role signals
 - section-position archetypes for aggregate bundles
 - harmonic behavior
@@ -62,3 +62,5 @@ Album bundles can be too large for clean prompting. `prompt.json` compresses the
 - arrangement hints
 
 `generate --style bundle.json` automatically prefers `prompt.json`.
+
+During generation, role presence ratios are treated as section-count budgets. This prevents recurring or sparse roles from becoming always-on parts unless the profile actually supports near-constant presence.

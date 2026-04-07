@@ -495,7 +495,7 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
   parts.push(`## Request\n${prompt}`);
   parts.push(`## Full schema reference\n\`\`\`json\n${JSON.stringify(schema, null, 2)}\n\`\`\``);
 
-  return generateStructuredObject({
+  const generatedSong = await generateStructuredObject({
     provider,
     model,
     systemPrompt,
@@ -504,6 +504,8 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
     schemaName: 'ableton_song',
     maxTokens: 16384,
   });
+
+  return enforceArrangementPlan(generatedSong, arrangementPlan);
 }
 
 async function buildSongGenerationPrompt({ prompt, styleProfile, genreKey = null, harmonyKey = null }) {
@@ -827,6 +829,17 @@ function buildStyleSection(p) {
         'nearly always active';
       lines.push(`- ${role.padEnd(12)} ${pct}%  (${hint})`);
     }
+    const sectionCount = Number.isFinite(p.structure?.section_count) ? p.structure.section_count : null;
+    if (sectionCount && sectionCount > 1) {
+      lines.push('');
+      lines.push('**Role presence budget**');
+      lines.push(`Reference profile section count: ${sectionCount}. Scale these ratios to the requested section count; do not turn ratios into always-on parts.`);
+      for (const [role, ratio] of Object.entries(rolePresence)) {
+        const target = Math.max(0, Math.round(ratio * sectionCount));
+        const max = Math.min(sectionCount, Math.ceil(ratio * sectionCount + 0.5));
+        lines.push(`- ${role.padEnd(12)} ratio ${Math.round(ratio * 100)}% (reference ~${target}/${sectionCount} sections), avoid >${max}/${sectionCount} in equivalent scaled form unless explicitly requested`);
+      }
+    }
     lines.push('');
   }
 
@@ -840,7 +853,10 @@ function buildStyleSection(p) {
       lines.push(`- Hard cap for active roles per section: ${roleConstraints.max_active_roles_per_section}`);
     }
     if ((roleConstraints.anchor_roles ?? []).length > 0) {
-      lines.push(`- Anchor roles: ${roleConstraints.anchor_roles.join(', ')}`);
+      lines.push(`- Anchor roles (high presence, but not automatically universal): ${roleConstraints.anchor_roles.join(', ')}`);
+    }
+    if ((roleConstraints.recurring_roles ?? []).length > 0) {
+      lines.push(`- Recurring roles (use often, but leave absent in some sections): ${roleConstraints.recurring_roles.join(', ')}`);
     }
     if ((roleConstraints.occasional_roles ?? []).length > 0) {
       lines.push(`- Occasional roles: ${roleConstraints.occasional_roles.join(', ')}`);
@@ -1007,6 +1023,99 @@ function buildStyleSection(p) {
   }
 
   return lines.join('\n');
+}
+
+function enforceArrangementPlan(song, arrangementPlan) {
+  const planSections = arrangementPlan?.section_plan;
+  if (!song?.sections || !Array.isArray(planSections) || planSections.length === 0) return song;
+
+  const sections = song.sections.map((section, index) => {
+    const plan = planSections[index] ?? findPlanByName(planSections, section.name);
+    if (!plan || !Array.isArray(section.tracks)) return section;
+
+    const originalTracks = section.tracks;
+    const requiredRoles = normalizeRoleSet(plan.required_roles);
+    const activeRoles = normalizeRoleSet(plan.active_roles);
+    const inactiveRoles = normalizeRoleSet(plan.inactive_roles);
+    const forbiddenRoles = normalizeRoleSet(plan.forbidden_roles);
+    const sparseRoles = normalizeRoleSet(plan.role_budget?.sparse_roles);
+
+    let tracks = originalTracks.filter(track => {
+      const role = classifyTrackRole(track.ableton_name || '');
+      if (requiredRoles.has(role)) return true;
+      if (activeRoles.has(role)) return true;
+      if (forbiddenRoles.has(role)) return false;
+      if (inactiveRoles.has(role)) return false;
+      if (sparseRoles.has(role)) return false;
+      return true;
+    });
+
+    tracks = capTracksToRoleBudget(tracks, plan);
+
+    // Avoid producing an unusable empty section if a model or plan was too strict.
+    if (tracks.length === 0 && originalTracks.length > 0) {
+      const fallback = originalTracks.find(track => activeRoles.has(classifyTrackRole(track.ableton_name || ''))) ?? originalTracks[0];
+      tracks = [fallback];
+    }
+
+    return { ...section, tracks };
+  });
+
+  return { ...song, sections };
+}
+
+function capTracksToRoleBudget(tracks, plan) {
+  const maxActiveRoles = Number(plan.role_budget?.max_active_roles);
+  if (!Number.isFinite(maxActiveRoles) || maxActiveRoles <= 0) return tracks;
+
+  const roles = new Map();
+  for (const track of tracks) {
+    const role = classifyTrackRole(track.ableton_name || '');
+    if (!roles.has(role)) roles.set(role, []);
+    roles.get(role).push(track);
+  }
+
+  if (roles.size <= maxActiveRoles) return tracks;
+
+  const requiredRoles = normalizeRoleSet(plan.required_roles);
+  const activeRoles = normalizeRoleSet(plan.active_roles);
+  const inactiveRoles = normalizeRoleSet(plan.inactive_roles);
+  const sparseRoles = normalizeRoleSet(plan.role_budget?.sparse_roles);
+
+  const rankedRoles = [...roles.entries()]
+    .map(([role, roleTracks]) => ({
+      role,
+      score:
+        (requiredRoles.has(role) ? 10000 : 0) +
+        (activeRoles.has(role) ? 5000 : 0) -
+        (inactiveRoles.has(role) ? 5000 : 0) -
+        (sparseRoles.has(role) ? 2000 : 0) +
+        roleTracks.reduce((sum, track) => sum + (track.clip?.notes?.length ?? 0), 0),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxActiveRoles)
+    .map(entry => entry.role);
+
+  const keepRoles = new Set(rankedRoles);
+  return tracks.filter(track => keepRoles.has(classifyTrackRole(track.ableton_name || '')));
+}
+
+function normalizeRoleSet(values) {
+  return new Set(
+    (Array.isArray(values) ? values : [])
+      .map(value => String(value || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
+function findPlanByName(planSections, sectionName) {
+  if (!sectionName) return null;
+  const normalized = String(sectionName).trim().toLowerCase();
+  return planSections.find(plan =>
+    [plan.section_name_hint, plan.section_role]
+      .filter(Boolean)
+      .some(value => String(value).trim().toLowerCase() === normalized)
+  ) ?? null;
 }
 
 export function summarizeContinuationContext(song, recentSectionLimit = CONTINUATION_RECENT_SECTION_LIMIT) {
