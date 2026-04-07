@@ -59,8 +59,9 @@ export async function importXmlCommand(xmlFile, options) {
       parseAttributeValue: true,
       // These tags can appear multiple times — always wrap in array
       isArray: tagName => [
-        'part', 'measure', 'note', 'direction', 'score-part',
+        'part', 'measure', 'note', 'direction', 'score-part', 'harmony',
         'tie', 'beam', 'slur', 'attributes', 'direction-type',
+        'lyric', 'score-instrument', 'midi-instrument',
       ].includes(tagName),
     });
 
@@ -84,6 +85,9 @@ export async function importXmlCommand(xmlFile, options) {
       const raw  = sp['part-name'];
       partNames[id] = typeof raw === 'object' ? (raw['#text'] || id) : String(raw || id);
     }
+    const unpitchedMaps = Object.fromEntries(
+      scoreParts.map(sp => [sp['@_id'], extractUnpitchedMidiMap(sp)]),
+    );
 
     // ── Global metadata from first part's first measure ───────────────────────
     const parts       = asArray(score.part);
@@ -144,9 +148,13 @@ export async function importXmlCommand(xmlFile, options) {
     const partNoteSets = parts
       .map((part, pi) => ({
         name:  partLabels[pi].name,
-        notes: extractNotes(part.measure, beatsPerBar),
+        notes: extractNotes(part.measure, beatsPerBar, unpitchedMaps[part['@_id']]),
       }))
       .filter(p => p.notes.length > 0);
+
+    const harmonyEvents = dedupeHarmonyEvents(
+      parts.flatMap(part => extractHarmony(part.measure, beatsPerBar)),
+    );
 
     if (partNoteSets.length === 0) {
       throw new Error('No notes found in the MusicXML file.');
@@ -164,20 +172,52 @@ export async function importXmlCommand(xmlFile, options) {
 
     for (const win of windows) {
       const tracks = [];
+      const sectionHarmony = harmonyEvents
+        .filter(h => h.time >= win.startBeat && h.time < win.endBeat)
+        .map(h => ({ ...h, time: round3(h.time - win.startBeat) }));
 
       for (const { name, notes } of partNoteSets) {
         const sectionNotes = notes
           .filter(n => n.time >= win.startBeat && n.time < win.endBeat)
-          .map(n => ({
-            pitch:    n.pitch,
-            time:     round3(n.time - win.startBeat),
-            duration: round3(Math.min(n.duration, win.endBeat - n.time)),
-            velocity: n.velocity,
-            muted:    false,
-          }));
+          .map(n => {
+            const note = {
+              pitch:    n.pitch,
+              time:     round3(n.time - win.startBeat),
+              duration: round3(Math.min(n.duration, win.endBeat - n.time)),
+              velocity: n.velocity,
+              muted:    false,
+            };
+            if (n.lyrics?.length > 0) note.lyrics = n.lyrics;
+            return note;
+          });
 
         if (sectionNotes.length > 0) {
-          tracks.push({ ableton_name: name, clip: { length_bars: win.bars, notes: sectionNotes } });
+          const trackLyrics = sectionNotes.flatMap(note =>
+            (note.lyrics ?? []).map(lyric => ({
+              ...lyric,
+              time: note.time,
+            })),
+          );
+          const clip = { length_bars: win.bars, notes: sectionNotes };
+          if (trackLyrics.length > 0) clip.lyrics = trackLyrics;
+          tracks.push({ ableton_name: name, clip });
+        }
+      }
+
+      if (options.chordTrack && sectionHarmony.length > 0) {
+        const chordTrackName = typeof options.chordTrack === 'string'
+          ? options.chordTrack
+          : 'Chords';
+        const chordNotes = harmonyToNotes(sectionHarmony, win.bars * beatsPerBar);
+        if (chordNotes.length > 0) {
+          tracks.push({
+            ableton_name: chordTrackName,
+            clip: {
+              name: chordClipName(sectionHarmony),
+              length_bars: win.bars,
+              notes: chordNotes,
+            },
+          });
         }
       }
 
@@ -192,7 +232,16 @@ export async function importXmlCommand(xmlFile, options) {
         console.log(chalk.dim(`       ${t.ableton_name}: ${t.clip.notes.length} notes`));
       }
 
-      sections.push({ name: win.name, bars: win.bars, tracks });
+      const section = { name: win.name, bars: win.bars, tracks };
+      if (sectionHarmony.length > 0) section.harmony = sectionHarmony;
+      const sectionLyrics = tracks.flatMap(track =>
+        (track.clip.lyrics ?? []).map(lyric => ({
+          track: track.ableton_name,
+          ...lyric,
+        })),
+      );
+      if (sectionLyrics.length > 0) section.lyrics = sectionLyrics;
+      sections.push(section);
     }
 
     console.log('');
@@ -212,6 +261,16 @@ export async function importXmlCommand(xmlFile, options) {
       },
       sections,
     };
+
+    if (harmonyEvents.length > 0) {
+      song.meta.harmony_source = 'musicxml';
+      song.meta.harmony_event_count = harmonyEvents.length;
+    }
+    const lyricsEventCount = sections.reduce((sum, section) => sum + (section.lyrics?.length ?? 0), 0);
+    if (lyricsEventCount > 0) {
+      song.meta.lyrics_source = 'musicxml';
+      song.meta.lyrics_event_count = lyricsEventCount;
+    }
 
     // ── Save ──────────────────────────────────────────────────────────────────
     if (options.out) {
@@ -244,7 +303,7 @@ export async function importXmlCommand(xmlFile, options) {
 
 /**
  * Extract all notes from an array of MusicXML measures.
- * Returns a flat array of { pitch, time, duration, velocity } with absolute beat times.
+ * Returns a flat array of { pitch, time, duration, velocity, lyrics? } with absolute beat times.
  *
  * Handles:
  *  - Variable divisions per measure
@@ -253,8 +312,10 @@ export async function importXmlCommand(xmlFile, options) {
  *  - Grace notes (skipped)
  *  - Tied notes (durations merged across measures)
  *  - Dynamics for velocity
+ *  - Lyrics attached to notes
+ *  - Unpitched percussion via MusicXML midi-unpitched maps
  */
-function extractNotes(measures, beatsPerBar) {
+function extractNotes(measures, beatsPerBar, unpitchedMidiMap = new Map()) {
   let currentDivisions = 1;
   let currentVelocity  = DEFAULT_VELOCITY;
   let measureBeat      = 0;
@@ -287,13 +348,9 @@ function extractNotes(measures, beatsPerBar) {
       // Chord note: starts at the same position as the previous note
       if (isChord) cursor = prevCursor;
 
-      if (!isRest && n.pitch) {
-        const midi = pitchToMidi(
-          n.pitch.step,
-          Number(n.pitch.octave),
-          Number(n.pitch.alter) || 0,
-        );
+      const midi = noteToMidi(n, unpitchedMidiMap);
 
+      if (!isRest && midi !== null) {
         const ties      = asArray(n.tie);
         const isTieStop  = ties.some(t => t['@_type'] === 'stop');
         const isTieStart = ties.some(t => t['@_type'] === 'start');
@@ -304,6 +361,8 @@ function extractNotes(measures, beatsPerBar) {
           if (!isTieStart) delete pendingTies[midi];
         } else {
           const noteObj = { pitch: midi, time: cursor, duration: beatDur, velocity: currentVelocity };
+          const lyrics = extractLyrics(n);
+          if (lyrics.length > 0) noteObj.lyrics = lyrics;
           notes.push(noteObj);
           if (isTieStart) pendingTies[midi] = noteObj;
         }
@@ -319,10 +378,260 @@ function extractNotes(measures, beatsPerBar) {
   return notes;
 }
 
+/**
+ * Extract MusicXML chord symbols (<harmony>) as absolute beat events.
+ *
+ * MusicXML can place harmony by document order and/or <offset>. Because this
+ * parser does not preserve mixed child order, no-offset chords are distributed
+ * across the measure as a practical fallback for common lead-sheet exports.
+ */
+function extractHarmony(measures, beatsPerBar) {
+  let currentDivisions = 1;
+  let measureBeat      = 0;
+  const events         = [];
+
+  for (const measure of measures) {
+    const attrs = asArray(measure.attributes)[0];
+    if (attrs?.divisions) currentDivisions = Number(attrs.divisions);
+
+    const harmonies = asArray(measure.harmony);
+    const hasExplicitOffsets = harmonies.some(h => h.offset !== undefined);
+
+    harmonies.forEach((harmony, index) => {
+      const parsed = parseHarmonySymbol(harmony);
+      if (!parsed) return;
+
+      const offsetBeats = hasExplicitOffsets
+        ? (Number(harmony.offset) || 0) / currentDivisions
+        : index * (beatsPerBar / Math.max(1, harmonies.length));
+
+      events.push({
+        time:   round3(measureBeat + offsetBeats),
+        symbol: parsed.symbol,
+        root:   parsed.root,
+        kind:   parsed.kind,
+        bass:   parsed.bass,
+      });
+    });
+
+    measureBeat += beatsPerBar;
+  }
+
+  return events;
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 function pitchToMidi(step, octave, alter) {
   return (octave + 1) * 12 + (STEP_SEMITONES[step] ?? 0) + Math.round(alter);
+}
+
+function noteToMidi(note, unpitchedMidiMap) {
+  if (note.pitch) {
+    return pitchToMidi(
+      note.pitch.step,
+      Number(note.pitch.octave),
+      Number(note.pitch.alter) || 0,
+    );
+  }
+
+  if (note.unpitched) {
+    const instrumentId = note.instrument?.['@_id'];
+    const mappedMidi = instrumentId ? unpitchedMidiMap.get(instrumentId) : null;
+    if (Number.isFinite(mappedMidi)) return mappedMidi;
+
+    const displayStep = note.unpitched['display-step'];
+    const displayOctave = Number(note.unpitched['display-octave']);
+    if (displayStep && Number.isFinite(displayOctave)) {
+      return pitchToMidi(displayStep, displayOctave, 0);
+    }
+  }
+
+  return null;
+}
+
+function extractUnpitchedMidiMap(scorePart) {
+  const entries = new Map();
+  for (const midiInstrument of asArray(scorePart?.['midi-instrument'])) {
+    const id = midiInstrument?.['@_id'];
+    const midi = Number(midiInstrument?.['midi-unpitched']);
+    if (id && Number.isFinite(midi)) entries.set(id, midi);
+  }
+  return entries;
+}
+
+function extractLyrics(note) {
+  return asArray(note.lyric)
+    .map(lyric => {
+      const text = textValue(lyric.text);
+      if (!text) return null;
+      return {
+        text,
+        syllabic: textValue(lyric.syllabic) || null,
+        number:   lyric['@_number'] !== undefined ? String(lyric['@_number']) : null,
+      };
+    })
+    .filter(Boolean);
+}
+
+function pitchClass(step, alter = 0) {
+  return (STEP_SEMITONES[step] + Math.round(alter) + 120) % 12;
+}
+
+function parseHarmonySymbol(harmony) {
+  const root = harmony.root;
+  const rootStep = root?.['root-step'];
+  if (!rootStep) return null;
+
+  const rootAlter = Number(root['root-alter']) || 0;
+  const rootName  = `${rootStep}${alterSuffix(rootAlter)}`;
+  const kindValue = textValue(harmony.kind) || 'major';
+  const kindText  = attrValue(harmony.kind, 'text');
+  const suffix    = kindText || kindSuffix(kindValue);
+
+  const bass = harmony.bass
+    ? `${harmony.bass['bass-step']}${alterSuffix(Number(harmony.bass['bass-alter']) || 0)}`
+    : null;
+
+  return {
+    root:   rootName,
+    kind:   kindValue,
+    bass,
+    symbol: `${rootName}${suffix}${bass ? `/${bass}` : ''}`,
+  };
+}
+
+function harmonyToNotes(harmonyEvents, sectionLengthBeats) {
+  const notes = [];
+
+  for (let i = 0; i < harmonyEvents.length; i++) {
+    const event = harmonyEvents[i];
+    const nextTime = harmonyEvents[i + 1]?.time ?? sectionLengthBeats;
+    const duration = Math.max(0.25, round3(nextTime - event.time));
+    const chordPitches = chordVoicing(event);
+
+    for (const pitch of chordPitches) {
+      notes.push({
+        pitch,
+        time:     event.time,
+        duration,
+        velocity: 72,
+        muted:    false,
+      });
+    }
+  }
+
+  return notes;
+}
+
+function chordVoicing(event) {
+  const root = parsePitchName(event.root);
+  if (!root) return [];
+
+  const intervals = kindIntervals(event.kind);
+  const rootMidi  = 60 + root.pc;
+  const pitches   = intervals.map(interval => rootMidi + interval);
+
+  if (event.bass) {
+    const bass = parsePitchName(event.bass);
+    if (bass) pitches.unshift(48 + bass.pc);
+  }
+
+  return [...new Set(pitches)].sort((a, b) => a - b);
+}
+
+function parsePitchName(name) {
+  const match = /^([A-G])([#b]{0,2})$/.exec(name);
+  if (!match) return null;
+  const [, step, accidentals] = match;
+  const alter = [...accidentals].reduce((sum, ch) => sum + (ch === '#' ? 1 : -1), 0);
+  return { step, alter, pc: pitchClass(step, alter) };
+}
+
+function kindIntervals(kind) {
+  const normalized = String(kind || 'major').toLowerCase();
+  if (normalized.includes('minor-major')) return [0, 3, 7, 11];
+  if (normalized.includes('major-minor')) return [0, 4, 7, 10];
+  if (normalized.includes('major-seventh')) return [0, 4, 7, 11];
+  if (normalized.includes('minor-seventh')) return [0, 3, 7, 10];
+  if (normalized.includes('dominant-ninth')) return [0, 4, 7, 10, 14];
+  if (normalized.includes('major-ninth')) return [0, 4, 7, 11, 14];
+  if (normalized.includes('minor-ninth')) return [0, 3, 7, 10, 14];
+  if (normalized.includes('dominant')) return [0, 4, 7, 10];
+  if (normalized.includes('half-diminished')) return [0, 3, 6, 10];
+  if (normalized.includes('diminished-seventh')) return [0, 3, 6, 9];
+  if (normalized.includes('diminished')) return [0, 3, 6];
+  if (normalized.includes('augmented')) return [0, 4, 8];
+  if (normalized.includes('suspended-fourth')) return [0, 5, 7];
+  if (normalized.includes('suspended-second')) return [0, 2, 7];
+  if (normalized.includes('minor-sixth')) return [0, 3, 7, 9];
+  if (normalized.includes('major-sixth')) return [0, 4, 7, 9];
+  if (normalized.includes('minor')) return [0, 3, 7];
+  return [0, 4, 7];
+}
+
+function chordClipName(harmonyEvents) {
+  const symbols = [];
+  for (const event of harmonyEvents) {
+    if (symbols[symbols.length - 1] !== event.symbol) symbols.push(event.symbol);
+  }
+  const suffix = symbols.length > 8 ? ' ...' : '';
+  return symbols.slice(0, 8).join(' ') + suffix;
+}
+
+function dedupeHarmonyEvents(events) {
+  const seen = new Set();
+  return events
+    .sort((a, b) => a.time - b.time || a.symbol.localeCompare(b.symbol))
+    .filter(event => {
+      const key = `${event.time}:${event.symbol}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function kindSuffix(kind) {
+  const normalized = String(kind || 'major').toLowerCase();
+  const map = {
+    major: '',
+    minor: 'm',
+    augmented: 'aug',
+    diminished: 'dim',
+    dominant: '7',
+    'major-seventh': 'maj7',
+    'minor-seventh': 'm7',
+    'diminished-seventh': 'dim7',
+    'augmented-seventh': 'aug7',
+    'half-diminished': 'm7b5',
+    'major-minor': '7',
+    'minor-major': 'mMaj7',
+    'suspended-fourth': 'sus4',
+    'suspended-second': 'sus2',
+    'major-sixth': '6',
+    'minor-sixth': 'm6',
+    'dominant-ninth': '9',
+    'major-ninth': 'maj9',
+    'minor-ninth': 'm9',
+  };
+  return map[normalized] ?? (normalized === 'none' ? '' : normalized.replaceAll('-', ' '));
+}
+
+function alterSuffix(alter) {
+  if (alter > 0) return '#'.repeat(alter);
+  if (alter < 0) return 'b'.repeat(Math.abs(alter));
+  return '';
+}
+
+function textValue(value) {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'object') return String(value['#text'] ?? '').trim();
+  return String(value).trim();
+}
+
+function attrValue(value, name) {
+  if (!value || typeof value !== 'object') return '';
+  return String(value[`@_${name}`] ?? '').trim();
 }
 
 function fifthsToScale(fifths, mode) {

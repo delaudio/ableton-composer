@@ -15,6 +15,7 @@ template: docs
 - `preset generate` create synth presets from preset profiles
 - `push` write notes into Ableton Live
 - `pull` import material from Live
+- `import-xml` convert MusicXML/MXL to AbletonSong JSON
 - `snapshot` save and restore device states
 
 ## Generate
@@ -62,6 +63,20 @@ ableton-composer compare <reference-profile-or-bundle> <generated-set>
 ```bash
 ableton-composer expand <set> --add "Strings,FX" [options]
 ```
+
+## Import MusicXML / MXL
+
+```bash
+ableton-composer import-xml score.mxl --chord-track --out sets/imported-song/
+```
+
+Important options:
+
+- `--split-every <measures>`
+- `--tracks "Part 1:Piano,Part 2:Lead"`
+- `--chord-track [name]` generates a MIDI chord track from MusicXML harmony symbols, using `Chords` as the default track name.
+
+When present in the source file, `import-xml` also preserves MusicXML lyrics as section/clip metadata and imports unpitched percussion via MusicXML `midi-unpitched` mappings.
 
 ## Presets
 

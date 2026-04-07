@@ -255,7 +255,7 @@ export async function pushSong(song, opts = {}) {
           continue;
         }
 
-        const clipName = `${section.name} — ${trackDef.ableton_name}`;
+        const clipName = trackDef.clip?.name || `${section.name} — ${trackDef.ableton_name}`;
         await pushClip(found.track, sectionIndex, trackDef.clip, { overwrite, timeSignature, clipName });
         onProgress(`${label} ✓ (${trackDef.clip.notes.length} notes)`);
         pushed++;

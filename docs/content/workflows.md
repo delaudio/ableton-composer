@@ -70,7 +70,27 @@ ableton-composer expand sets/my-song \
 
 Useful when you already have a harmonic structure and only want new supporting parts.
 
-## 6. Compare Drift
+## 6. Import MusicXML With Chord Symbols
+
+```bash
+ableton-composer import-xml score.mxl \
+  --chord-track \
+  --out sets/imported-score/
+```
+
+When the MusicXML/MXL file contains harmony symbols, the importer stores them as section-level harmony metadata. With `--chord-track`, it also creates a MIDI `Chords` track and names the chord clip from the imported progression.
+
+When the source file contains lyrics, the importer preserves them as section/clip metadata. Unpitched percussion parts are imported through MusicXML `midi-unpitched` mappings when available.
+
+Use a custom track name when your Ableton set already has a dedicated harmony track:
+
+```bash
+ableton-composer import-xml score.mxl \
+  --chord-track "Harmony" \
+  --out sets/imported-score/
+```
+
+## 7. Compare Drift
 
 ```bash
 ableton-composer compare \
@@ -85,7 +105,7 @@ This reports:
 - rhythm by role
 - role presence drift
 
-## 7. Typical Album-Style Loop
+## 8. Typical Album-Style Loop
 
 ```bash
 # analyze

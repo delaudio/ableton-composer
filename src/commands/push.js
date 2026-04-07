@@ -215,7 +215,8 @@ async function pushSingleSection(sectionPath, slotIndex, options, spinner) {
         console.log(chalk.red(`  ✗ ${trackDef.ableton_name}: not found in Live set`));
         continue;
       }
-      await pushClip(found.track, slotIndex, trackDef.clip, { overwrite: options.overwrite, timeSignature });
+      const clipName = trackDef.clip?.name || `${section.name} — ${trackDef.ableton_name}`;
+      await pushClip(found.track, slotIndex, trackDef.clip, { overwrite: options.overwrite, timeSignature, clipName });
       console.log(chalk.green(`  ✓ ${trackDef.ableton_name} → slot ${slotIndex} (${trackDef.clip.notes.length} notes)`));
       pushed++;
     } catch (err) {

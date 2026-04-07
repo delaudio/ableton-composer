@@ -152,6 +152,7 @@ program
   .option('-o, --out <path>',         'Save to a specific path (directory or .json file)')
   .option('--split-every <measures>', 'Split into sections every N measures (default: one section)')
   .option('-t, --tracks <names>',     'Rename parts: positional "Piano,Violin" or mapped "Part 1:Lead"')
+  .option('--chord-track [name]',     'Generate a MIDI chord track from MusicXML harmony symbols (default name: Chords)')
   .action(importXmlCommand);
 
 // ── import-midi ───────────────────────────────────────────────────────────────
