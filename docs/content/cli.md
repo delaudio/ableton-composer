@@ -17,6 +17,7 @@ template: docs
 - `pull` import material from Live
 - `import-xml` convert MusicXML/MXL to AbletonSong JSON
 - `stems scan` scan a folder of audio stems into a manifest JSON
+- `stems setup` create/reuse Ableton audio tracks from a stem manifest
 - `snapshot` save and restore device states
 
 ## Generate
@@ -95,6 +96,18 @@ Important options:
 The scanner writes a structured JSON manifest with one entry per audio file. It applies deterministic filename-based classification for common stem names like `kick`, `snare`, `bass`, `vox`, `lead`, `pad`, and `fx`, and stores standardized `track_name`, `role`, `group`, and `color` fields.
 
 Re-running the scan against the same manifest preserves manual overrides for `track_name`, `role`, `group`, and `color`.
+
+## Stem Setup
+
+```bash
+ableton-composer stems setup stems/manifests/my-song.stems.json
+```
+
+Important options:
+
+- `--dry-run` previews the track setup without touching Ableton
+
+This command creates missing Ableton audio tracks from the manifest, reuses tracks with matching names, and applies manifest colors when possible.
 
 ## Presets
 

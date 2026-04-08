@@ -125,7 +125,25 @@ This creates a versioned stem manifest with:
 
 Use this as the first step before building audio-track setup and Ableton stem loading workflows.
 
-## 9. Typical Album-Style Loop
+## 9. Prepare Ableton Audio Tracks From a Stem Manifest
+
+```bash
+ableton-composer stems setup stems/manifests/song-stems.stems.json
+```
+
+Use this after scanning/classifying stems and before actual audio clip loading. The setup step:
+
+- creates missing audio tracks
+- reuses tracks when the manifest name already exists
+- applies track colors from the manifest when possible
+
+Preview only:
+
+```bash
+ableton-composer stems setup stems/manifests/song-stems.stems.json --dry-run
+```
+
+## 10. Typical Album-Style Loop
 
 ```bash
 # analyze

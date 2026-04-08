@@ -105,10 +105,56 @@ export async function setupLiveSet(requiredTrackNames, requiredSceneCount) {
 }
 
 /**
- * Get all MIDI tracks with their names.
+ * Prepare a Live set for stem workflows: create any missing audio tracks by
+ * name and apply colors when provided.
+ *
+ * @param {{name: string, color?: string|null}[]} requiredTracks
+ * @returns {Promise<{tracks: string[], reused: string[], colored: string[]}>}
+ */
+export async function setupAudioTracks(requiredTracks) {
+  const ableton = getAbleton();
+  const created = [];
+  const reused = [];
+  const colored = [];
+
+  const existing = await getTracks(ableton);
+  const existingByName = new Map(existing.map(t => [t.name, t]));
+
+  for (const def of requiredTracks) {
+    let found = existingByName.get(def.name);
+
+    if (!found) {
+      await ableton.song.createAudioTrack(-1);
+      const allTracks = await getTracks(ableton);
+      found = allTracks[allTracks.length - 1];
+      await found.track.set('name', def.name);
+      created.push(def.name);
+      existingByName.set(def.name, found);
+    } else {
+      reused.push(def.name);
+    }
+
+    if (def.color) {
+      const resolvedColor = normalizeAbletonColor(def.color);
+      if (resolvedColor) {
+        try {
+          await found.track.set('color', resolvedColor);
+          colored.push(def.name);
+        } catch {
+          // Non-fatal: some Live/device states may reject color changes
+        }
+      }
+    }
+  }
+
+  return { tracks: created, reused, colored };
+}
+
+/**
+ * Get all normal tracks with their names.
  * Returns an array of { index, name, track } objects.
  */
-export async function getMidiTracks(ableton) {
+export async function getTracks(ableton) {
   const tracks = await ableton.song.get('tracks');
   const result = [];
 
@@ -116,8 +162,6 @@ export async function getMidiTracks(ableton) {
     const track = tracks[i];
     try {
       const name = await track.get('name');
-      // Filter to MIDI tracks only (they have clip_slots with MIDI capability)
-      // We try getting clip_slots; audio tracks will still return them but addNewNotes will fail
       result.push({ index: i, name, track });
     } catch {
       // Skip problematic tracks
@@ -125,6 +169,14 @@ export async function getMidiTracks(ableton) {
   }
 
   return result;
+}
+
+/**
+ * Get all MIDI tracks with their names.
+ * Returns an array of { index, name, track } objects.
+ */
+export async function getMidiTracks(ableton) {
+  return getTracks(ableton);
 }
 
 /**
@@ -276,3 +328,23 @@ function parseBeatsPerBar(timeSignature) {
   const [numerator] = timeSignature.split('/').map(Number);
   return numerator ?? 4;
 }
+
+function normalizeAbletonColor(color) {
+  if (typeof color !== 'string') return null;
+  const named = ABLETON_NAMED_COLORS[color.toLowerCase()];
+  if (named) return named;
+  if (/^#?[0-9a-f]{6}$/i.test(color)) {
+    return color.startsWith('#') ? color : `#${color}`;
+  }
+  return null;
+}
+
+const ABLETON_NAMED_COLORS = {
+  red: '#ff5a5a',
+  blue: '#4f83ff',
+  purple: '#a66bff',
+  green: '#58c46b',
+  yellow: '#ffd24d',
+  gray: '#8a8a8a',
+  grey: '#8a8a8a',
+};

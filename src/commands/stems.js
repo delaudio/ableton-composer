@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import { basename, join } from 'path';
+import { connect, disconnect, setupAudioTracks } from '../lib/ableton.js';
 import {
   createStemManifest,
   defaultStemManifestPath,
@@ -65,12 +66,95 @@ export async function stemScanCommand(sourceDir, options) {
   }
 }
 
+export async function stemSetupCommand(manifestPath, options) {
+  const spinner = ora();
+
+  try {
+    spinner.start(`Loading stem manifest ${basename(manifestPath)}...`);
+    const absPath = manifestPath.startsWith('/') ? manifestPath : join(process.cwd(), manifestPath);
+    const manifest = await loadStemManifestFile(absPath);
+    const requestedTracks = buildTrackSetupList(manifest.stems || []);
+    spinner.succeed(`Loaded ${manifest.name || basename(absPath)}`);
+
+    if (requestedTracks.length === 0) {
+      console.log(chalk.yellow('No tracks found in manifest.'));
+      return;
+    }
+
+    console.log(chalk.bold(`\n  ${manifest.name || basename(absPath)}`));
+    console.log(chalk.dim(`  Manifest: ${absPath}`));
+    console.log(chalk.dim(`  Tracks:   ${requestedTracks.length}\n`));
+
+    for (const track of requestedTracks.slice(0, 16)) {
+      console.log(
+        `  ${chalk.cyan(track.name)}` +
+        chalk.dim(` [${track.group}/${track.role}] color:${track.color || 'none'}`)
+      );
+    }
+    if (requestedTracks.length > 16) {
+      console.log(chalk.dim(`  … ${requestedTracks.length - 16} more track(s)`));
+    }
+
+    if (options.dryRun) {
+      console.log(chalk.yellow('\nDRY RUN — no tracks will be created in Ableton.\n'));
+      return;
+    }
+
+    spinner.start('Connecting to Ableton Live...');
+    await connect();
+    spinner.succeed('Connected');
+
+    spinner.start('Setting up audio tracks...');
+    const result = await setupAudioTracks(requestedTracks);
+    spinner.succeed('Audio track setup complete');
+
+    if (result.tracks.length > 0) {
+      console.log(chalk.green(`  + Created tracks: ${result.tracks.join(', ')}`));
+    }
+    if (result.reused.length > 0) {
+      console.log(chalk.dim(`  = Reused tracks: ${result.reused.join(', ')}`));
+    }
+    if (result.colored.length > 0) {
+      console.log(chalk.dim(`  • Applied colors: ${result.colored.join(', ')}`));
+    }
+    if (result.tracks.length === 0 && result.reused.length === 0) {
+      console.log(chalk.dim('  (nothing to set up)'));
+    }
+    console.log('');
+  } catch (err) {
+    spinner.fail(err.message);
+    process.exit(1);
+  } finally {
+    await disconnect();
+  }
+}
+
 function resolveOutputPath(name, outOption) {
   if (!outOption) return defaultStemManifestPath(name);
 
   const absOut = outOption.startsWith('/') ? outOption : join(process.cwd(), outOption);
   if (absOut.endsWith('.json')) return absOut;
   return join(absOut, `${name}.stems.json`);
+}
+
+function buildTrackSetupList(stems) {
+  const seen = new Set();
+  const tracks = [];
+
+  for (const stem of stems) {
+    const name = String(stem.track_name || '').trim();
+    if (!name || seen.has(name)) continue;
+
+    seen.add(name);
+    tracks.push({
+      name,
+      role: stem.role || 'other',
+      group: stem.group || 'Music',
+      color: stem.color || null,
+    });
+  }
+
+  return tracks;
 }
 
 async function maybeLoadExistingManifest(outputPath) {

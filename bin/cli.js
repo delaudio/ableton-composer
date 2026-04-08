@@ -23,7 +23,7 @@ import { importMidiCommand } from '../src/commands/import-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
 import { snapshotCommand }  from '../src/commands/snapshot.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
-import { stemScanCommand } from '../src/commands/stems.js';
+import { stemScanCommand, stemSetupCommand } from '../src/commands/stems.js';
 import { presetSaveCommand, presetLoadCommand, presetListCommand, presetAnalyzeCommand, presetGenerateCommand } from '../src/commands/preset.js';
 
 const program = new Command();
@@ -186,6 +186,12 @@ stemsCmd
   .option('-n, --name <name>', 'Manifest/song name override')
   .option('-o, --out <path>',  'Output file or directory (default: stems/manifests/<name>.stems.json)')
   .action(stemScanCommand);
+
+stemsCmd
+  .command('setup <manifest>')
+  .description('Create or align Ableton audio tracks from a stem manifest')
+  .option('--dry-run', 'Show what would be set up without writing to Ableton')
+  .action(stemSetupCommand);
 
 // ── preset ────────────────────────────────────────────────────────────────────
 const presetCmd = program
