@@ -108,7 +108,23 @@ This reports:
 
 When the source is an album, artist, or collection bundle, compare weights role presence, structure, and role-level rhythm more heavily than exact track-name matches.
 
-## 8. Typical Album-Style Loop
+## 8. Scan a Stem Folder
+
+```bash
+ableton-composer stems scan /path/to/song-stems \
+  --out stems/manifests/song-stems.stems.json
+```
+
+This creates a versioned stem manifest with:
+
+- source root
+- relative audio file paths
+- default track names derived from filenames
+- placeholder `role`, `group`, and `color` fields for later classification
+
+Use this as the first step before building audio-track setup and Ableton stem loading workflows.
+
+## 9. Typical Album-Style Loop
 
 ```bash
 # analyze

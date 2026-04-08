@@ -23,6 +23,7 @@ import { importMidiCommand } from '../src/commands/import-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
 import { snapshotCommand }  from '../src/commands/snapshot.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
+import { stemScanCommand } from '../src/commands/stems.js';
 import { presetSaveCommand, presetLoadCommand, presetListCommand, presetAnalyzeCommand, presetGenerateCommand } from '../src/commands/preset.js';
 
 const program = new Command();
@@ -173,6 +174,18 @@ program
   .option('-o, --out <path>',      'Save snapshot to a specific path')
   .option('--restore <file>',      'Restore device parameters from a snapshot file')
   .action(snapshotCommand);
+
+// ── stems ────────────────────────────────────────────────────────────────────
+const stemsCmd = program
+  .command('stems')
+  .description('Scan and prepare audio stem manifests');
+
+stemsCmd
+  .command('scan <dir>')
+  .description('Scan a folder of audio stems and write a manifest JSON')
+  .option('-n, --name <name>', 'Manifest/song name override')
+  .option('-o, --out <path>',  'Output file or directory (default: stems/manifests/<name>.stems.json)')
+  .action(stemScanCommand);
 
 // ── preset ────────────────────────────────────────────────────────────────────
 const presetCmd = program
