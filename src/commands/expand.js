@@ -13,9 +13,8 @@
 
 import chalk from 'chalk';
 import ora from 'ora';
-import { writeFile } from 'fs/promises';
 import { join } from 'path';
-import { loadSong, saveSong } from '../lib/storage.js';
+import { loadSong, saveSong, writeSongFile } from '../lib/storage.js';
 import { expandSong, getProviderLabel, normalizeProvider } from '../lib/ai.js';
 
 export async function expandCommand(fileArg, options) {
@@ -124,11 +123,11 @@ export async function expandCommand(fileArg, options) {
 
     if (options.out) {
       const absOut = options.out.startsWith('/') ? options.out : join(process.cwd(), options.out);
-      await writeFile(absOut, JSON.stringify(updatedSong, null, 2), 'utf-8');
+      await writeSongFile(absOut, updatedSong);
       console.log(chalk.green(`✓ Saved to ${absOut}`));
     } else {
       // Overwrite the source file
-      await writeFile(filepath, JSON.stringify(updatedSong, null, 2), 'utf-8');
+      await writeSongFile(filepath, updatedSong);
       console.log(chalk.green(`✓ Updated ${filepath}`));
     }
 

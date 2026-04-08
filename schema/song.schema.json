@@ -3,8 +3,18 @@
   "title": "AbletonSong",
   "description": "A structured song definition for Ableton Live. Each section maps to a scene row in the session view. Each track entry maps to a named track in Live.",
   "type": "object",
-  "required": ["meta", "sections"],
+  "required": ["_format", "meta", "sections"],
   "properties": {
+    "_format": {
+      "type": "object",
+      "description": "AbletonSong interchange format marker. Older unversioned files are accepted by loaders, but new saves use this field.",
+      "required": ["name", "version"],
+      "properties": {
+        "name":    { "const": "AbletonSong" },
+        "version": { "const": "0.2" }
+      },
+      "additionalProperties": false
+    },
     "meta": {
       "type": "object",
       "required": ["bpm", "scale", "genre"],

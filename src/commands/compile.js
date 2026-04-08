@@ -7,9 +7,8 @@
  */
 
 import chalk from 'chalk';
-import { writeFile } from 'fs/promises';
 import { join, basename } from 'path';
-import { loadSetDirectory, isSetDirectory, saveSong, listSectionFiles } from '../lib/storage.js';
+import { loadSetDirectory, isSetDirectory, saveSong, listSectionFiles, writeSongFile } from '../lib/storage.js';
 
 export async function compileCommand(dirOrName, options) {
   try {
@@ -30,7 +29,7 @@ export async function compileCommand(dirOrName, options) {
     let outPath;
     if (options.out) {
       outPath = options.out.startsWith('/') ? options.out : join(process.cwd(), options.out);
-      await writeFile(outPath, JSON.stringify(song, null, 2), 'utf-8');
+      await writeSongFile(outPath, song);
     } else {
       // Save next to the directory with a timestamp
       const nameHint = `${basename(dirPath)}`;

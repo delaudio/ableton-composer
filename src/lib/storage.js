@@ -20,6 +20,49 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const SETS_DIR = join(__dirname, '../../sets');
 
+export const ABLETON_SONG_FORMAT = Object.freeze({
+  name:    'AbletonSong',
+  version: '0.2',
+});
+
+/**
+ * Return a copy of a full AbletonSong with the current persisted format marker.
+ */
+export function formatSongForSave(song) {
+  if (!song?.meta || !Array.isArray(song.sections)) return song;
+  return {
+    ...song,
+    _format: { ...ABLETON_SONG_FORMAT },
+    meta:    stripMetaFormat(song.meta),
+  };
+}
+
+/**
+ * Normalize a loaded song. Older unversioned files are left usable; directory
+ * format markers stored in meta.json are lifted to the full-song level.
+ */
+export function normalizeLoadedSong(song) {
+  if (!song?.meta || !Array.isArray(song.sections)) return song;
+
+  const format = normalizeSongFormat(song._format ?? song.meta?._format);
+  const normalized = {
+    ...song,
+    meta: stripMetaFormat(song.meta),
+  };
+
+  if (format) normalized._format = format;
+  return normalized;
+}
+
+export function stringifySong(song) {
+  return JSON.stringify(formatSongForSave(song), null, 2);
+}
+
+export async function writeSongFile(filepath, song) {
+  await writeFile(filepath, stringifySong(song), 'utf-8');
+  return filepath;
+}
+
 // ─── flat file ───────────────────────────────────────────────────────────────
 
 /**
@@ -29,7 +72,7 @@ export async function saveSong(song, nameHint) {
   const slug = nameHint ? slugify(nameHint) : slugify(song.meta.genre || 'song');
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const filepath = join(SETS_DIR, `${slug}_${timestamp}.json`);
-  await writeFile(filepath, JSON.stringify(song, null, 2), 'utf-8');
+  await writeSongFile(filepath, song);
   return filepath;
 }
 
@@ -84,7 +127,8 @@ export async function listSectionFiles(dirPath) {
  * Load a full AbletonSong from a set directory.
  */
 export async function loadSetDirectory(dirPath) {
-  const meta = JSON.parse(await readFile(join(dirPath, 'meta.json'), 'utf-8'));
+  const rawMeta = JSON.parse(await readFile(join(dirPath, 'meta.json'), 'utf-8'));
+  const { _format, ...meta } = rawMeta;
   const sectionFiles = await listSectionFiles(dirPath);
 
   if (sectionFiles.length === 0) {
@@ -97,7 +141,7 @@ export async function loadSetDirectory(dirPath) {
     )
   );
 
-  return { meta, sections };
+  return normalizeLoadedSong({ _format, meta, sections });
 }
 
 /**
@@ -105,11 +149,16 @@ export async function loadSetDirectory(dirPath) {
  * Creates the directory if it doesn't exist.
  */
 export async function saveSetDirectory(song, dirPath) {
+  const formatted = formatSongForSave(song);
   await mkdir(dirPath, { recursive: true });
-  await writeFile(join(dirPath, 'meta.json'), JSON.stringify(song.meta, null, 2), 'utf-8');
+  await writeFile(
+    join(dirPath, 'meta.json'),
+    JSON.stringify({ _format: formatted._format, ...formatted.meta }, null, 2),
+    'utf-8',
+  );
 
-  for (let i = 0; i < song.sections.length; i++) {
-    const section = song.sections[i];
+  for (let i = 0; i < formatted.sections.length; i++) {
+    const section = formatted.sections[i];
     const filename = sectionFilename(i, section.name);
     await writeFile(join(dirPath, filename), JSON.stringify(section, null, 2), 'utf-8');
   }
@@ -125,9 +174,18 @@ export async function saveSectionToDirectory(section, slotIndex, dirPath, meta =
   const metaPath = join(dirPath, 'meta.json');
   try {
     await stat(metaPath);
+    const existingMeta = JSON.parse(await readFile(metaPath, 'utf-8'));
+    if (!existingMeta._format) {
+      await writeFile(
+        metaPath,
+        JSON.stringify({ _format: { ...ABLETON_SONG_FORMAT }, ...existingMeta }, null, 2),
+        'utf-8',
+      );
+    }
   } catch {
     if (meta) {
-      await writeFile(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
+      const formattedMeta = { _format: { ...ABLETON_SONG_FORMAT }, ...stripMetaFormat(meta) };
+      await writeFile(metaPath, JSON.stringify(formattedMeta, null, 2), 'utf-8');
     }
   }
 
@@ -182,7 +240,7 @@ export async function loadSong(nameOrPath) {
         if (!song.meta && song.name && song.tracks) {
           return { song, filepath: p, isDirectory: false, isSectionFile: true };
         }
-        return { song, filepath: p, isDirectory: false };
+        return { song: normalizeLoadedSong(song), filepath: p, isDirectory: false };
       }
     } catch {
       // Try next candidate
@@ -198,7 +256,7 @@ export async function loadSong(nameOrPath) {
       return { song, filepath: match.filepath, isDirectory: true };
     }
     const song = JSON.parse(await readFile(match.filepath, 'utf-8'));
-    return { song, filepath: match.filepath, isDirectory: false };
+    return { song: normalizeLoadedSong(song), filepath: match.filepath, isDirectory: false };
   }
 
   throw new Error(`No set found matching "${nameOrPath}". Run \`list\` to see available sets.`);
@@ -260,4 +318,19 @@ export function slugify(str) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 40);
+}
+
+function normalizeSongFormat(format) {
+  if (!format || typeof format !== 'object') return null;
+  const name = typeof format.name === 'string' ? format.name : ABLETON_SONG_FORMAT.name;
+  const version = typeof format.version === 'string' || typeof format.version === 'number'
+    ? String(format.version)
+    : null;
+  if (!version) return null;
+  return { name, version };
+}
+
+function stripMetaFormat(meta = {}) {
+  const { _format, ...rest } = meta;
+  return rest;
 }

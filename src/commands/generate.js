@@ -12,7 +12,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { join } from 'path';
 import { deriveTonalState, generateSong, getProviderLabel, normalizeProvider } from '../lib/ai.js';
-import { saveSetDirectory, loadSong, SETS_DIR, slugify } from '../lib/storage.js';
+import { saveSetDirectory, loadSong, SETS_DIR, slugify, stringifySong, writeSongFile } from '../lib/storage.js';
 import { fetchContext } from '../lib/fetchers/index.js';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
 import { loadStyleProfile } from '../lib/profiles.js';
@@ -232,7 +232,7 @@ export async function generateCommand(prompt, options) {
         console.log(chalk.green(`✓ Saved to ${savedPath}`));
         console.log('');
       } else {
-        console.log(JSON.stringify(song, null, 2));
+        console.log(stringifySong(song));
       }
     }
 
@@ -259,7 +259,5 @@ export async function generateCommand(prompt, options) {
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 async function writeOutputFile(song, outputPath) {
-  const { writeFile } = await import('fs/promises');
-  await writeFile(outputPath, JSON.stringify(song, null, 2), 'utf-8');
-  return outputPath;
+  return writeSongFile(outputPath, song);
 }

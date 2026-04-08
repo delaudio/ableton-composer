@@ -21,9 +21,9 @@
 
 import chalk from 'chalk';
 import ora from 'ora';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { join, basename, extname } from 'path';
-import { saveSong, saveSetDirectory } from '../lib/storage.js';
+import { saveSong, saveSetDirectory, writeSongFile } from '../lib/storage.js';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -282,7 +282,7 @@ export async function importXmlCommand(xmlFile, options) {
         console.log(chalk.green(`✓ Saved to ${absOut}/`));
         console.log(chalk.dim('  Edit "genre" in meta.json to complete metadata.'));
       } else {
-        await writeFile(absOut, JSON.stringify(song, null, 2), 'utf-8');
+        await writeSongFile(absOut, song);
         console.log(chalk.green(`✓ Saved to ${absOut}`));
       }
     } else {

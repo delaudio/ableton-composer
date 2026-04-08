@@ -18,7 +18,6 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import { join } from 'path';
-import { writeFile } from 'fs/promises';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
 import {
   loadSong,
@@ -26,6 +25,7 @@ import {
   saveSectionToDirectory,
   isSetDirectory,
   sectionFilename,
+  writeSongFile,
 } from '../lib/storage.js';
 
 export async function pullCommand(options) {
@@ -169,7 +169,7 @@ export async function pullCommand(options) {
       }
 
       const targetPath = outTarget.startsWith('/') ? outTarget : join(process.cwd(), outTarget);
-      await writeFile(targetPath, JSON.stringify(existingSong, null, 2), 'utf-8');
+      await writeSongFile(targetPath, existingSong);
       console.log(chalk.green(`\n✓ Saved to ${targetPath}`));
 
     } else {

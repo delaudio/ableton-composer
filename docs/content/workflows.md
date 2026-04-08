@@ -127,3 +127,20 @@ ableton-composer compare \
   profiles/albums/artist/album/bundle.json \
   sets/generated-output
 ```
+
+## Format Versioning
+
+New full AbletonSong JSON outputs include a format marker:
+
+```json
+{
+  "_format": {
+    "name": "AbletonSong",
+    "version": "0.2"
+  },
+  "meta": {},
+  "sections": []
+}
+```
+
+Set directories store the same marker in `meta.json`; loaders lift it back to the full-song level. Older unversioned files still load normally and are upgraded to the current marker the next time they are saved by a command.
