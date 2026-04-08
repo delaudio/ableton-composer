@@ -1,0 +1,95 @@
+{
+  "_format": {
+    "name": "AbletonSong",
+    "version": "0.2"
+  },
+  "meta": {
+    "bpm": 118,
+    "scale": "D minor",
+    "genre": "synthetic fixture",
+    "mood": "restrained",
+    "time_signature": "4/4",
+    "description": "Original multi-section fixture for arrangement and role-presence tests."
+  },
+  "sections": [
+    {
+      "name": "intro",
+      "bars": 4,
+      "tracks": [
+        {
+          "ableton_name": "Pad",
+          "instrument": "soft pad",
+          "clip": {
+            "length_bars": 4,
+            "notes": [
+              { "pitch": 50, "time": 0, "duration": 8, "velocity": 54 },
+              { "pitch": 57, "time": 0, "duration": 8, "velocity": 50 },
+              { "pitch": 62, "time": 0, "duration": 8, "velocity": 48 },
+              { "pitch": 53, "time": 8, "duration": 8, "velocity": 54 },
+              { "pitch": 57, "time": 8, "duration": 8, "velocity": 50 },
+              { "pitch": 60, "time": 8, "duration": 8, "velocity": 48 }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "main",
+      "bars": 4,
+      "tracks": [
+        {
+          "ableton_name": "Bass",
+          "clip": {
+            "length_bars": 4,
+            "notes": [
+              { "pitch": 38, "time": 0, "duration": 1, "velocity": 86 },
+              { "pitch": 38, "time": 2, "duration": 1, "velocity": 78 },
+              { "pitch": 43, "time": 4, "duration": 1, "velocity": 84 },
+              { "pitch": 41, "time": 6, "duration": 1, "velocity": 78 },
+              { "pitch": 38, "time": 8, "duration": 1, "velocity": 86 },
+              { "pitch": 38, "time": 10, "duration": 1, "velocity": 78 },
+              { "pitch": 45, "time": 12, "duration": 1, "velocity": 84 },
+              { "pitch": 43, "time": 14, "duration": 1, "velocity": 78 }
+            ]
+          }
+        },
+        {
+          "ableton_name": "Drums",
+          "clip": {
+            "length_bars": 4,
+            "notes": [
+              { "pitch": 36, "time": 0, "duration": 0.25, "velocity": 106 },
+              { "pitch": 42, "time": 0, "duration": 0.125, "velocity": 70 },
+              { "pitch": 38, "time": 2, "duration": 0.25, "velocity": 100 },
+              { "pitch": 42, "time": 2, "duration": 0.125, "velocity": 70 },
+              { "pitch": 36, "time": 4, "duration": 0.25, "velocity": 104 },
+              { "pitch": 38, "time": 6, "duration": 0.25, "velocity": 100 },
+              { "pitch": 36, "time": 8, "duration": 0.25, "velocity": 106 },
+              { "pitch": 38, "time": 10, "duration": 0.25, "velocity": 100 },
+              { "pitch": 36, "time": 12, "duration": 0.25, "velocity": 104 },
+              { "pitch": 46, "time": 14.5, "duration": 0.25, "velocity": 76 }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "breakdown",
+      "bars": 4,
+      "tracks": [
+        {
+          "ableton_name": "Lead",
+          "clip": {
+            "length_bars": 4,
+            "notes": [
+              { "pitch": 65, "time": 0, "duration": 1, "velocity": 72 },
+              { "pitch": 64, "time": 1, "duration": 1, "velocity": 70 },
+              { "pitch": 62, "time": 2, "duration": 2, "velocity": 74 },
+              { "pitch": 60, "time": 8, "duration": 4, "velocity": 70 }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

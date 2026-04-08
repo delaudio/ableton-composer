@@ -158,3 +158,26 @@ Typical fields include:
 - `transforms`, a lightweight history of operations such as `generate`, `import-xml`, `expand`, `split`, or `compile`
 
 Older files without provenance still load normally. Commands that save the song again can add or append provenance history where practical.
+
+## Example Corpus
+
+The repository includes a small synthetic corpus under `examples/` for repeatable demos and smoke tests:
+
+- `examples/ableton-song/*.song.json` for direct analysis and visualization tests
+- `examples/musicxml/simple-harmony-lyrics.musicxml` for MusicXML harmony/lyrics import tests
+- `examples/midi/simple-melody.mid` for MIDI import tests
+
+Example commands:
+
+```bash
+ableton-composer analyze examples/ableton-song/multi-section-song.song.json \
+  --scope song \
+  --print
+
+ableton-composer import-xml examples/musicxml/simple-harmony-lyrics.musicxml \
+  --chord-track \
+  --out /tmp/ac-simple-xml/
+
+ableton-composer import-midi examples/midi/simple-melody.mid \
+  --out /tmp/ac-simple-midi/
+```

@@ -1,0 +1,53 @@
+{
+  "_format": {
+    "name": "AbletonSong",
+    "version": "0.2"
+  },
+  "meta": {
+    "bpm": 110,
+    "scale": "A minor",
+    "genre": "synthetic fixture",
+    "time_signature": "4/4",
+    "description": "Original chord progression fixture with section harmony metadata."
+  },
+  "sections": [
+    {
+      "name": "progression",
+      "bars": 4,
+      "harmony": [
+        { "time": 0, "symbol": "Am7", "root": "A", "kind": "minor-seventh" },
+        { "time": 4, "symbol": "Fmaj7", "root": "F", "kind": "major-seventh" },
+        { "time": 8, "symbol": "Cmaj7", "root": "C", "kind": "major-seventh" },
+        { "time": 12, "symbol": "G7", "root": "G", "kind": "dominant" }
+      ],
+      "tracks": [
+        {
+          "ableton_name": "Chords",
+          "instrument": "electric piano",
+          "clip": {
+            "name": "Am7 Fmaj7 Cmaj7 G7",
+            "length_bars": 4,
+            "notes": [
+              { "pitch": 57, "time": 0, "duration": 3.5, "velocity": 70 },
+              { "pitch": 60, "time": 0, "duration": 3.5, "velocity": 68 },
+              { "pitch": 64, "time": 0, "duration": 3.5, "velocity": 67 },
+              { "pitch": 67, "time": 0, "duration": 3.5, "velocity": 66 },
+              { "pitch": 53, "time": 4, "duration": 3.5, "velocity": 70 },
+              { "pitch": 57, "time": 4, "duration": 3.5, "velocity": 68 },
+              { "pitch": 60, "time": 4, "duration": 3.5, "velocity": 67 },
+              { "pitch": 64, "time": 4, "duration": 3.5, "velocity": 66 },
+              { "pitch": 48, "time": 8, "duration": 3.5, "velocity": 70 },
+              { "pitch": 52, "time": 8, "duration": 3.5, "velocity": 68 },
+              { "pitch": 55, "time": 8, "duration": 3.5, "velocity": 67 },
+              { "pitch": 59, "time": 8, "duration": 3.5, "velocity": 66 },
+              { "pitch": 55, "time": 12, "duration": 3.5, "velocity": 70 },
+              { "pitch": 59, "time": 12, "duration": 3.5, "velocity": 68 },
+              { "pitch": 62, "time": 12, "duration": 3.5, "velocity": 67 },
+              { "pitch": 65, "time": 12, "duration": 3.5, "velocity": 66 }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

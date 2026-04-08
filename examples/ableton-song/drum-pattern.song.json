@@ -1,0 +1,42 @@
+{
+  "_format": {
+    "name": "AbletonSong",
+    "version": "0.2"
+  },
+  "meta": {
+    "bpm": 124,
+    "scale": "C major",
+    "genre": "synthetic fixture",
+    "time_signature": "4/4",
+    "description": "Original General MIDI drum fixture for rhythm analysis smoke tests."
+  },
+  "sections": [
+    {
+      "name": "drums",
+      "bars": 2,
+      "tracks": [
+        {
+          "ableton_name": "Drums",
+          "instrument": "General MIDI drum kit",
+          "clip": {
+            "length_bars": 2,
+            "notes": [
+              { "pitch": 36, "time": 0, "duration": 0.25, "velocity": 108 },
+              { "pitch": 42, "time": 0, "duration": 0.125, "velocity": 72 },
+              { "pitch": 42, "time": 1, "duration": 0.125, "velocity": 68 },
+              { "pitch": 38, "time": 2, "duration": 0.25, "velocity": 102 },
+              { "pitch": 42, "time": 2, "duration": 0.125, "velocity": 72 },
+              { "pitch": 42, "time": 3, "duration": 0.125, "velocity": 68 },
+              { "pitch": 36, "time": 4, "duration": 0.25, "velocity": 106 },
+              { "pitch": 42, "time": 4, "duration": 0.125, "velocity": 72 },
+              { "pitch": 42, "time": 5, "duration": 0.125, "velocity": 68 },
+              { "pitch": 38, "time": 6, "duration": 0.25, "velocity": 102 },
+              { "pitch": 46, "time": 6.5, "duration": 0.25, "velocity": 74 },
+              { "pitch": 42, "time": 7, "duration": 0.125, "velocity": 68 }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

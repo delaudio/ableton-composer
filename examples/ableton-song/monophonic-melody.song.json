@@ -1,0 +1,38 @@
+{
+  "_format": {
+    "name": "AbletonSong",
+    "version": "0.2"
+  },
+  "meta": {
+    "bpm": 96,
+    "scale": "C major",
+    "genre": "synthetic fixture",
+    "time_signature": "4/4",
+    "description": "Original monophonic melody fixture for analysis and visualization smoke tests."
+  },
+  "sections": [
+    {
+      "name": "melody",
+      "bars": 4,
+      "tracks": [
+        {
+          "ableton_name": "Lead",
+          "instrument": "simple sine lead",
+          "clip": {
+            "length_bars": 4,
+            "notes": [
+              { "pitch": 60, "time": 0, "duration": 1, "velocity": 72 },
+              { "pitch": 62, "time": 1, "duration": 1, "velocity": 70 },
+              { "pitch": 64, "time": 2, "duration": 2, "velocity": 76 },
+              { "pitch": 67, "time": 4, "duration": 1, "velocity": 78 },
+              { "pitch": 65, "time": 5, "duration": 1, "velocity": 72 },
+              { "pitch": 64, "time": 6, "duration": 2, "velocity": 74 },
+              { "pitch": 62, "time": 9, "duration": 1, "velocity": 70 },
+              { "pitch": 60, "time": 12, "duration": 3, "velocity": 76 }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
