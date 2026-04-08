@@ -92,7 +92,9 @@ Important options:
 - `--name <name>` overrides the manifest name
 - `--out <path>` writes to a custom file or directory
 
-The scanner writes a structured JSON manifest with one entry per audio file. It does not classify files yet; `role`, `group`, and `color` are reserved for the later classification step.
+The scanner writes a structured JSON manifest with one entry per audio file. It applies deterministic filename-based classification for common stem names like `kick`, `snare`, `bass`, `vox`, `lead`, `pad`, and `fx`, and stores standardized `track_name`, `role`, `group`, and `color` fields.
+
+Re-running the scan against the same manifest preserves manual overrides for `track_name`, `role`, `group`, and `color`.
 
 ## Presets
 

@@ -120,7 +120,8 @@ This creates a versioned stem manifest with:
 - source root
 - relative audio file paths
 - default track names derived from filenames
-- placeholder `role`, `group`, and `color` fields for later classification
+- deterministic `role`, `group`, and `color` classification for common stem names
+- preserved manual overrides when rescanning into the same manifest
 
 Use this as the first step before building audio-track setup and Ableton stem loading workflows.
 
