@@ -15,7 +15,8 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { join } from 'path';
 import { loadSong, saveSong, writeSongFile } from '../lib/storage.js';
-import { expandSong, getProviderLabel, normalizeProvider } from '../lib/ai.js';
+import { expandSong, getDefaultModel, getProviderLabel, normalizeProvider } from '../lib/ai.js';
+import { appendProvenance } from '../lib/provenance.js';
 
 export async function expandCommand(fileArg, options) {
   const spinner = ora();
@@ -120,6 +121,13 @@ export async function expandCommand(fileArg, options) {
 
     // ── Save ──────────────────────────────────────────────────────────────────
     const updatedSong = { meta, sections };
+    appendProvenance(updatedSong, 'expand', {
+      provider,
+      model: getDefaultModel(provider, options.model),
+      prompt: options.style || undefined,
+      tracks: tracksToAdd,
+      sections: result.sections.length,
+    });
 
     if (options.out) {
       const absOut = options.out.startsWith('/') ? options.out : join(process.cwd(), options.out);

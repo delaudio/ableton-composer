@@ -24,6 +24,7 @@ import ora from 'ora';
 import { readFile } from 'fs/promises';
 import { join, basename, extname } from 'path';
 import { saveSong, saveSetDirectory, writeSongFile } from '../lib/storage.js';
+import { createProvenance } from '../lib/provenance.js';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -258,6 +259,16 @@ export async function importXmlCommand(xmlFile, options) {
         genre:          '',
         time_signature: timeSignature,
         description:    `Imported from ${basename(xmlFile)}`,
+        provenance: createProvenance({
+          sourceType:   'imported-musicxml',
+          operation:    'import-xml',
+          sourcePath:   absPath,
+          sourceFormat: extname(xmlFile).replace(/^\./, '').toLowerCase() || 'musicxml',
+          details: {
+            sections: sections.length,
+            tracks:   partNoteSets.map(part => part.name),
+          },
+        }),
       },
       sections,
     };

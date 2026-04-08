@@ -144,3 +144,17 @@ New full AbletonSong JSON outputs include a format marker:
 ```
 
 Set directories store the same marker in `meta.json`; loaders lift it back to the full-song level. Older unversioned files still load normally and are upgraded to the current marker the next time they are saved by a command.
+
+## Provenance Metadata
+
+New generated and imported songs also include optional `meta.provenance` metadata. This is reproducibility context, not musical content, and Ableton push ignores it.
+
+Typical fields include:
+
+- `source_type`, such as `generated`, `imported-musicxml`, `imported-midi`, or `pulled-ableton`
+- `source_path` and `source_format` for imports
+- `provider`, `model`, `prompt_summary`, and `prompt_hash` for AI generation
+- `style_profile` when generation used a profile bundle
+- `transforms`, a lightweight history of operations such as `generate`, `import-xml`, `expand`, `split`, or `compile`
+
+Older files without provenance still load normally. Commands that save the song again can add or append provenance history where practical.

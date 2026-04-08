@@ -9,6 +9,7 @@
 import chalk from 'chalk';
 import { loadSong, saveSetDirectory, sectionFilename } from '../lib/storage.js';
 import { join, basename } from 'path';
+import { appendProvenance } from '../lib/provenance.js';
 
 export async function splitCommand(fileOrName, options) {
   try {
@@ -24,6 +25,11 @@ export async function splitCommand(fileOrName, options) {
       ? (options.out.startsWith('/') ? options.out : join(process.cwd(), options.out))
       : filepath.replace(/(_\d{4}-\d{2}-\d{2}T[\d-]+)?\.json$/, '');
 
+    appendProvenance(song, 'split', {
+      source_path: filepath,
+      source_format: 'flat-json',
+      sections: song.sections.length,
+    });
     await saveSetDirectory(song, outDir);
 
     console.log(chalk.green(`✓ Split into ${outDir}`));

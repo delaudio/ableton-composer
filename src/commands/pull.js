@@ -27,6 +27,7 @@ import {
   sectionFilename,
   writeSongFile,
 } from '../lib/storage.js';
+import { appendProvenance, createProvenance } from '../lib/provenance.js';
 
 export async function pullCommand(options) {
   const spinner = ora();
@@ -129,6 +130,14 @@ export async function pullCommand(options) {
       genre: '',
       time_signature: timeSignature,
       description: 'Pulled from Ableton Live — fill in scale and genre.',
+      provenance: createProvenance({
+        sourceType: 'pulled-ableton',
+        operation:  'pull-session',
+        details: {
+          sections: newSections.length,
+          tracks:   midiTracks.map(t => t.name),
+        },
+      }),
     };
 
     const outTarget = options.out || options.addTo;
@@ -168,6 +177,10 @@ export async function pullCommand(options) {
         }
       }
 
+      appendProvenance(existingSong, 'pull-session', {
+        sections: newSections.length,
+        tracks:   midiTracks.map(t => t.name),
+      });
       const targetPath = outTarget.startsWith('/') ? outTarget : join(process.cwd(), outTarget);
       await writeSongFile(targetPath, existingSong);
       console.log(chalk.green(`\n✓ Saved to ${targetPath}`));
@@ -329,6 +342,14 @@ async function pullFromArrangement(ableton, options, spinner) {
     genre: '',
     time_signature: timeSignature,
     description: 'Imported from Ableton arrangement — fill in scale and genre.',
+    provenance: createProvenance({
+      sourceType: 'pulled-ableton',
+      operation:  'pull-arrangement',
+      details: {
+        sections: builtSections.length,
+        tracks:   midiTracks.map(t => t.name),
+      },
+    }),
   };
 
   const outTarget = options.out;

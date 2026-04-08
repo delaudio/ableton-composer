@@ -11,11 +11,12 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import { join } from 'path';
-import { deriveTonalState, generateSong, getProviderLabel, normalizeProvider } from '../lib/ai.js';
+import { deriveTonalState, generateSong, getDefaultModel, getProviderLabel, normalizeProvider } from '../lib/ai.js';
 import { saveSetDirectory, loadSong, SETS_DIR, slugify, stringifySong, writeSongFile } from '../lib/storage.js';
 import { fetchContext } from '../lib/fetchers/index.js';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
 import { loadStyleProfile } from '../lib/profiles.js';
+import { appendProvenance, createProvenance } from '../lib/provenance.js';
 
 export async function generateCommand(prompt, options) {
   const spinner = ora();
@@ -31,6 +32,7 @@ export async function generateCommand(prompt, options) {
 
     // ── 0b. Load style profile (optional) ───────────────────────────────────
     let styleProfile = null;
+    let styleProfilePath = null;
     if (options.style) {
       const absStyle = options.style.startsWith('/')
         ? options.style
@@ -39,6 +41,7 @@ export async function generateCommand(prompt, options) {
         throw new Error(`Style profile not found: ${absStyle}`);
       });
       styleProfile = loaded.profile;
+      styleProfilePath = loaded.resolvedPath;
       const label = loaded.bundle
         ? `${loaded.bundle.scope || 'bundle'} bundle -> ${loaded.resolvedPath} (${styleProfile._meta?.prompt_ready ? 'prompt profile' : 'merged profile'})`
         : (styleProfile._meta?.source || loaded.resolvedPath);
@@ -185,6 +188,24 @@ export async function generateCommand(prompt, options) {
 
       // ── Print summary ───────────────────────────────────────────────────
       const { meta, sections } = song;
+      const provenanceDetails = {
+        provider,
+        model: getDefaultModel(provider, options.model),
+        prompt,
+        styleProfilePath,
+        sections: sections.length,
+        tracks: trackNames,
+      };
+      if (existingSong) {
+        appendProvenance(song, 'generate-continuation', provenanceDetails);
+      } else {
+        song.meta.provenance = createProvenance({
+          sourceType: 'generated',
+          operation:  'generate',
+          ...provenanceDetails,
+        });
+      }
+
       console.log('');
       if (variationCount > 1) console.log(chalk.bold(`  ── Variation ${v} ──`));
       console.log(chalk.bold(`🎵 ${meta.genre || 'Song'} — ${meta.bpm} BPM — ${meta.scale}`));

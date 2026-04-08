@@ -25,7 +25,47 @@
         "genre":          { "type": "string" },
         "mood":           { "type": "string" },
         "time_signature": { "type": "string", "default": "4/4", "description": "E.g. '4/4', '3/4', '6/8'" },
-        "description":    { "type": "string", "description": "Free-text description of this song/set" }
+        "description":    { "type": "string", "description": "Free-text description of this song/set" },
+        "provenance": {
+          "type": "object",
+          "description": "Optional reproducibility metadata describing the source and transformations that produced this song. Ableton push ignores this field.",
+          "properties": {
+            "source_type":    { "type": "string" },
+            "source_path":    { "type": "string" },
+            "source_format":  { "type": "string" },
+            "provider":       { "type": "string" },
+            "model":          { "type": "string" },
+            "prompt_summary": { "type": "string" },
+            "prompt_hash":    { "type": "string" },
+            "style_profile":  { "type": "string" },
+            "created_at":     { "type": "string" },
+            "updated_at":     { "type": "string" },
+            "transforms": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["operation", "at"],
+                "properties": {
+                  "operation":      { "type": "string" },
+                  "at":             { "type": "string" },
+                  "source_path":    { "type": "string" },
+                  "source_format":  { "type": "string" },
+                  "provider":       { "type": "string" },
+                  "model":          { "type": "string" },
+                  "prompt_summary": { "type": "string" },
+                  "prompt_hash":    { "type": "string" },
+                  "style_profile":  { "type": "string" },
+                  "sections":       { "type": "integer" },
+                  "tracks": {
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "output":         { "type": "string" }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "sections": {

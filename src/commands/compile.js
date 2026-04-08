@@ -9,6 +9,7 @@
 import chalk from 'chalk';
 import { join, basename } from 'path';
 import { loadSetDirectory, isSetDirectory, saveSong, listSectionFiles, writeSongFile } from '../lib/storage.js';
+import { appendProvenance } from '../lib/provenance.js';
 
 export async function compileCommand(dirOrName, options) {
   try {
@@ -24,6 +25,11 @@ export async function compileCommand(dirOrName, options) {
 
     const song = await loadSetDirectory(dirPath);
     const sections = await listSectionFiles(dirPath);
+    appendProvenance(song, 'compile', {
+      source_path: dirPath,
+      source_format: 'set-directory',
+      sections: sections.length,
+    });
 
     // Write output
     let outPath;

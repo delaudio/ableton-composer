@@ -24,6 +24,7 @@ import ora from 'ora';
 import { readFile } from 'fs/promises';
 import { join, basename, extname } from 'path';
 import { saveSong, saveSetDirectory, writeSongFile } from '../lib/storage.js';
+import { createProvenance } from '../lib/provenance.js';
 
 export async function importMidiCommand(midiFile, options) {
   const spinner = ora();
@@ -139,6 +140,16 @@ export async function importMidiCommand(midiFile, options) {
         genre: '',
         time_signature: timeSignature,
         description: `Imported from ${basename(midiFile)} — fill in scale and genre.`,
+        provenance: createProvenance({
+          sourceType:   'imported-midi',
+          operation:    'import-midi',
+          sourcePath:   absPath,
+          sourceFormat: extname(midiFile).replace(/^\./, '').toLowerCase() || 'mid',
+          details: {
+            sections: sections.length,
+            tracks:   activeTracks.map(t => t.name),
+          },
+        }),
       },
       sections,
     };
