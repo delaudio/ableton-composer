@@ -3,11 +3,13 @@ import ora from 'ora';
 import { basename, join } from 'path';
 import { connect, disconnect, setupAudioTracks } from '../lib/ableton.js';
 import {
+  buildStemTrackDefinitions,
   createStemManifest,
   defaultStemManifestPath,
   loadStemManifestFile,
   mergeStemOverrides,
   scanStemDirectory,
+  sortStemsForOrganization,
   writeStemManifestFile,
 } from '../lib/stems.js';
 import {
@@ -47,11 +49,11 @@ export async function stemScanCommand(sourceDir, options) {
     console.log(chalk.dim(`  Source: ${absRoot}`));
     console.log(chalk.dim(`  Files:  ${mergedStems.length}\n`));
 
-    for (const stem of mergedStems.slice(0, 12)) {
+    for (const stem of sortStemsForOrganization(mergedStems).slice(0, 12)) {
       const folder = stem.source_dir ? `${stem.source_dir}/` : '';
       console.log(
-        `  ${chalk.cyan(stem.track_name)}` +
-        chalk.dim(` [${stem.group}/${stem.role}] ← ${folder}${stem.filename}`)
+        `  ${chalk.cyan(stem.display_name || stem.track_name)}` +
+        chalk.dim(` [${stem.group}/${stem.role}] order:${stem.order} ← ${folder}${stem.filename}`)
       );
     }
 
@@ -78,7 +80,9 @@ export async function stemSetupCommand(manifestPath, options) {
     spinner.start(`Loading stem manifest ${basename(manifestPath)}...`);
     const absPath = manifestPath.startsWith('/') ? manifestPath : join(process.cwd(), manifestPath);
     const manifest = await loadStemManifestFile(absPath);
-    const requestedTracks = buildTrackSetupList(manifest.stems || []);
+    const requestedTracks = buildStemTrackDefinitions(manifest.stems || [], {
+      prefixGroups: options.prefixGroups,
+    });
     spinner.succeed(`Loaded ${manifest.name || basename(absPath)}`);
 
     if (requestedTracks.length === 0) {
@@ -93,7 +97,7 @@ export async function stemSetupCommand(manifestPath, options) {
     for (const track of requestedTracks.slice(0, 16)) {
       console.log(
         `  ${chalk.cyan(track.name)}` +
-        chalk.dim(` [${track.group}/${track.role}] color:${track.color || 'none'}`)
+        chalk.dim(` [${track.group}/${track.role}] color:${track.color || 'none'} order:${track.order}`)
       );
     }
     if (requestedTracks.length > 16) {
@@ -189,26 +193,6 @@ function resolveReaperOutputPath(name, outOption) {
   return join(absOut, `${name}.lua`);
 }
 
-function buildTrackSetupList(stems) {
-  const seen = new Set();
-  const tracks = [];
-
-  for (const stem of stems) {
-    const name = String(stem.track_name || '').trim();
-    if (!name || seen.has(name)) continue;
-
-    seen.add(name);
-    tracks.push({
-      name,
-      role: stem.role || 'other',
-      group: stem.group || 'Music',
-      color: stem.color || null,
-    });
-  }
-
-  return tracks;
-}
-
 async function maybeLoadExistingManifest(outputPath) {
   try {
     return await loadStemManifestFile(outputPath);
@@ -224,7 +208,7 @@ function printGroupSummary(stems) {
   }
 
   const summary = Array.from(counts.entries())
-    .sort((a, b) => a[0].localeCompare(b[0], 'en'))
+    .sort((a, b) => groupBucketOrder(a[0]) - groupBucketOrder(b[0]) || a[0].localeCompare(b[0], 'en'))
     .map(([group, count]) => `${group}:${count}`)
     .join('  ');
 
@@ -232,3 +216,10 @@ function printGroupSummary(stems) {
     console.log(chalk.dim(`  Groups: ${summary}`));
   }
 }
+
+function groupBucketOrder(group) {
+  const index = GROUP_BUCKET_ORDER.indexOf(group);
+  return index === -1 ? GROUP_BUCKET_ORDER.length : index;
+}
+
+const GROUP_BUCKET_ORDER = ['Drums', 'Bass', 'Music', 'Vocals', 'FX'];

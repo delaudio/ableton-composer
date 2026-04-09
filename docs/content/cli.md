@@ -197,7 +197,9 @@ Important options:
 
 The scanner writes a structured JSON manifest with one entry per audio file. It applies deterministic filename-based classification for common stem names like `kick`, `snare`, `bass`, `vox`, `lead`, `pad`, and `fx`, and stores standardized `track_name`, `role`, `group`, and `color` fields.
 
-Re-running the scan against the same manifest preserves manual overrides for `track_name`, `role`, `group`, and `color`.
+It also writes default organization metadata such as `display_name` and `order`, so track layout stays predictable across Ableton and REAPER workflows while remaining easy to override manually in the manifest.
+
+Re-running the scan against the same manifest preserves manual overrides for `track_name`, `display_name`, `role`, `group`, `color`, and `order`.
 
 ## Stem Setup
 
@@ -207,9 +209,10 @@ ableton-composer stems setup stems/manifests/my-song.stems.json
 
 Important options:
 
+- `--prefix-groups` prefixes track names with their group, e.g. `[Drums] Kick`
 - `--dry-run` previews the track setup without touching Ableton
 
-This command creates missing Ableton audio tracks from the manifest, reuses tracks with matching names, and applies manifest colors when possible.
+This command creates missing Ableton audio tracks from the manifest, reuses tracks with matching names, and applies manifest colors when possible. Track order follows manifest organization rules, and `--prefix-groups` makes group buckets visible even without true Ableton folder tracks.
 
 ## Stem Reaper
 

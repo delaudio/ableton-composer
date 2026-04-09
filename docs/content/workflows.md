@@ -198,6 +198,7 @@ This creates a versioned stem manifest with:
 - relative audio file paths
 - default track names derived from filenames
 - deterministic `role`, `group`, and `color` classification for common stem names
+- default `display_name` and `order` fields for stable organization
 - preserved manual overrides when rescanning into the same manifest
 
 Use this as the first step before building audio-track setup and Ableton stem loading workflows.
@@ -218,7 +219,10 @@ Preview only:
 
 ```bash
 ableton-composer stems setup stems/manifests/song-stems.stems.json --dry-run
+ableton-composer stems setup stems/manifests/song-stems.stems.json --prefix-groups
 ```
+
+You can also edit `display_name` and `order` in the manifest directly when you want to override the default grouping/order rules without changing the source filenames.
 
 ## 14. Prepare a REAPER Import Script From a Stem Manifest
 

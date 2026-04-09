@@ -9,7 +9,7 @@ export const STEMS_DIR = join(__dirname, '../../stems');
 
 export const STEM_MANIFEST_FORMAT = Object.freeze({
   name: 'AbletonStemManifest',
-  version: '0.1',
+  version: '0.2',
 });
 
 const AUDIO_EXTENSIONS = new Set([
@@ -91,11 +91,49 @@ export function mergeStemOverrides(stems, existingManifest) {
     return {
       ...stem,
       track_name: coalesceOverride(existing.track_name, stem.track_name),
+      display_name: coalesceOverride(existing.display_name, stem.display_name),
       role: coalesceOverride(existing.role, stem.role),
       group: coalesceOverride(existing.group, stem.group),
       color: coalesceOverride(existing.color, stem.color),
+      order: coalesceOverride(existing.order, stem.order),
     };
   });
+}
+
+export function sortStemsForOrganization(stems) {
+  return [...stems].sort(compareStemOrganization);
+}
+
+export function buildStemTrackDefinitions(stems, options = {}) {
+  const prefixGroups = options.prefixGroups === true;
+  const seen = new Set();
+  const tracks = [];
+
+  for (const stem of sortStemsForOrganization(stems)) {
+    const name = resolveStemDisplayName(stem, { prefixGroups });
+    if (!name || seen.has(name)) continue;
+
+    seen.add(name);
+    tracks.push({
+      name,
+      role: stem.role || 'other',
+      group: stem.group || 'Music',
+      color: stem.color || null,
+      order: stemOrderValue(stem),
+    });
+  }
+
+  return tracks;
+}
+
+export function resolveStemDisplayName(stem, options = {}) {
+  const baseName = String(stem.display_name || stem.track_name || '').trim();
+  if (!baseName) return '';
+  if (options.prefixGroups !== true) return baseName;
+
+  const group = String(stem.group || '').trim();
+  if (!group) return baseName;
+  return `[${group}] ${baseName}`;
 }
 
 async function collectAudioFiles(dir, bucket = []) {
@@ -150,9 +188,11 @@ function classifyStem(stem) {
   return {
     ...stem,
     track_name: trackName,
+    display_name: trackName,
     role,
     group,
     color: colorForGroup(group),
+    order: defaultStemOrder({ ...stem, role, group, track_name: trackName }),
   };
 }
 
@@ -177,6 +217,37 @@ function canonicalTrackName(role, fallback) {
 
 function coalesceOverride(value, fallback) {
   return value === undefined || value === null || value === '' ? fallback : value;
+}
+
+function compareStemOrganization(a, b) {
+  const orderDelta = stemOrderValue(a) - stemOrderValue(b);
+  if (orderDelta !== 0) return orderDelta;
+
+  const nameDelta = resolveStemDisplayName(a).localeCompare(resolveStemDisplayName(b), 'en');
+  if (nameDelta !== 0) return nameDelta;
+
+  return String(a.relative_path || '').localeCompare(String(b.relative_path || ''), 'en');
+}
+
+function stemOrderValue(stem) {
+  const explicit = Number(stem.order);
+  if (Number.isFinite(explicit)) return explicit;
+  return defaultStemOrder(stem);
+}
+
+function defaultStemOrder(stem) {
+  const groupRank = groupOrder(stem.group);
+  const roleRank = roleOrder(stem.role);
+  return groupRank * 100 + roleRank;
+}
+
+function groupOrder(group) {
+  const index = GROUP_ORDER.indexOf(group);
+  return index === -1 ? GROUP_ORDER.length : index;
+}
+
+function roleOrder(role) {
+  return ROLE_ORDER[role] ?? 99;
 }
 
 const STEM_ROLE_RULES = [
@@ -232,6 +303,38 @@ const GROUP_COLORS = {
   Music: 'purple',
   Vocals: 'green',
   FX: 'yellow',
+};
+
+const GROUP_ORDER = [
+  'Drums',
+  'Bass',
+  'Music',
+  'Vocals',
+  'FX',
+];
+
+const ROLE_ORDER = {
+  kick: 0,
+  snare: 1,
+  clap: 2,
+  hihat: 3,
+  tom: 4,
+  cymbal: 5,
+  percussion: 6,
+  drums: 7,
+  bass: 0,
+  lead: 0,
+  keys: 1,
+  synth: 2,
+  guitar: 3,
+  pad: 4,
+  brass: 5,
+  strings: 6,
+  'vocal-lead': 0,
+  'vocal-backing': 1,
+  vocal: 2,
+  fx: 0,
+  other: 99,
 };
 
 const ROLE_NAMES = {

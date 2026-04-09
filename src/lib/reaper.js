@@ -2,7 +2,7 @@ import { mkdir, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { slugify } from './storage.js';
-import { STEMS_DIR } from './stems.js';
+import { resolveStemDisplayName, sortStemsForOrganization, STEMS_DIR } from './stems.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -161,8 +161,8 @@ export async function writeReaperStemImportScript(outputPath, script) {
 function buildTrackEntries(stems) {
   const occurrences = new Map();
 
-  return stems.map((stem, index) => {
-    const baseName = String(stem.track_name || stem.filename || `Stem ${index + 1}`).trim() || `Stem ${index + 1}`;
+  return sortStemsForOrganization(stems).map((stem, index) => {
+    const baseName = resolveStemDisplayName(stem) || String(stem.filename || `Stem ${index + 1}`).trim() || `Stem ${index + 1}`;
     const seen = (occurrences.get(baseName) || 0) + 1;
     occurrences.set(baseName, seen);
 
@@ -192,7 +192,7 @@ function groupTrackEntries(entries) {
     groups.get(name).stems.push(entry);
   }
 
-  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, 'en'));
+  return [...groups.values()];
 }
 
 function colorForGroup(group) {

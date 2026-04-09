@@ -243,6 +243,7 @@ stemsCmd
 stemsCmd
   .command('setup <manifest>')
   .description('Create or align Ableton audio tracks from a stem manifest')
+  .option('--prefix-groups', 'Prefix track names with their group, e.g. [Drums] Kick')
   .option('--dry-run', 'Show what would be set up without writing to Ableton')
   .action(stemSetupCommand);
 
