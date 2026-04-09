@@ -16,6 +16,7 @@ template: docs
 - `push` write notes into Ableton Live
 - `pull` import material from Live
 - `import-xml` convert MusicXML/MXL to AbletonSong JSON
+- `export-xml` export an AbletonSong set to MusicXML/MXL
 - `stems scan` scan a folder of audio stems into a manifest JSON
 - `stems setup` create/reuse Ableton audio tracks from a stem manifest
 - `snapshot` save and restore device states
@@ -81,6 +82,19 @@ Important options:
 - `--chord-track [name]` generates a MIDI chord track from MusicXML harmony symbols, using `Chords` as the default track name.
 
 When present in the source file, `import-xml` also preserves MusicXML lyrics as section/clip metadata and imports unpitched percussion via MusicXML `midi-unpitched` mappings.
+
+## Export MusicXML / MXL
+
+```bash
+ableton-composer export-xml sets/my-song --out exports/my-song.musicxml
+ableton-composer export-xml sets/my-song --out exports/my-song.mxl
+```
+
+Important options:
+
+- `--out <path>` chooses `.musicxml` or `.mxl` output
+
+The exporter concatenates sections into a single score timeline, emits one MusicXML part per track, writes harmony and lyrics when present, and falls back to best-effort note spelling from the song key when notation metadata is not available.
 
 ## Stem Scan
 

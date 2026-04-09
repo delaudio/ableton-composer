@@ -738,7 +738,7 @@ async function readXmlContent(filePath) {
   const containerBytes = unzipped['META-INF/container.xml'];
   if (containerBytes) {
     const containerXml = new TextDecoder().decode(containerBytes);
-    const match = containerXml.match(/full-path="([^"]+\.xml)"/);
+    const match = containerXml.match(/full-path="([^"]+\.(?:xml|musicxml))"/);
     if (match) {
       const bytes = unzipped[match[1]];
       if (bytes) return new TextDecoder().decode(bytes);
@@ -747,7 +747,7 @@ async function readXmlContent(filePath) {
 
   // Fallback: use the first .xml file that isn't in META-INF
   for (const [name, bytes] of Object.entries(unzipped)) {
-    if (name.endsWith('.xml') && !name.startsWith('META-INF')) {
+    if ((name.endsWith('.xml') || name.endsWith('.musicxml')) && !name.startsWith('META-INF')) {
       return new TextDecoder().decode(bytes);
     }
   }

@@ -23,6 +23,7 @@ import { importMidiCommand } from '../src/commands/import-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
 import { snapshotCommand }  from '../src/commands/snapshot.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
+import { exportXmlCommand } from '../src/commands/export-xml.js';
 import { stemScanCommand, stemSetupCommand } from '../src/commands/stems.js';
 import { presetSaveCommand, presetLoadCommand, presetListCommand, presetAnalyzeCommand, presetGenerateCommand } from '../src/commands/preset.js';
 
@@ -155,6 +156,13 @@ program
   .option('-t, --tracks <names>',     'Rename parts: positional "Piano,Violin" or mapped "Part 1:Lead"')
   .option('--chord-track [name]',     'Generate a MIDI chord track from MusicXML harmony symbols (default name: Chords)')
   .action(importXmlCommand);
+
+// ── export-xml ───────────────────────────────────────────────────────────────
+program
+  .command('export-xml <file>')
+  .description('Export an AbletonSong set as MusicXML (.musicxml) or compressed MXL (.mxl)')
+  .option('-o, --out <path>', 'Save to a specific output file (default: exports/<name>.musicxml)')
+  .action(exportXmlCommand);
 
 // ── import-midi ───────────────────────────────────────────────────────────────
 program

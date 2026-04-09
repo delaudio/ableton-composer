@@ -90,7 +90,24 @@ ableton-composer import-xml score.mxl \
   --out sets/imported-score/
 ```
 
-## 7. Compare Drift
+## 7. Export a Set Back to MusicXML / MXL
+
+```bash
+ableton-composer export-xml sets/imported-score \
+  --out exports/imported-score.musicxml
+
+ableton-composer export-xml sets/imported-score \
+  --out exports/imported-score.mxl
+```
+
+This is the inverse interoperability path for MuseScore, Logic, and other notation-aware tools. The exporter:
+
+- concatenates sections into one score timeline
+- writes one part per track
+- includes harmony symbols and lyrics when present
+- packages compressed `.mxl` output when requested
+
+## 8. Compare Drift
 
 ```bash
 ableton-composer compare \
@@ -108,7 +125,7 @@ This reports:
 
 When the source is an album, artist, or collection bundle, compare weights role presence, structure, and role-level rhythm more heavily than exact track-name matches.
 
-## 8. Scan a Stem Folder
+## 9. Scan a Stem Folder
 
 ```bash
 ableton-composer stems scan /path/to/song-stems \
@@ -125,7 +142,7 @@ This creates a versioned stem manifest with:
 
 Use this as the first step before building audio-track setup and Ableton stem loading workflows.
 
-## 9. Prepare Ableton Audio Tracks From a Stem Manifest
+## 10. Prepare Ableton Audio Tracks From a Stem Manifest
 
 ```bash
 ableton-composer stems setup stems/manifests/song-stems.stems.json
@@ -143,7 +160,7 @@ Preview only:
 ableton-composer stems setup stems/manifests/song-stems.stems.json --dry-run
 ```
 
-## 10. Typical Album-Style Loop
+## 11. Typical Album-Style Loop
 
 ```bash
 # analyze
