@@ -24,6 +24,7 @@ export async function exportSongToMidi(song, outPath) {
   }));
 
   const beatsPerBar = timeSignature[0];
+  const ppq = midi.header.ppq;
   let sectionStartBeat = 0;
 
   for (const section of song.sections || []) {
@@ -36,8 +37,8 @@ export async function exportSongToMidi(song, outPath) {
       for (const note of trackDef.clip?.notes || []) {
         track.addNote({
           midi: note.pitch,
-          time: sectionStartBeat + Number(note.time || 0),
-          duration: Number(note.duration || 0),
+          ticks: Math.round((sectionStartBeat + Number(note.time || 0)) * ppq),
+          durationTicks: Math.max(1, Math.round(Number(note.duration || 0) * ppq)),
           velocity: clampVelocity(note.velocity),
         });
       }

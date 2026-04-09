@@ -19,6 +19,7 @@ import { listCommand }     from '../src/commands/list.js';
 import { infoCommand }     from '../src/commands/info.js';
 import { analyzeCommand }  from '../src/commands/analyze.js';
 import { compareCommand }  from '../src/commands/compare.js';
+import { validateRoundtripCommand } from '../src/commands/validate-roundtrip.js';
 import { importMidiCommand } from '../src/commands/import-midi.js';
 import { exportMidiCommand } from '../src/commands/export-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
@@ -132,6 +133,13 @@ program
   .description('Compare two sets or profiles to measure style fidelity')
   .option('--out <path>', 'Save the comparison report as JSON')
   .action(compareCommand);
+
+program
+  .command('validate-roundtrip <file>')
+  .description('Export and re-import a set to measure what survives across MIDI/MusicXML round-trips')
+  .requiredOption('--via <format>', 'Round-trip format: midi, musicxml, or mxl')
+  .option('--out <path>', 'Save the validation report as JSON')
+  .action(validateRoundtripCommand);
 
 // ── expand ────────────────────────────────────────────────────────────────────
 program

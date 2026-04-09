@@ -12,6 +12,7 @@ template: docs
 - `expand` add tracks to existing sections
 - `analyze` extract song, album, artist, or collection profiles
 - `compare` compare a generated set against a reference profile or bundle
+- `validate-roundtrip` measure note/track preservation through MIDI or MusicXML export+import
 - `preset generate` create synth presets from preset profiles
 - `push` write notes into Ableton Live
 - `pull` import material from Live
@@ -63,6 +64,21 @@ ableton-composer compare <reference-profile-or-bundle> <generated-set>
 ```
 
 For aggregate bundles, compare emphasizes structure, role presence, and role-level rhythm so album/artist references are not scored like exact song-to-song copies.
+
+## Validate Round-Trip
+
+```bash
+ableton-composer validate-roundtrip sets/my-song --via midi
+ableton-composer validate-roundtrip sets/my-song --via musicxml
+ableton-composer validate-roundtrip sets/my-song --via mxl
+```
+
+Important options:
+
+- `--via midi|musicxml|mxl`
+- `--out <path>` saves the report JSON
+
+This command exports the set, re-imports it, and reports what survived: note counts, track names, BPM, time signature, and note-level drift.
 
 ## Expand
 

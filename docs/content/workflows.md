@@ -121,7 +121,22 @@ Use MIDI export when the target is a DAW rather than notation software. The expo
 - preserves tempo and time signature
 - concatenates section-relative notes into one absolute song timeline
 
-## 9. Compare Drift
+## 9. Validate a Round-Trip
+
+```bash
+ableton-composer validate-roundtrip examples/ableton-song/chord-progression.song.json --via midi
+ableton-composer validate-roundtrip examples/ableton-song/chord-progression.song.json --via musicxml
+```
+
+Use this when you want to measure what is preserved across interchange formats. The report highlights:
+
+- note match percentage
+- track-name overlap
+- BPM and time-signature preservation
+- section-count drift
+- pitch/timing/duration mismatches
+
+## 10. Compare Drift
 
 ```bash
 ableton-composer compare \
@@ -139,7 +154,7 @@ This reports:
 
 When the source is an album, artist, or collection bundle, compare weights role presence, structure, and role-level rhythm more heavily than exact track-name matches.
 
-## 10. Scan a Stem Folder
+## 11. Scan a Stem Folder
 
 ```bash
 ableton-composer stems scan /path/to/song-stems \
@@ -156,7 +171,7 @@ This creates a versioned stem manifest with:
 
 Use this as the first step before building audio-track setup and Ableton stem loading workflows.
 
-## 11. Prepare Ableton Audio Tracks From a Stem Manifest
+## 12. Prepare Ableton Audio Tracks From a Stem Manifest
 
 ```bash
 ableton-composer stems setup stems/manifests/song-stems.stems.json
@@ -174,7 +189,7 @@ Preview only:
 ableton-composer stems setup stems/manifests/song-stems.stems.json --dry-run
 ```
 
-## 12. Typical Album-Style Loop
+## 13. Typical Album-Style Loop
 
 ```bash
 # analyze
