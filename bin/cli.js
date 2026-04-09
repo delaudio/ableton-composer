@@ -54,6 +54,9 @@ program
   .option('-S, --sections <n>',    'Total number of sections to generate')
   .option('--chunk-size <n>',      'Generate in chunks of N sections per API call (use with --sections)')
   .option('--provider <name>',     'AI provider: "api"/"anthropic", "openai", "codex", or "cli"/"claude-cli"')
+  .option('--evaluate',            'Run an AI critique after saving the generated set')
+  .option('--rubric <name>',       'Critique rubric for --evaluate or critique command')
+  .option('--eval-out <path>',     'Save auto-evaluation report to a specific JSON path')
   .option('--no-save',             'Print JSON to stdout without saving to disk')
   .action(generateCommand);
 

@@ -17,11 +17,16 @@ import { fetchContext } from '../lib/fetchers/index.js';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
 import { loadStyleProfile } from '../lib/profiles.js';
 import { appendProvenance, createProvenance } from '../lib/provenance.js';
+import { defaultCritiqueReportPath, runSongCritique, saveCritiqueReport } from '../lib/critique-runner.js';
 
 export async function generateCommand(prompt, options) {
   const spinner = ora();
 
   try {
+    if (options.evaluate && options.save === false) {
+      throw new Error('--evaluate requires saving enabled');
+    }
+
     // ── 0a. Load existing song for --continue ────────────────────────────────
     let existingSong = null;
     if (options.continue) {
@@ -252,6 +257,24 @@ export async function generateCommand(prompt, options) {
         savedPaths.push(savedPath);
         console.log(chalk.green(`✓ Saved to ${savedPath}`));
         console.log('');
+
+        if (options.evaluate) {
+          spinner.start('Evaluating generated song...');
+          try {
+            const critique = await runSongCritique(song, savedPath, {
+              rubric: options.rubric || 'auto',
+              model: options.model,
+              provider,
+            });
+            const reportPath = options.evalOut
+              ? (options.evalOut.startsWith('/') ? options.evalOut : join(process.cwd(), options.evalOut))
+              : defaultCritiqueReportPath(savedPath);
+            await saveCritiqueReport(critique, reportPath);
+            spinner.succeed(`Critique saved to ${reportPath} (${critique.score}/100)`);
+          } catch (critiqueErr) {
+            spinner.warn(`Generated song saved, but critique failed: ${critiqueErr.message}`);
+          }
+        }
       } else {
         console.log(stringifySong(song));
       }

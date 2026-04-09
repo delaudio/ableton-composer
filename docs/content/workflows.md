@@ -154,6 +154,19 @@ Use this when you want structured feedback before revising a piece. The critique
 
 Rubrics are file-based under `prompts/critique/`, so extending the system is mostly a prompt-authoring task rather than a code change.
 
+If you want critique automatically after generation:
+
+```bash
+ableton-composer generate "moody electronic sketch with restrained hooks" \
+  --style profiles/albums/example-artist/midnight-signals/bundle.json \
+  --tracks "Bass,Drums,Pad,Lead,Chords,FX" \
+  --provider openai \
+  --sections 4 \
+  --chunk-size 2 \
+  --evaluate \
+  --rubric auto
+```
+
 ## 11. Compare Drift
 
 ```bash

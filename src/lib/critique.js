@@ -20,7 +20,7 @@ export async function loadCritiqueRubric(name) {
 
 export function autoDetectCritiqueRubric(song, requestedName = '') {
   const normalized = normalizeRubricName(requestedName);
-  if (normalized) return normalized;
+  if (normalized && normalized !== 'auto') return normalized;
 
   const trackNames = (song.sections || [])
     .flatMap(section => (section.tracks || []).map(track => String(track.ableton_name || '').toLowerCase()));

@@ -40,8 +40,13 @@ Common options:
 - `--chunk-size <n>`
 - `--continue <set>`
 - `--variations <n>`
+- `--evaluate`
+- `--rubric <name>`
+- `--eval-out <path>`
 - `--live-sync`
 - `--no-save`
+
+When `--evaluate` is enabled, `generate` saves the set first and then runs the critique pipeline against the saved output. If `--eval-out` is omitted, the report is written next to the saved set as `<saved-path>.critique.json`.
 
 ## Analyze
 
@@ -90,9 +95,12 @@ ableton-composer critique sets/my-song --rubric general --provider openai
 Important options:
 
 - `--rubric general|string-quartet|synth-pop|chicago-house`
+- `--rubric auto|general|string-quartet|synth-pop|chicago-house`
 - `--provider anthropic|openai|codex|claude-cli`
 - `--model <model>`
 - `--out <path>`
+
+If you want the same critique step immediately after generation, use `generate --evaluate` with the same `--rubric` flag.
 
 The critique command returns structured guidance, not objective truth. It does not modify the source set.
 
