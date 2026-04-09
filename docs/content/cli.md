@@ -96,6 +96,8 @@ Important options:
 
 The critique command returns structured guidance, not objective truth. It does not modify the source set.
 
+Named rubrics are loaded from `prompts/critique/`. Add a new Markdown file there to introduce a new critique context without changing the command implementation.
+
 ## Expand
 
 ```bash

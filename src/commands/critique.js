@@ -4,6 +4,7 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { analyzeSong } from '../lib/analysis.js';
 import { critiqueSongObject, getProviderLabel } from '../lib/ai.js';
+import { autoDetectCritiqueRubric, loadCritiqueRubric } from '../lib/critique.js';
 import { loadSong } from '../lib/storage.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -12,7 +13,8 @@ const CRITIQUE_PROMPT = join(__dirname, '../../prompts/critique.md');
 export async function critiqueCommand(fileOrName, options) {
   try {
     const { song, filepath, isDirectory } = await loadSong(fileOrName);
-    const rubric = normalizeRubric(options.rubric, song);
+    const rubricName = autoDetectCritiqueRubric(song, options.rubric);
+    const rubric = await loadCritiqueRubric(rubricName);
     const provider = options.provider || 'anthropic';
     const model = options.model;
     const analysis = analyzeSong(song, filepath);
@@ -62,10 +64,9 @@ function buildCritiqueUserMessage(song, analysis, filepath, rubric) {
 
   return [
     `Rubric: ${rubric.name}`,
-    `Rubric intent: ${rubric.description}`,
     '',
-    'Rubric criteria:',
-    ...rubric.criteria.map(item => `- ${item}`),
+    'Rubric prompt:',
+    rubric.prompt,
     '',
     `Source path: ${filepath}`,
     '',
@@ -84,17 +85,6 @@ function summarizePitchRange(notes) {
   const pitches = notes.map(note => Number(note.pitch)).filter(Number.isFinite);
   if (!pitches.length) return null;
   return { min: Math.min(...pitches), max: Math.max(...pitches) };
-}
-
-function normalizeRubric(input, song) {
-  const value = String(input || '').trim().toLowerCase();
-  if (value && RUBRICS[value]) return { name: value, ...RUBRICS[value] };
-
-  const trackNames = (song.sections || []).flatMap(section => (section.tracks || []).map(track => track.ableton_name.toLowerCase()));
-  const quartet = ['violin i', 'violin ii', 'viola', 'cello'];
-  if (quartet.every(name => trackNames.includes(name))) return { name: 'string-quartet', ...RUBRICS['string-quartet'] };
-
-  return { name: 'general', ...RUBRICS.general };
 }
 
 function printCritique(report, filepath, isDirectory, provider, model) {
@@ -137,46 +127,3 @@ function printCritique(report, filepath, isDirectory, provider, model) {
     console.log('');
   }
 }
-
-const RUBRICS = {
-  general: {
-    description: 'Evaluate coherence, structure, balance, role clarity, tonal stability, and section contrast.',
-    criteria: [
-      'structural coherence across sections',
-      'clarity of roles and arrangement balance',
-      'tonal and rhythmic consistency',
-      'section contrast without losing continuity',
-      'idiomatic use of ranges and densities where inferable',
-    ],
-  },
-  'string-quartet': {
-    description: 'Evaluate idiomatic string writing, independence of voices, register balance, and quartet texture.',
-    criteria: [
-      'idiomatic ranges for violin, viola, and cello',
-      'independence of voices instead of excessive doubling',
-      'inner-voice motion and balance',
-      'cello function and upper-voice contrast',
-      'motivic clarity and section development',
-    ],
-  },
-  'synth-pop': {
-    description: 'Evaluate hook clarity, role separation, groove, palette consistency, and section lift in synth-pop contexts.',
-    criteria: [
-      'hook and lead clarity',
-      'bass, drums, pad, and chord separation',
-      'groove consistency and restraint',
-      'palette coherence for the intended style',
-      'useful contrast between verse/chorus or equivalent sections',
-    ],
-  },
-  'chicago-house': {
-    description: 'Evaluate groove function, bass/chord interaction, DJ-friendly structure, and historical palette coherence.',
-    criteria: [
-      'four-on-the-floor groove function',
-      'bass and chord stab interaction',
-      'economy of melodic material',
-      'intro/outro and mix-friendly structure',
-      'style coherence for early house references',
-    ],
-  },
-};

@@ -152,6 +152,8 @@ Use this when you want structured feedback before revising a piece. The critique
 - idiomatic issues for a target instrumentation
 - weak contrast or continuity between sections
 
+Rubrics are file-based under `prompts/critique/`, so extending the system is mostly a prompt-authoring task rather than a code change.
+
 ## 11. Compare Drift
 
 ```bash
