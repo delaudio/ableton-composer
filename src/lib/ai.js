@@ -8,6 +8,7 @@ import { readFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { classifyTrackRole } from './analysis.js';
+import { buildDossierPromptSection } from './dossiers.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROMPTS_DIR = join(__dirname, '../../prompts');
@@ -446,9 +447,9 @@ function parseJsonResponse(raw) {
   }
 }
 
-export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, model, provider = 'anthropic', tonalState = null }) {
-  const inferredGenreKey = inferGenrePromptKey(prompt, styleProfile);
-  const inferredHarmonyKey = inferHarmonyPromptKey(prompt, styleProfile);
+export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, existingSong = null, model, provider = 'anthropic', tonalState = null }) {
+  const inferredGenreKey = inferGenrePromptKey(prompt, styleProfile, researchDossier);
+  const inferredHarmonyKey = inferHarmonyPromptKey(prompt, styleProfile, researchDossier);
   const systemPrompt = await buildSongGenerationPrompt({
     prompt,
     styleProfile,
@@ -473,6 +474,7 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
       trackNames,
       context,
       styleProfile,
+      researchDossier,
       existingSong,
       tonalState,
       model,
@@ -489,6 +491,7 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
         trackNames,
         context,
         styleProfile,
+        researchDossier,
         existingSong,
         tonalState,
         model,
@@ -501,6 +504,7 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
         trackNames,
         context,
         styleProfile,
+        researchDossier,
         existingSong,
         tonalState,
         model,
@@ -520,6 +524,10 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
 
   if (styleProfile) {
     parts.push(buildStyleSection(styleProfile));
+  }
+
+  if (researchDossier) {
+    parts.push(buildDossierPromptSection(researchDossier));
   }
 
   if (existingSong) {
@@ -582,7 +590,7 @@ async function buildSongGenerationPrompt({ prompt, styleProfile, genreKey = null
   return sections.join('\n\n');
 }
 
-async function generateHarmonicPlan({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, tonalState = null, model, provider, genreKey = null, harmonyKey = null }) {
+async function generateHarmonicPlan({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, existingSong = null, tonalState = null, model, provider, genreKey = null, harmonyKey = null }) {
   const systemPrompt = await buildHarmonicPlanPrompt({ genreKey, harmonyKey });
   const parts = [];
 
@@ -594,6 +602,10 @@ async function generateHarmonicPlan({ prompt, trackNames, context = {}, stylePro
 
   if (styleProfile) {
     parts.push(buildStyleSection(styleProfile));
+  }
+
+  if (researchDossier) {
+    parts.push(buildDossierPromptSection(researchDossier));
   }
 
   if (existingSong) {
@@ -619,7 +631,7 @@ async function generateHarmonicPlan({ prompt, trackNames, context = {}, stylePro
   });
 }
 
-async function generateSongBlueprint({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, tonalState = null, model, provider, genreKey = null, harmonyKey = null }) {
+async function generateSongBlueprint({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, existingSong = null, tonalState = null, model, provider, genreKey = null, harmonyKey = null }) {
   const systemPrompt = await buildSongBlueprintPrompt({ genreKey, harmonyKey });
   const parts = [];
 
@@ -631,6 +643,10 @@ async function generateSongBlueprint({ prompt, trackNames, context = {}, stylePr
 
   if (styleProfile) {
     parts.push(buildStyleSection(styleProfile));
+  }
+
+  if (researchDossier) {
+    parts.push(buildDossierPromptSection(researchDossier));
   }
 
   if (existingSong) {
@@ -656,7 +672,7 @@ async function generateSongBlueprint({ prompt, trackNames, context = {}, stylePr
   });
 }
 
-async function generateArrangementPlan({ prompt, trackNames, context = {}, styleProfile = null, existingSong = null, model, provider, genreKey = null }) {
+async function generateArrangementPlan({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, existingSong = null, model, provider, genreKey = null }) {
   const systemPrompt = await buildArrangementPlanPrompt({ genreKey });
   const parts = [];
 
@@ -668,6 +684,10 @@ async function generateArrangementPlan({ prompt, trackNames, context = {}, style
 
   if (styleProfile) {
     parts.push(buildStyleSection(styleProfile));
+  }
+
+  if (researchDossier) {
+    parts.push(buildDossierPromptSection(researchDossier));
   }
 
   if (existingSong) {
@@ -736,8 +756,8 @@ async function buildSongBlueprintPrompt({ genreKey, harmonyKey }) {
   return sections.join('\n\n');
 }
 
-function inferGenrePromptKey(prompt, styleProfile) {
-  const haystack = buildInferenceHaystack(prompt, styleProfile);
+function inferGenrePromptKey(prompt, styleProfile, researchDossier = null) {
+  const haystack = buildInferenceHaystack(prompt, styleProfile, researchDossier);
 
   const genreMatchers = [
     { key: 'idm', patterns: ['idm', 'glitch', 'braindance', 'leftfield'] },
@@ -749,8 +769,8 @@ function inferGenrePromptKey(prompt, styleProfile) {
   return match?.key || null;
 }
 
-function inferHarmonyPromptKey(prompt, styleProfile) {
-  const haystack = buildInferenceHaystack(prompt, styleProfile);
+function inferHarmonyPromptKey(prompt, styleProfile, researchDossier = null) {
+  const haystack = buildInferenceHaystack(prompt, styleProfile, researchDossier);
 
   const harmonyMatchers = [
     { key: 'neo-soul', patterns: ['neo-soul', 'neosoul', 'neo soul', 'soul-jazz', 'jazz-soul', 'modern r&b', 'modern rnb', "d'angelo", 'erykah badu', 'robert glasper'] },
@@ -762,12 +782,20 @@ function inferHarmonyPromptKey(prompt, styleProfile) {
   return match?.key || null;
 }
 
-function buildInferenceHaystack(prompt, styleProfile) {
+function buildInferenceHaystack(prompt, styleProfile, researchDossier = null) {
   return [
     prompt,
     styleProfile?.genre,
     styleProfile?._meta?.source,
     styleProfile?._meta?.category,
+    researchDossier?.topic,
+    researchDossier?.historical_context?.summary,
+    ...(researchDossier?.historical_context?.scenes ?? []),
+    ...(researchDossier?.instrumentation_families ?? []),
+    ...(researchDossier?.production_traits ?? []),
+    ...(researchDossier?.arrangement_traits ?? []),
+    ...(researchDossier?.rhythm_harmony_tendencies ?? []),
+    ...(researchDossier?.sound_design_traits ?? []),
   ]
     .filter(Boolean)
     .join(' ')

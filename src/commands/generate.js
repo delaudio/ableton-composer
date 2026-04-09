@@ -16,6 +16,7 @@ import { saveSetDirectory, loadSong, SETS_DIR, slugify, stringifySong, writeSong
 import { fetchContext } from '../lib/fetchers/index.js';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
 import { loadStyleProfile } from '../lib/profiles.js';
+import { loadResearchDossier } from '../lib/dossiers.js';
 import { appendProvenance, createProvenance } from '../lib/provenance.js';
 import { defaultCritiqueReportPath, runSongCritique, saveCritiqueReport } from '../lib/critique-runner.js';
 
@@ -38,6 +39,8 @@ export async function generateCommand(prompt, options) {
     // ── 0b. Load style profile (optional) ───────────────────────────────────
     let styleProfile = null;
     let styleProfilePath = null;
+    let researchDossier = null;
+    let researchDossierPath = null;
     if (options.style) {
       const absStyle = options.style.startsWith('/')
         ? options.style
@@ -51,6 +54,15 @@ export async function generateCommand(prompt, options) {
         ? `${loaded.bundle.scope || 'bundle'} bundle -> ${loaded.resolvedPath} (${styleProfile._meta?.prompt_ready ? 'prompt profile' : 'merged profile'})`
         : (styleProfile._meta?.source || loaded.resolvedPath);
       console.log(chalk.dim(`Style profile: ${label}`));
+    }
+
+    if (options.dossier) {
+      const loaded = await loadResearchDossier(options.dossier).catch(() => {
+        throw new Error(`Research dossier not found or invalid: ${options.dossier}`);
+      });
+      researchDossier = loaded.dossier;
+      researchDossierPath = loaded.resolvedPath;
+      console.log(chalk.dim(`Research dossier: ${researchDossier.topic} -> ${researchDossierPath}`));
     }
 
     // ── 1. Resolve track names ───────────────────────────────────────────────
@@ -138,6 +150,7 @@ export async function generateCommand(prompt, options) {
             trackNames,
             context:      chunk === 0 ? context : {},
             styleProfile,
+            researchDossier,
             existingSong: accumulated,
             tonalState,
             model:        options.model,
@@ -178,6 +191,7 @@ export async function generateCommand(prompt, options) {
           trackNames,
           context,
           styleProfile,
+          researchDossier,
           existingSong,
           model:        options.model,
           provider,
@@ -198,6 +212,7 @@ export async function generateCommand(prompt, options) {
         model: getDefaultModel(provider, options.model),
         prompt,
         styleProfilePath,
+        researchDossierPath,
         sections: sections.length,
         tracks: trackNames,
       };

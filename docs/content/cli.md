@@ -11,6 +11,7 @@ template: docs
 - `generate` create a song from a prompt
 - `expand` add tracks to existing sections
 - `analyze` extract song, album, artist, or collection profiles
+- `research genre` create structured historical/production dossiers for prompt guidance
 - `compare` compare a generated set against a reference profile or bundle
 - `validate-roundtrip` measure note/track preservation through MIDI or MusicXML export+import
 - `critique` review a set with an AI rubric and structured feedback
@@ -37,6 +38,7 @@ Common options:
 
 - `--tracks "Bass,Drums,Pad,Lead,Chords,FX"`
 - `--style <path>`
+- `--dossier <path>`
 - `--provider anthropic|openai|codex|claude-cli`
 - `--model <model>`
 - `--sections <n>`
@@ -50,6 +52,25 @@ Common options:
 - `--no-save`
 
 When `--evaluate` is enabled, `generate` saves the set first and then runs the critique pipeline against the saved output. If `--eval-out` is omitted, the report is written next to the saved set as `<saved-path>.critique.json`.
+
+`--dossier` adds a separate knowledge layer for historical context, instrumentation families, production traits, facts, inferences, and sources. It complements a style profile instead of replacing it.
+
+## Research Dossiers
+
+```bash
+ableton-composer research genre "early 80s synth-pop"
+ableton-composer research genre "krautrock 1968-1976" --out research/krautrock.json
+ableton-composer generate "motorik instrumental with gradual synth lift" \
+  --dossier research/krautrock.json \
+  --tracks "Drums,Bass,Organ,Synth,FX"
+```
+
+Important options:
+
+- `--out <path>` writes the dossier JSON to a custom location
+- `--print` prints the dossier JSON without saving
+
+The dossier format separates factual claims, creative inferences, source notes, and historical caveats so generation can use historically informed guardrails without collapsing into artist cloning.
 
 ## Analyze
 
