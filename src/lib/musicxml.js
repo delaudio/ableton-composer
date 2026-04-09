@@ -23,8 +23,9 @@ export function buildMusicXml(song, options = {}) {
   const beatsPerBar = parseBeatsPerBar(song.meta?.time_signature || '4/4');
   const beatType = parseBeatType(song.meta?.time_signature || '4/4');
   const divisions = options.divisions || 4;
-  const key = parseScale(song.meta?.scale || '');
-  const trackNames = uniqueTrackNames(song.sections || []);
+  const key = resolveKeySignature(song);
+  const trackCatalog = buildTrackCatalog(song.sections || []);
+  const trackNames = [...trackCatalog.keys()];
   const partEvents = buildPartEvents(song, trackNames, beatsPerBar, divisions);
 
   const partListXml = trackNames
@@ -43,6 +44,7 @@ export function buildMusicXml(song, options = {}) {
       id: partId(index),
       name,
       measures: partEvents.get(name) || [],
+      trackNotation: trackCatalog.get(name)?.notation ?? null,
       beatsPerBar,
       beatType,
       divisions,
@@ -107,7 +109,7 @@ function buildPartEvents(song, trackNames, beatsPerBar, divisions) {
   return byTrack;
 }
 
-function buildPartXml({ id, measures, beatsPerBar, beatType, divisions, key, bpm }) {
+function buildPartXml({ id, measures, trackNotation, beatsPerBar, beatType, divisions, key, bpm }) {
   const measureXml = measures.map((measure, index) => {
     const lines = [`    <measure number="${measure.number}">`];
 
@@ -123,8 +125,8 @@ function buildPartXml({ id, measures, beatsPerBar, beatType, divisions, key, bpm
       lines.push(`          <beat-type>${beatType}</beat-type>`);
       lines.push('        </time>');
       lines.push('        <clef>');
-      lines.push(`          <sign>${defaultClef(measures)}</sign>`);
-      lines.push(`          <line>${defaultClef(measures) === 'F' ? 4 : 2}</line>`);
+      lines.push(`          <sign>${preferredClefSign(trackNotation, measures)}</sign>`);
+      lines.push(`          <line>${preferredClefLine(trackNotation, measures)}</line>`);
       lines.push('        </clef>');
       lines.push('      </attributes>');
       lines.push('      <direction placement="above">');
@@ -183,6 +185,7 @@ function sliceTrackIntoMeasures(notes, sectionStartBeat, bars, beatsPerBar, divi
       duration,
       velocity: note.velocity,
       lyrics: Array.isArray(note.lyrics) ? note.lyrics : [],
+      notation: note.notation ?? null,
     });
   }
 
@@ -257,17 +260,34 @@ function renderNoteGroup(notes, duration, divisions, key) {
   const lines = [];
 
   notes.forEach((note, index) => {
-    const pitch = midiToPitch(Number(note.pitch), key);
+    const pitch = preferredPitch(note, key);
     lines.push('      <note>');
     if (index > 0) lines.push('        <chord/>');
-    lines.push('        <pitch>');
-    lines.push(`          <step>${pitch.step}</step>`);
-    if (pitch.alter) lines.push(`          <alter>${pitch.alter}</alter>`);
-    lines.push(`          <octave>${pitch.octave}</octave>`);
-    lines.push('        </pitch>');
+    if (pitch.unpitched) {
+      lines.push('        <unpitched>');
+      lines.push(`          <display-step>${pitch.unpitched.display_step}</display-step>`);
+      lines.push(`          <display-octave>${pitch.unpitched.display_octave}</display-octave>`);
+      lines.push('        </unpitched>');
+    } else {
+      lines.push('        <pitch>');
+      lines.push(`          <step>${pitch.step}</step>`);
+      if (pitch.alter) lines.push(`          <alter>${pitch.alter}</alter>`);
+      lines.push(`          <octave>${pitch.octave}</octave>`);
+      lines.push('        </pitch>');
+    }
     lines.push(`        <duration>${duration}</duration>`);
-    lines.push(`        <voice>1</voice>`);
-    lines.push(`        <type>${durationToType(duration)}</type>`);
+    lines.push(`        <voice>${xmlEscape(note.notation?.voice ?? 1)}</voice>`);
+    if (note.notation?.type) {
+      lines.push(`        <type>${xmlEscape(note.notation.type)}</type>`);
+    } else {
+      lines.push(`        <type>${durationToType(duration)}</type>`);
+    }
+    if (note.notation?.staff) {
+      lines.push(`        <staff>${xmlEscape(note.notation.staff)}</staff>`);
+    }
+    for (const tie of note.notation?.ties ?? []) {
+      lines.push(`        <tie type="${xmlEscape(tie)}"/>`);
+    }
 
     if (note.lyrics?.length) {
       for (const lyric of note.lyrics) {
@@ -302,6 +322,17 @@ function uniqueTrackNames(sections) {
     }
   }
   return [...names];
+}
+
+function buildTrackCatalog(sections) {
+  const byTrack = new Map();
+  for (const section of sections || []) {
+    for (const track of section.tracks || []) {
+      if (!track.ableton_name || byTrack.has(track.ableton_name)) continue;
+      byTrack.set(track.ableton_name, { notation: track.notation ?? null });
+    }
+  }
+  return byTrack;
 }
 
 function groupHarmonyByMeasure(harmony, sectionStartBeat, beatsPerBar) {
@@ -389,6 +420,46 @@ function parseScale(scale) {
   const tonic = `${step.toUpperCase()}${accidental}`;
   const table = mode === 'minor' ? MINOR_FIFTHS : MAJOR_FIFTHS;
   return { fifths: table[tonic] ?? 0, mode };
+}
+
+function resolveKeySignature(song) {
+  const notationKey = song.meta?.notation?.key;
+  if (Number.isInteger(notationKey?.fifths) && notationKey?.mode) {
+    return {
+      fifths: notationKey.fifths,
+      mode: String(notationKey.mode).toLowerCase(),
+    };
+  }
+  return parseScale(song.meta?.scale || '');
+}
+
+function preferredPitch(note, key) {
+  const notation = note.notation ?? {};
+  if (notation.unpitched?.display_step && Number.isFinite(notation.unpitched?.display_octave)) {
+    return {
+      unpitched: {
+        display_step: notation.unpitched.display_step,
+        display_octave: notation.unpitched.display_octave,
+      },
+    };
+  }
+  if (notation.pitch?.step && Number.isFinite(notation.pitch?.octave)) {
+    return {
+      step: notation.pitch.step,
+      alter: Number(notation.pitch.alter) || 0,
+      octave: Number(notation.pitch.octave),
+    };
+  }
+  return midiToPitch(Number(note.pitch), key);
+}
+
+function preferredClefSign(trackNotation, measures) {
+  return trackNotation?.clef?.sign || defaultClef(measures);
+}
+
+function preferredClefLine(trackNotation, measures) {
+  if (Number.isFinite(trackNotation?.clef?.line)) return Number(trackNotation.clef.line);
+  return preferredClefSign(trackNotation, measures) === 'F' ? 4 : 2;
 }
 
 function midiToPitch(midi, key) {

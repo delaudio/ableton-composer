@@ -148,7 +148,10 @@ export async function importXmlCommand(xmlFile, options) {
     // ── Extract notes from each part ──────────────────────────────────────────
     const partNoteSets = parts
       .map((part, pi) => ({
+        id:    part['@_id'],
         name:  partLabels[pi].name,
+        source_name: partNames[part['@_id']] || part['@_id'],
+        notation: extractTrackNotation(part.measure),
         notes: extractNotes(part.measure, beatsPerBar, unpitchedMaps[part['@_id']]),
       }))
       .filter(p => p.notes.length > 0);
@@ -177,7 +180,7 @@ export async function importXmlCommand(xmlFile, options) {
         .filter(h => h.time >= win.startBeat && h.time < win.endBeat)
         .map(h => ({ ...h, time: round3(h.time - win.startBeat) }));
 
-      for (const { name, notes } of partNoteSets) {
+      for (const { id, name, source_name, notation, notes } of partNoteSets) {
         const sectionNotes = notes
           .filter(n => n.time >= win.startBeat && n.time < win.endBeat)
           .map(n => {
@@ -189,6 +192,7 @@ export async function importXmlCommand(xmlFile, options) {
               muted:    false,
             };
             if (n.lyrics?.length > 0) note.lyrics = n.lyrics;
+            if (n.notation) note.notation = n.notation;
             return note;
           });
 
@@ -201,7 +205,10 @@ export async function importXmlCommand(xmlFile, options) {
           );
           const clip = { length_bars: win.bars, notes: sectionNotes };
           if (trackLyrics.length > 0) clip.lyrics = trackLyrics;
-          tracks.push({ ableton_name: name, clip });
+          const track = { ableton_name: name, clip };
+          const trackNotation = { part_id: id, source_name, ...(notation ?? {}) };
+          if (Object.keys(trackNotation).length > 0) track.notation = trackNotation;
+          tracks.push(track);
         }
       }
 
@@ -233,7 +240,15 @@ export async function importXmlCommand(xmlFile, options) {
         console.log(chalk.dim(`       ${t.ableton_name}: ${t.clip.notes.length} notes`));
       }
 
-      const section = { name: win.name, bars: win.bars, tracks };
+      const section = {
+        name: win.name,
+        bars: win.bars,
+        tracks,
+        notation: {
+          measure_start: Math.floor(win.startBeat / beatsPerBar) + 1,
+          measure_end: Math.floor(win.endBeat / beatsPerBar),
+        },
+      };
       if (sectionHarmony.length > 0) section.harmony = sectionHarmony;
       const sectionLyrics = tracks.flatMap(track =>
         (track.clip.lyrics ?? []).map(lyric => ({
@@ -259,6 +274,17 @@ export async function importXmlCommand(xmlFile, options) {
         genre:          '',
         time_signature: timeSignature,
         description:    `Imported from ${basename(xmlFile)}`,
+        notation: {
+          source: 'musicxml',
+          key: {
+            fifths: globalFifths,
+            mode: globalMode,
+          },
+          time: {
+            beats: globalBeats,
+            beat_type: globalBeatType,
+          },
+        },
         provenance: createProvenance({
           sourceType:   'imported-musicxml',
           operation:    'import-xml',
@@ -374,6 +400,8 @@ function extractNotes(measures, beatsPerBar, unpitchedMidiMap = new Map()) {
           const noteObj = { pitch: midi, time: cursor, duration: beatDur, velocity: currentVelocity };
           const lyrics = extractLyrics(n);
           if (lyrics.length > 0) noteObj.lyrics = lyrics;
+          const notation = extractNoteNotation(n, midi, unpitchedMidiMap);
+          if (notation) noteObj.notation = notation;
           notes.push(noteObj);
           if (isTieStart) pendingTies[midi] = noteObj;
         }
@@ -471,6 +499,22 @@ function extractUnpitchedMidiMap(scorePart) {
   return entries;
 }
 
+function extractTrackNotation(measures) {
+  for (const measure of measures) {
+    const attrs = asArray(measure.attributes)[0];
+    const clef = asArray(attrs?.clef)[0];
+    if (clef?.sign) {
+      return {
+        clef: {
+          sign: String(clef.sign),
+          line: Number(clef.line) || (String(clef.sign) === 'F' ? 4 : 2),
+        },
+      };
+    }
+  }
+  return null;
+}
+
 function extractLyrics(note) {
   return asArray(note.lyric)
     .map(lyric => {
@@ -483,6 +527,40 @@ function extractLyrics(note) {
       };
     })
     .filter(Boolean);
+}
+
+function extractNoteNotation(note, midi, unpitchedMidiMap) {
+  const notation = {};
+
+  if (note.pitch) {
+    notation.pitch = {
+      step: note.pitch.step,
+      alter: Number(note.pitch.alter) || 0,
+      octave: Number(note.pitch.octave),
+    };
+  }
+
+  if (note.unpitched) {
+    const instrumentId = note.instrument?.['@_id'];
+    const mappedMidi = instrumentId ? unpitchedMidiMap.get(instrumentId) : null;
+    notation.unpitched = {
+      display_step: note.unpitched['display-step'] || null,
+      display_octave: Number(note.unpitched['display-octave']) || null,
+      instrument_id: instrumentId || null,
+      midi_unpitched: Number.isFinite(mappedMidi) ? mappedMidi : (Number.isFinite(midi) ? midi : null),
+    };
+  }
+
+  if (note.voice !== undefined) notation.voice = textValue(note.voice) || null;
+  if (note.staff !== undefined) notation.staff = textValue(note.staff) || null;
+  if (note.type !== undefined) notation.type = textValue(note.type) || null;
+
+  const ties = asArray(note.tie)
+    .map(tie => tie?.['@_type'])
+    .filter(Boolean);
+  if (ties.length > 0) notation.ties = ties;
+
+  return Object.keys(notation).length > 0 ? notation : null;
 }
 
 function pitchClass(step, alter = 0) {

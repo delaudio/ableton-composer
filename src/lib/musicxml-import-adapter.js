@@ -53,12 +53,21 @@ export function importXmlToSong(score, absPath) {
     bars: totalMeasures,
     tracks: parts.map(part => ({
       ableton_name: partNames[part['@_id']] || part['@_id'],
+      notation: {
+        part_id: part['@_id'],
+        source_name: partNames[part['@_id']] || part['@_id'],
+        ...(extractTrackNotation(part.measure) ?? {}),
+      },
       clip: {
         length_bars: totalMeasures,
         notes: extractNotes(part.measure, beatsPerBar),
       },
     })).filter(track => track.clip.notes.length > 0),
     harmony: dedupeHarmonyEvents(parts.flatMap(part => extractHarmony(part.measure, beatsPerBar))),
+    notation: {
+      measure_start: 1,
+      measure_end: totalMeasures,
+    },
   }];
 
   return {
@@ -68,6 +77,17 @@ export function importXmlToSong(score, absPath) {
       genre: '',
       time_signature: timeSignature,
       description: `Imported from ${absPath.split('/').pop()}`,
+      notation: {
+        source: 'musicxml',
+        key: {
+          fifths: globalFifths,
+          mode: globalMode,
+        },
+        time: {
+          beats: globalBeats,
+          beat_type: globalBeatType,
+        },
+      },
     },
     sections,
   };
@@ -94,12 +114,15 @@ function extractNotes(measures, beatsPerBar) {
       if (isChord) cursor = prevCursor;
 
       if (!isRest && n.pitch) {
-        notes.push({
+        const note = {
           pitch: pitchToMidi(n.pitch.step, Number(n.pitch.octave), Number(n.pitch.alter) || 0),
           time: round3(cursor),
           duration: round3(beatDur),
           velocity: 80,
-        });
+        };
+        const notation = extractNoteNotation(n);
+        if (notation) note.notation = notation;
+        notes.push(note);
       }
 
       prevCursor = cursor;
@@ -110,6 +133,39 @@ function extractNotes(measures, beatsPerBar) {
   }
 
   return notes;
+}
+
+function extractTrackNotation(measures) {
+  for (const measure of measures) {
+    const attrs = asArray(measure.attributes)[0];
+    const clef = asArray(attrs?.clef)[0];
+    if (clef?.sign) {
+      return {
+        clef: {
+          sign: String(clef.sign),
+          line: Number(clef.line) || (String(clef.sign) === 'F' ? 4 : 2),
+        },
+      };
+    }
+  }
+  return null;
+}
+
+function extractNoteNotation(note) {
+  const notation = {};
+  if (note.pitch) {
+    notation.pitch = {
+      step: note.pitch.step,
+      alter: Number(note.pitch.alter) || 0,
+      octave: Number(note.pitch.octave),
+    };
+  }
+  if (note.voice !== undefined) notation.voice = textValue(note.voice) || null;
+  if (note.staff !== undefined) notation.staff = textValue(note.staff) || null;
+  if (note.type !== undefined) notation.type = textValue(note.type) || null;
+  const ties = asArray(note.tie).map(tie => tie?.['@_type']).filter(Boolean);
+  if (ties.length > 0) notation.ties = ties;
+  return Object.keys(notation).length > 0 ? notation : null;
 }
 
 function extractHarmony(measures, beatsPerBar) {

@@ -11,7 +11,7 @@
       "required": ["name", "version"],
       "properties": {
         "name":    { "const": "AbletonSong" },
-        "version": { "const": "0.2" }
+        "version": { "const": "0.3" }
       },
       "additionalProperties": false
     },
@@ -26,6 +26,27 @@
         "mood":           { "type": "string" },
         "time_signature": { "type": "string", "default": "4/4", "description": "E.g. '4/4', '3/4', '6/8'" },
         "description":    { "type": "string", "description": "Free-text description of this song/set" },
+        "notation": {
+          "type": "object",
+          "description": "Optional notation-oriented metadata used by MusicXML workflows. Ableton push ignores this field.",
+          "properties": {
+            "source": { "type": "string" },
+            "key": {
+              "type": "object",
+              "properties": {
+                "fifths": { "type": "integer" },
+                "mode": { "type": "string" }
+              }
+            },
+            "time": {
+              "type": "object",
+              "properties": {
+                "beats": { "type": "integer" },
+                "beat_type": { "type": "integer" }
+              }
+            }
+          }
+        },
         "provenance": {
           "type": "object",
           "description": "Optional reproducibility metadata describing the source and transformations that produced this song. Ableton push ignores this field.",
@@ -85,6 +106,10 @@
             "minimum": 1,
             "description": "Length of this section in bars (used for context only)"
           },
+          "notation": {
+            "type": "object",
+            "description": "Optional notation metadata such as original measure bounds."
+          },
           "tracks": {
             "type": "array",
             "description": "List of tracks to populate. ableton_name must match the track name in your Live set exactly.",
@@ -100,10 +125,17 @@
                   "type": "string",
                   "description": "Human-readable description of the instrument (for LLM context only)"
                 },
+                "notation": {
+                  "type": "object",
+                  "description": "Optional notation metadata such as clef, part id, or original part name."
+                },
                 "clip": {
                   "type": "object",
                   "required": ["length_bars", "notes"],
                   "properties": {
+                    "name": {
+                      "type": "string"
+                    },
                     "length_bars": {
                       "type": "number",
                       "minimum": 0.5,
@@ -145,6 +177,41 @@
                           "muted": {
                             "type": "boolean",
                             "default": false
+                          },
+                          "notation": {
+                            "type": "object",
+                            "description": "Optional note-level notation metadata used for MusicXML round-trips.",
+                            "properties": {
+                              "pitch": {
+                                "type": "object",
+                                "properties": {
+                                  "step": { "type": "string" },
+                                  "alter": { "type": "integer" },
+                                  "octave": { "type": "integer" }
+                                }
+                              },
+                              "unpitched": {
+                                "type": "object",
+                                "properties": {
+                                  "display_step": { "type": "string" },
+                                  "display_octave": { "type": "integer" },
+                                  "midi_unpitched": { "type": "integer" }
+                                }
+                              },
+                              "voice": {
+                                "type": ["integer", "string"]
+                              },
+                              "staff": {
+                                "type": ["integer", "string"]
+                              },
+                              "type": {
+                                "type": "string"
+                              },
+                              "ties": {
+                                "type": "array",
+                                "items": { "type": "string" }
+                              }
+                            }
                           }
                         }
                       }

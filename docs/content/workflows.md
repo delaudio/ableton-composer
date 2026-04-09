@@ -279,7 +279,7 @@ New full AbletonSong JSON outputs include a format marker:
 {
   "_format": {
     "name": "AbletonSong",
-    "version": "0.2"
+    "version": "0.3"
   },
   "meta": {},
   "sections": []
@@ -287,6 +287,17 @@ New full AbletonSong JSON outputs include a format marker:
 ```
 
 Set directories store the same marker in `meta.json`; loaders lift it back to the full-song level. Older unversioned files still load normally and are upgraded to the current marker the next time they are saved by a command.
+
+## Notation Metadata Layer
+
+MusicXML-oriented workflows can now persist an optional `notation` layer without affecting Ableton push. Typical locations are:
+
+- `meta.notation` for key/time signature details from MusicXML
+- `section.notation` for original measure bounds
+- `track.notation` for part ids, source names, and clef hints
+- `note.notation` for pitch spelling, note type, voice/staff, ties, and unpitched percussion display data
+
+This keeps the core format MIDI-friendly while allowing better MusicXML export and future notation-aware features.
 
 ## Provenance Metadata
 

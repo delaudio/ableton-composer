@@ -145,7 +145,7 @@ Important options:
 - `--tracks "Part 1:Piano,Part 2:Lead"`
 - `--chord-track [name]` generates a MIDI chord track from MusicXML harmony symbols, using `Chords` as the default track name.
 
-When present in the source file, `import-xml` also preserves MusicXML lyrics as section/clip metadata and imports unpitched percussion via MusicXML `midi-unpitched` mappings.
+When present in the source file, `import-xml` also preserves MusicXML lyrics as section/clip metadata, imports unpitched percussion via MusicXML `midi-unpitched` mappings, and writes optional `notation` metadata on the song, sections, tracks, and notes for later MusicXML round-trips.
 
 ## Export MusicXML / MXL
 
@@ -158,7 +158,7 @@ Important options:
 
 - `--out <path>` chooses `.musicxml` or `.mxl` output
 
-The exporter concatenates sections into a single score timeline, emits one MusicXML part per track, writes harmony and lyrics when present, and falls back to best-effort note spelling from the song key when notation metadata is not available.
+The exporter concatenates sections into a single score timeline, emits one MusicXML part per track, writes harmony and lyrics when present, prefers preserved `notation` metadata for pitch spelling, clef, and note typing when available, and falls back to best-effort note spelling from the song key when notation metadata is not available.
 
 ## Export MIDI
 

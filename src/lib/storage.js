@@ -22,7 +22,7 @@ export const SETS_DIR = join(__dirname, '../../sets');
 
 export const ABLETON_SONG_FORMAT = Object.freeze({
   name:    'AbletonSong',
-  version: '0.2',
+  version: '0.3',
 });
 
 /**
