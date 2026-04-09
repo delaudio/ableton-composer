@@ -17,6 +17,7 @@ template: docs
 - `pull` import material from Live
 - `import-xml` convert MusicXML/MXL to AbletonSong JSON
 - `export-xml` export an AbletonSong set to MusicXML/MXL
+- `export-midi` export an AbletonSong set to Standard MIDI File
 - `stems scan` scan a folder of audio stems into a manifest JSON
 - `stems setup` create/reuse Ableton audio tracks from a stem manifest
 - `snapshot` save and restore device states
@@ -95,6 +96,18 @@ Important options:
 - `--out <path>` chooses `.musicxml` or `.mxl` output
 
 The exporter concatenates sections into a single score timeline, emits one MusicXML part per track, writes harmony and lyrics when present, and falls back to best-effort note spelling from the song key when notation metadata is not available.
+
+## Export MIDI
+
+```bash
+ableton-composer export-midi sets/my-song --out exports/my-song.mid
+```
+
+Important options:
+
+- `--out <path>` chooses the output `.mid` file
+
+Use MIDI export for DAW interoperability when you care about notes, timing, tempo, and track separation more than notation fidelity.
 
 ## Stem Scan
 

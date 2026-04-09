@@ -20,6 +20,7 @@ import { infoCommand }     from '../src/commands/info.js';
 import { analyzeCommand }  from '../src/commands/analyze.js';
 import { compareCommand }  from '../src/commands/compare.js';
 import { importMidiCommand } from '../src/commands/import-midi.js';
+import { exportMidiCommand } from '../src/commands/export-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
 import { snapshotCommand }  from '../src/commands/snapshot.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
@@ -173,6 +174,13 @@ program
   .option('--split-every <bars>',        'Split into sections every N bars (default: one section)')
   .option('-t, --tracks <names>',        'Rename tracks: positional "Bass,Drums" or mapped "Piano:Pad,Bass:Bass"')
   .action(importMidiCommand);
+
+// ── export-midi ──────────────────────────────────────────────────────────────
+program
+  .command('export-midi <file>')
+  .description('Export an AbletonSong set as a Standard MIDI File (.mid)')
+  .option('-o, --out <path>', 'Save to a specific output file (default: exports/<name>.mid)')
+  .action(exportMidiCommand);
 
 // ── snapshot ──────────────────────────────────────────────────────────────────
 program

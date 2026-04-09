@@ -107,7 +107,21 @@ This is the inverse interoperability path for MuseScore, Logic, and other notati
 - includes harmony symbols and lyrics when present
 - packages compressed `.mxl` output when requested
 
-## 8. Compare Drift
+## 8. Export a Set as MIDI for DAW Interoperability
+
+```bash
+ableton-composer export-midi sets/imported-score \
+  --out exports/imported-score.mid
+```
+
+Use MIDI export when the target is a DAW rather than notation software. The exporter:
+
+- writes one MIDI track per AbletonSong track
+- preserves track names
+- preserves tempo and time signature
+- concatenates section-relative notes into one absolute song timeline
+
+## 9. Compare Drift
 
 ```bash
 ableton-composer compare \
@@ -125,7 +139,7 @@ This reports:
 
 When the source is an album, artist, or collection bundle, compare weights role presence, structure, and role-level rhythm more heavily than exact track-name matches.
 
-## 9. Scan a Stem Folder
+## 10. Scan a Stem Folder
 
 ```bash
 ableton-composer stems scan /path/to/song-stems \
@@ -142,7 +156,7 @@ This creates a versioned stem manifest with:
 
 Use this as the first step before building audio-track setup and Ableton stem loading workflows.
 
-## 10. Prepare Ableton Audio Tracks From a Stem Manifest
+## 11. Prepare Ableton Audio Tracks From a Stem Manifest
 
 ```bash
 ableton-composer stems setup stems/manifests/song-stems.stems.json
@@ -160,7 +174,7 @@ Preview only:
 ableton-composer stems setup stems/manifests/song-stems.stems.json --dry-run
 ```
 
-## 11. Typical Album-Style Loop
+## 12. Typical Album-Style Loop
 
 ```bash
 # analyze
