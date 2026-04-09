@@ -275,7 +275,24 @@ Use this when the next step is arranging or scoring in Logic Pro rather than rou
 - writes MIDI key signature metadata when `meta.scale` is a simple major/minor key
 - reserves channel 10 for drum-like tracks during MIDI export
 
-## 17. Export MIDI for REAPER
+## 17. Generate a Static Song Report
+
+```bash
+ableton-composer report sets/example --out reports/example-report.md
+ableton-composer report sets/example --out docs/content/reports/example-report.md
+```
+
+Use this when you want a lightweight inspection page for demos, thesis material, or internal review. The report includes:
+
+- metadata snapshot for BPM, scale, signature, sections, tracks, and notes
+- section timeline SVG
+- energy curve SVG
+- section, track, and role presence tables
+- density summaries derived from notes per bar
+
+When saved under `docs/content/`, the generated Markdown becomes part of the Minuto docs build automatically.
+
+## 18. Export MIDI for REAPER
 
 ```bash
 ableton-composer export-midi sets/my-song --target reaper
@@ -288,7 +305,7 @@ Use this when the next step is arranging or editing MIDI directly in REAPER. The
 - reserves channel 10 for drum-like tracks during MIDI export
 - writes to `exports/<name>-reaper.mid` unless you override `--out`
 
-## 18. Build an Evaluation Pack for Thesis or User Studies
+## 19. Build an Evaluation Pack for Thesis or User Studies
 
 ```bash
 ableton-composer evaluation-pack \

@@ -15,6 +15,7 @@ template: docs
 - `validate-roundtrip` measure note/track preservation through MIDI or MusicXML export+import
 - `critique` review a set with an AI rubric and structured feedback
 - `evaluation-pack` build a thesis/user-study report bundle from one or more sets
+- `report` generate a static Markdown song report / lightweight visualizer
 - `preset generate` create synth presets from preset profiles
 - `push` write notes into Ableton Live
 - `pull` import material from Live
@@ -228,6 +229,19 @@ Important options:
 - `--out <path>` writes the generated `.lua` script to a custom path
 
 This command does not require REAPER to be running. It writes a Lua ReaScript that you can run inside REAPER to create tracks, preserve stem grouping/colors, and import the referenced audio files at timeline start.
+
+## Report
+
+```bash
+ableton-composer report sets/my-song --out reports/my-song.md
+ableton-composer report sets/my-song --out docs/content/reports/my-song.md
+```
+
+Important options:
+
+- `--out <path>` writes the generated Markdown report to a custom location
+
+The report is Markdown-first so it can live in `reports/` for thesis/demo artifacts or under `docs/content/` for the Minuto site. It includes metadata, section/track tables, role presence, density summaries, and inline SVG visualizations for timeline and energy curve.
 
 ## Presets
 

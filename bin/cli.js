@@ -28,6 +28,7 @@ import { expandCommand }    from '../src/commands/expand.js';
 import { snapshotCommand }  from '../src/commands/snapshot.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
 import { exportXmlCommand } from '../src/commands/export-xml.js';
+import { reportCommand } from '../src/commands/report.js';
 import { stemScanCommand, stemSetupCommand, stemReaperCommand } from '../src/commands/stems.js';
 import { presetSaveCommand, presetLoadCommand, presetListCommand, presetAnalyzeCommand, presetGenerateCommand } from '../src/commands/preset.js';
 
@@ -167,6 +168,12 @@ program
   .option('--roundtrip <formats>', 'Comma-separated round-trip checks: midi,musicxml,mxl')
   .option('--out <dir>', 'Output directory (default: reports/<name>-evaluation-pack)')
   .action(evaluationPackCommand);
+
+program
+  .command('report <file>')
+  .description('Generate a static Markdown song report for docs or thesis/demo use')
+  .option('--out <path>', 'Output Markdown path (default: reports/<name>.md)')
+  .action(reportCommand);
 
 // ── expand ────────────────────────────────────────────────────────────────────
 program
