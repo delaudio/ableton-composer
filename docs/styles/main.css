@@ -258,6 +258,29 @@ html {
   @apply max-w-none;
 }
 
+.report-tooltip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 18rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgb(55 65 81);
+  background: rgba(17, 24, 39, 0.94);
+  color: rgb(243 244 246);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.report-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .command-panel {
   @apply p-1;
 }

@@ -192,25 +192,30 @@ function buildDensityRange(sections) {
 function buildTimelineSvg(sections) {
   const totalBars = Math.max(1, sections.reduce((sum, section) => sum + section.bars, 0));
   const width = 960;
-  const height = 120;
+  const height = 136;
   let cursor = 0;
 
   const rects = sections.map((section, index) => {
     const x = Math.round((cursor / totalBars) * width);
     const w = Math.max(24, Math.round((section.bars / totalBars) * width));
     const fill = SECTION_COLORS[index % SECTION_COLORS.length];
-    const label = escapeXml(section.name);
-    const notes = `${section.note_count} notes`;
+    const label = escapeXml(compactTimelineLabel(section.name, index, w, sections.length));
+    const notes = compactTimelineMeta(section, w);
+    const anchor = w < 64 ? 'middle' : 'start';
+    const textX = w < 64 ? Math.round(x + (w / 2)) : x + 12;
+    const tooltip = escapeXml(formatSectionTooltip(section, index));
     cursor += section.bars;
 
     return [
-      `<rect x="${x}" y="18" width="${w}" height="52" rx="8" fill="${fill}" opacity="0.92"></rect>`,
-      `<text x="${x + 12}" y="42" fill="#111111" font-size="14" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">${label}</text>`,
-      `<text x="${x + 12}" y="60" fill="#333333" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">${section.bars} bars · ${notes}</text>`,
+      `<g data-report-tooltip="${tooltip}" style="cursor: default;">`,
+      `<rect x="${x}" y="18" width="${w}" height="58" rx="8" fill="${fill}" opacity="0.92"></rect>`,
+      `<text x="${textX}" y="42" fill="#111111" font-size="${w < 64 ? 12 : 14}" text-anchor="${anchor}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">${label}</text>`,
+      notes ? `<text x="${textX}" y="60" fill="#333333" font-size="${w < 64 ? 10 : 11}" text-anchor="${anchor}" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">${escapeXml(notes)}</text>` : '',
+      `</g>`,
     ].join('');
   }).join('');
 
-  return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="Song section timeline"><rect x="0" y="0" width="${width}" height="${height}" rx="14" fill="#f5f1e8"></rect>${rects}</svg>`;
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="Song section timeline"><rect x="0" y="0" width="${width}" height="${height}" rx="14" fill="#f5f1e8"></rect>${rects}<text x="24" y="112" fill="#5b5b5b" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">Detailed section names remain listed in the Sections table below.</text></svg>`;
 }
 
 function buildEnergySvg(sections) {
@@ -219,6 +224,7 @@ function buildEnergySvg(sections) {
   const padding = 40;
   const maxEnergy = Math.max(1, ...sections.map(section => section.energy));
   const step = sections.length > 1 ? (width - padding * 2) / (sections.length - 1) : 0;
+  const compactAxis = sections.length >= 8;
 
   const points = sections.map((section, index) => {
     const x = padding + index * step;
@@ -229,10 +235,21 @@ function buildEnergySvg(sections) {
   const polyline = points.map(([x, y]) => `${x},${y}`).join(' ');
   const dots = points.map(([x, y], index) => {
     const section = sections[index];
-    return `<g><circle cx="${x}" cy="${y}" r="5" fill="#0f766e"></circle><text x="${x}" y="${height - 12}" text-anchor="middle" fill="#333333" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">${escapeXml(section.name)}</text></g>`;
+    const label = compactAxis ? compactTimelineLabel(section.name, index, 72, sections.length) : truncateLabel(section.name, 12);
+    const tooltip = escapeXml(`${formatSectionTooltip(section, index)}\nEnergy: ${section.energy}/10`);
+    return [
+      `<g data-report-tooltip="${tooltip}" style="cursor: default;">`,
+      `<circle cx="${x}" cy="${y}" r="5" fill="#0f766e"></circle>`,
+      `<text x="${x}" y="${height - 12}" text-anchor="middle" fill="#333333" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">${escapeXml(label)}</text>`,
+      `</g>`,
+    ].join('');
   }).join('');
 
-  return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="Section energy curve"><rect x="0" y="0" width="${width}" height="${height}" rx="14" fill="#eef7f5"></rect><line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#6b7280" stroke-width="1"></line><line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#6b7280" stroke-width="1"></line><polyline fill="none" stroke="#0f766e" stroke-width="4" points="${polyline}"></polyline>${dots}</svg>`;
+  const footer = compactAxis
+    ? `<text x="24" y="${height - 24}" fill="#5b5b5b" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">Hover points for full section names and energy details.</text>`
+    : '';
+
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="Section energy curve"><rect x="0" y="0" width="${width}" height="${height}" rx="14" fill="#eef7f5"></rect><line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#6b7280" stroke-width="1"></line><line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#6b7280" stroke-width="1"></line><polyline fill="none" stroke="#0f766e" stroke-width="4" points="${polyline}"></polyline>${dots}${footer}</svg>`;
 }
 
 function inferRoleFromName(name) {
@@ -260,6 +277,34 @@ function inferSectionBars(section) {
 
 function formatDecimal(value) {
   return Number(value || 0).toFixed(2).replace(/\.00$/, '');
+}
+
+function compactTimelineLabel(name, index, width, sectionCount) {
+  if (width < 42) return String(index + 1);
+  if (width < 64) return String(index + 1).padStart(2, '0');
+  if (sectionCount >= 10) return `S${String(index + 1).padStart(2, '0')}`;
+
+  const normalized = String(name || `section_${index + 1}`);
+  if (width < 96) return truncateLabel(normalized, 8);
+  if (width < 140) return truncateLabel(normalized, 14);
+  return truncateLabel(normalized, 24);
+}
+
+function compactTimelineMeta(section, width) {
+  if (width < 42) return '';
+  if (width < 64) return `${section.bars}b`;
+  if (width < 96) return `${section.bars}b · ${section.note_count}n`;
+  return `${section.bars} bars · ${section.note_count} notes`;
+}
+
+function formatSectionTooltip(section, index) {
+  return `S${String(index + 1).padStart(2, '0')} · ${section.name}\n${section.bars} bars · ${section.note_count} notes · ${section.track_count} tracks`;
+}
+
+function truncateLabel(value, maxLength) {
+  const input = String(value || '');
+  if (input.length <= maxLength) return input;
+  return `${input.slice(0, Math.max(1, maxLength - 1))}…`;
 }
 
 function escapeXml(value) {

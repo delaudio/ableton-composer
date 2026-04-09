@@ -153,3 +153,48 @@ document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
     }
   });
 });
+
+const initReportTooltips = () => {
+  const tooltipTargets = document.querySelectorAll("[data-report-tooltip]");
+  if (tooltipTargets.length === 0) return;
+
+  const tooltip = document.createElement("div");
+  tooltip.className = "report-tooltip";
+  document.body.appendChild(tooltip);
+
+  const showTooltip = (event) => {
+    const target = event.target.closest("[data-report-tooltip]");
+    if (!target) return;
+
+    tooltip.textContent = target.getAttribute("data-report-tooltip") || "";
+    tooltip.classList.add("is-visible");
+    moveTooltip(event);
+  };
+
+  const hideTooltip = () => {
+    tooltip.classList.remove("is-visible");
+  };
+
+  const moveTooltip = (event) => {
+    if (!tooltip.classList.contains("is-visible")) return;
+
+    const offset = 16;
+    const width = tooltip.offsetWidth;
+    const height = tooltip.offsetHeight;
+    const maxX = window.innerWidth - width - 12;
+    const maxY = window.innerHeight - height - 12;
+    const left = Math.min(event.clientX + offset, Math.max(12, maxX));
+    const top = Math.min(event.clientY + offset, Math.max(12, maxY));
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  };
+
+  tooltipTargets.forEach((target) => {
+    target.addEventListener("mouseenter", showTooltip);
+    target.addEventListener("mousemove", moveTooltip);
+    target.addEventListener("mouseleave", hideTooltip);
+  });
+};
+
+initReportTooltips();
