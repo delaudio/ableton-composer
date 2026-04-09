@@ -14,6 +14,7 @@ template: docs
 - `compare` compare a generated set against a reference profile or bundle
 - `validate-roundtrip` measure note/track preservation through MIDI or MusicXML export+import
 - `critique` review a set with an AI rubric and structured feedback
+- `evaluation-pack` build a thesis/user-study report bundle from one or more sets
 - `preset generate` create synth presets from preset profiles
 - `push` write notes into Ableton Live
 - `pull` import material from Live
@@ -105,6 +106,26 @@ If you want the same critique step immediately after generation, use `generate -
 The critique command returns structured guidance, not objective truth. It does not modify the source set.
 
 Named rubrics are loaded from `prompts/critique/`. Add a new Markdown file there to introduce a new critique context without changing the command implementation.
+
+## Evaluation Pack
+
+```bash
+ableton-composer evaluation-pack sets/my-song \
+  --reference profiles/albums/example-artist/midnight-signals/bundle.json \
+  --roundtrip midi,musicxml
+```
+
+Important options:
+
+- `--reference <path>`
+- `--critique`
+- `--rubric auto|general|string-quartet|synth-pop|chicago-house`
+- `--provider anthropic|openai|codex|claude-cli`
+- `--model <model>`
+- `--roundtrip midi|musicxml|mxl` or comma-separated list
+- `--out <dir>`
+
+This command writes an `evaluation-pack.json` plus a Markdown summary. It is meant for thesis work, demos, and repeatable user-study material, not just console inspection.
 
 ## Expand
 

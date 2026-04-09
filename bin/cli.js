@@ -21,6 +21,7 @@ import { analyzeCommand }  from '../src/commands/analyze.js';
 import { compareCommand }  from '../src/commands/compare.js';
 import { validateRoundtripCommand } from '../src/commands/validate-roundtrip.js';
 import { critiqueCommand } from '../src/commands/critique.js';
+import { evaluationPackCommand } from '../src/commands/evaluation-pack.js';
 import { importMidiCommand } from '../src/commands/import-midi.js';
 import { exportMidiCommand } from '../src/commands/export-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
@@ -153,6 +154,19 @@ program
   .option('-m, --model <model>', 'Model override')
   .option('--out <path>', 'Save the critique report as JSON')
   .action(critiqueCommand);
+
+program
+  .command('evaluation-pack <targets...>')
+  .alias('eval-pack')
+  .description('Build a thesis/user-study evaluation bundle from one or more sets')
+  .option('--reference <path>', 'Reference set/profile/bundle for compare scoring')
+  .option('--critique', 'Run AI critique for each target')
+  .option('--rubric <name>', 'Critique rubric when --critique is enabled')
+  .option('--provider <name>', 'AI provider for --critique')
+  .option('-m, --model <model>', 'Model override for --critique')
+  .option('--roundtrip <formats>', 'Comma-separated round-trip checks: midi,musicxml,mxl')
+  .option('--out <dir>', 'Output directory (default: reports/<name>-evaluation-pack)')
+  .action(evaluationPackCommand);
 
 // ── expand ────────────────────────────────────────────────────────────────────
 program

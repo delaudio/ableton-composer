@@ -240,6 +240,37 @@ ableton-composer compare \
   sets/generated-output
 ```
 
+## 15. Build an Evaluation Pack for Thesis or User Studies
+
+```bash
+ableton-composer evaluation-pack \
+  sets/generated-a \
+  sets/generated-b \
+  --reference profiles/albums/example-artist/midnight-signals/bundle.json \
+  --roundtrip midi,musicxml \
+  --out reports/session-01
+```
+
+Add critique when you want qualitative feedback in the same bundle:
+
+```bash
+ableton-composer evaluation-pack \
+  sets/generated-a \
+  --reference profiles/albums/example-artist/midnight-signals/bundle.json \
+  --roundtrip midi \
+  --critique \
+  --rubric auto \
+  --provider openai \
+  --out reports/session-02
+```
+
+The command writes:
+
+- `evaluation-pack.json` with structured per-target results
+- `README.md` with a quick human-readable summary
+
+This is the intended bridge between generation, compare, critique, and interoperability validation when you need repeatable evaluation artifacts.
+
 ## Format Versioning
 
 New full AbletonSong JSON outputs include a format marker:
