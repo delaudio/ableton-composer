@@ -13,6 +13,7 @@ template: docs
 - `analyze` extract song, album, artist, or collection profiles
 - `compare` compare a generated set against a reference profile or bundle
 - `validate-roundtrip` measure note/track preservation through MIDI or MusicXML export+import
+- `critique` review a set with an AI rubric and structured feedback
 - `preset generate` create synth presets from preset profiles
 - `push` write notes into Ableton Live
 - `pull` import material from Live
@@ -79,6 +80,21 @@ Important options:
 - `--out <path>` saves the report JSON
 
 This command exports the set, re-imports it, and reports what survived: note counts, track names, BPM, time signature, and note-level drift.
+
+## Critique
+
+```bash
+ableton-composer critique sets/my-song --rubric general --provider openai
+```
+
+Important options:
+
+- `--rubric general|string-quartet|synth-pop|chicago-house`
+- `--provider anthropic|openai|codex|claude-cli`
+- `--model <model>`
+- `--out <path>`
+
+The critique command returns structured guidance, not objective truth. It does not modify the source set.
 
 ## Expand
 

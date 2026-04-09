@@ -136,7 +136,23 @@ Use this when you want to measure what is preserved across interchange formats. 
 - section-count drift
 - pitch/timing/duration mismatches
 
-## 10. Compare Drift
+## 10. Critique a Generated Set
+
+```bash
+ableton-composer critique sets/my-song \
+  --rubric general \
+  --provider openai \
+  --out reports/my-song-critique.json
+```
+
+Use this when you want structured feedback before revising a piece. The critique is advisory rather than objective and can help identify:
+
+- structural weaknesses
+- role-balance problems
+- idiomatic issues for a target instrumentation
+- weak contrast or continuity between sections
+
+## 11. Compare Drift
 
 ```bash
 ableton-composer compare \
@@ -154,7 +170,7 @@ This reports:
 
 When the source is an album, artist, or collection bundle, compare weights role presence, structure, and role-level rhythm more heavily than exact track-name matches.
 
-## 11. Scan a Stem Folder
+## 12. Scan a Stem Folder
 
 ```bash
 ableton-composer stems scan /path/to/song-stems \
@@ -171,7 +187,7 @@ This creates a versioned stem manifest with:
 
 Use this as the first step before building audio-track setup and Ableton stem loading workflows.
 
-## 12. Prepare Ableton Audio Tracks From a Stem Manifest
+## 13. Prepare Ableton Audio Tracks From a Stem Manifest
 
 ```bash
 ableton-composer stems setup stems/manifests/song-stems.stems.json
@@ -189,7 +205,7 @@ Preview only:
 ableton-composer stems setup stems/manifests/song-stems.stems.json --dry-run
 ```
 
-## 13. Typical Album-Style Loop
+## 14. Typical Album-Style Loop
 
 ```bash
 # analyze

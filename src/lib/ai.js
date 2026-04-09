@@ -200,6 +200,45 @@ const PRESET_RESPONSE_SCHEMA = {
   },
 };
 
+const CRITIQUE_RESPONSE_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['score', 'rubric', 'summary', 'strengths', 'issues', 'suggested_revisions', 'followup_commands'],
+  properties: {
+    score: { type: 'integer' },
+    rubric: { type: 'string' },
+    summary: { type: 'string' },
+    strengths: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    issues: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['severity', 'category', 'message'],
+        properties: {
+          severity: { type: 'string' },
+          category: { type: 'string' },
+          section: { type: 'string' },
+          track: { type: 'string' },
+          message: { type: 'string' },
+          suggestion: { type: 'string' },
+        },
+      },
+    },
+    suggested_revisions: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    followup_commands: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+  },
+};
+
 export function normalizeProvider(provider = 'anthropic') {
   const normalized = String(provider).toLowerCase();
 
@@ -790,6 +829,18 @@ export async function generatePresetObject({ systemPrompt, userMessage, model, p
     userMessage,
     responseSchema: PRESET_RESPONSE_SCHEMA,
     schemaName: 'synth_preset',
+    maxTokens: 4096,
+  });
+}
+
+export async function critiqueSongObject({ systemPrompt, userMessage, model, provider = 'anthropic' }) {
+  return generateStructuredObject({
+    provider,
+    model,
+    systemPrompt,
+    userMessage,
+    responseSchema: CRITIQUE_RESPONSE_SCHEMA,
+    schemaName: 'song_critique',
     maxTokens: 4096,
   });
 }

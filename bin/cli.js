@@ -20,6 +20,7 @@ import { infoCommand }     from '../src/commands/info.js';
 import { analyzeCommand }  from '../src/commands/analyze.js';
 import { compareCommand }  from '../src/commands/compare.js';
 import { validateRoundtripCommand } from '../src/commands/validate-roundtrip.js';
+import { critiqueCommand } from '../src/commands/critique.js';
 import { importMidiCommand } from '../src/commands/import-midi.js';
 import { exportMidiCommand } from '../src/commands/export-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
@@ -140,6 +141,15 @@ program
   .requiredOption('--via <format>', 'Round-trip format: midi, musicxml, or mxl')
   .option('--out <path>', 'Save the validation report as JSON')
   .action(validateRoundtripCommand);
+
+program
+  .command('critique <file>')
+  .description('Review a set with an AI model and return structured musical feedback')
+  .option('--rubric <name>', 'Critique rubric: general, string-quartet, synth-pop, chicago-house')
+  .option('--provider <name>', 'AI provider: "api"/"anthropic", "openai", "codex", or "cli"/"claude-cli"')
+  .option('-m, --model <model>', 'Model override')
+  .option('--out <path>', 'Save the critique report as JSON')
+  .action(critiqueCommand);
 
 // ── expand ────────────────────────────────────────────────────────────────────
 program
