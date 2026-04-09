@@ -53,7 +53,7 @@ Common options:
 
 When `--evaluate` is enabled, `generate` saves the set first and then runs the critique pipeline against the saved output. If `--eval-out` is omitted, the report is written next to the saved set as `<saved-path>.critique.json`.
 
-`--dossier` adds a separate knowledge layer for historical context, instrumentation families, production traits, facts, inferences, and sources. It complements a style profile instead of replacing it.
+`--dossier` adds a separate knowledge layer for historical context, instrumentation families, production traits, facts, inferences, sources, and historical guardrails. It complements a style profile instead of replacing it.
 
 ## Research Dossiers
 
@@ -71,6 +71,17 @@ Important options:
 - `--print` prints the dossier JSON without saving
 
 The dossier format separates factual claims, creative inferences, source notes, and historical caveats so generation can use historically informed guardrails without collapsing into artist cloning.
+
+Each dossier can now also include a structured `historical_guardrails` block with:
+
+- `target_period`
+- `allowed_instrument_families`
+- `caution_instruments`
+- `avoid_by_default`
+- `historically_plausible_substitutes`
+- `anachronism_policy`
+
+These guardrails are advisory by default. They are meant to bias generation away from obvious anachronisms without turning every dossier into a rigid reconstruction.
 
 ## Analyze
 

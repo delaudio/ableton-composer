@@ -45,6 +45,7 @@ export function createGenreResearchDossier(topic) {
     rhythm_harmony_tendencies: catalog.rhythm_harmony_tendencies || [],
     sound_design_traits: catalog.sound_design_traits || [],
     suggested_role_palette: catalog.suggested_role_palette || [],
+    historical_guardrails: catalog.historical_guardrails || buildDefaultHistoricalGuardrails(period || catalog.period || '', catalog.instrumentation_families || []),
     historical_constraints_and_caveats: catalog.historical_constraints_and_caveats || [
       'Separate era-faithful traits from modern convenience choices.',
       'Do not treat this dossier as a license to imitate a specific artist or song too closely.',
@@ -110,6 +111,7 @@ export function buildDossierPromptSection(dossier) {
   pushList(lines, 'Rhythm and harmony tendencies', dossier.rhythm_harmony_tendencies);
   pushList(lines, 'Sound design traits', dossier.sound_design_traits);
   pushList(lines, 'Suggested role palette', dossier.suggested_role_palette);
+  pushHistoricalGuardrails(lines, dossier.historical_guardrails);
   pushList(lines, 'Historical constraints and caveats', dossier.historical_constraints_and_caveats);
 
   const facts = normalizeClaims(dossier.facts);
@@ -154,6 +156,58 @@ function pushList(lines, heading, values) {
   }
 }
 
+function pushHistoricalGuardrails(lines, guardrails) {
+  if (!guardrails || typeof guardrails !== 'object') return;
+
+  const period = guardrails.target_period || {};
+  const periodLabel = [
+    Number.isFinite(period.start_year) ? period.start_year : null,
+    Number.isFinite(period.end_year) ? period.end_year : null,
+  ].filter(value => value != null).join('-');
+
+  if (
+    !periodLabel &&
+    !Array.isArray(guardrails.allowed_instrument_families) &&
+    !Array.isArray(guardrails.caution_instruments) &&
+    !Array.isArray(guardrails.avoid_by_default) &&
+    !Array.isArray(guardrails.historically_plausible_substitutes)
+  ) {
+    return;
+  }
+
+  lines.push('Historical guardrails (advisory by default):');
+  if (periodLabel) lines.push(`- Target period: ${periodLabel}`);
+  if (guardrails.anachronism_policy) lines.push(`- Anachronism policy: ${guardrails.anachronism_policy}`);
+
+  if (Array.isArray(guardrails.allowed_instrument_families) && guardrails.allowed_instrument_families.length > 0) {
+    lines.push(`- Allowed instrument families: ${guardrails.allowed_instrument_families.join(', ')}`);
+  }
+
+  if (Array.isArray(guardrails.caution_instruments) && guardrails.caution_instruments.length > 0) {
+    lines.push('- Caution instruments:');
+    for (const entry of guardrails.caution_instruments) {
+      lines.push(`  - ${formatGuardrailEntry(entry)}`);
+    }
+  }
+
+  if (Array.isArray(guardrails.avoid_by_default) && guardrails.avoid_by_default.length > 0) {
+    lines.push('- Avoid by default:');
+    for (const entry of guardrails.avoid_by_default) {
+      lines.push(`  - ${formatGuardrailEntry(entry)}`);
+    }
+  }
+
+  if (Array.isArray(guardrails.historically_plausible_substitutes) && guardrails.historically_plausible_substitutes.length > 0) {
+    lines.push('- Historically plausible substitutes:');
+    for (const entry of guardrails.historically_plausible_substitutes) {
+      const source = entry.for || entry.source || 'modern instrument';
+      const substitutes = Array.isArray(entry.substitutes) ? entry.substitutes.join(', ') : '';
+      const reason = entry.reason ? ` (${entry.reason})` : '';
+      lines.push(`  - ${source} -> ${substitutes || 'n/a'}${reason}`);
+    }
+  }
+}
+
 function normalizeClaims(values) {
   if (!Array.isArray(values)) return [];
   return values
@@ -174,6 +228,9 @@ function validateResearchDossier(dossier, resolvedPath) {
   }
   if (!dossier.topic) {
     throw new Error(`Research dossier missing topic: ${resolvedPath}`);
+  }
+  if (dossier.historical_guardrails != null && typeof dossier.historical_guardrails !== 'object') {
+    throw new Error(`Research dossier historical_guardrails must be an object: ${resolvedPath}`);
   }
 }
 
@@ -197,6 +254,23 @@ function matchGenreTemplate(topic) {
       rhythm_harmony_tendencies: ['steady straight subdivisions', 'danceable mid-tempo pulse', 'diatonic minor/major progressions with occasional modal color', 'repeating bass ostinati'],
       sound_design_traits: ['brassy analog stabs', 'glassier pad layers', 'pulse-wave basses', 'short melodic leads with portamento used sparingly'],
       suggested_role_palette: ['drums', 'bass', 'pad', 'lead', 'keys', 'vocals', 'fx'],
+      historical_guardrails: {
+        target_period: { start_year: 1978, end_year: 1985 },
+        allowed_instrument_families: ['analog monosynths', 'analog or early digital polysynths', 'drum machines', 'simple vocal layering', 'clean bass guitar or synth bass'],
+        caution_instruments: [
+          { name: 'Yamaha DX7', reason: 'belongs more to the mid-1980s edge than the earliest synth-pop wave' },
+          { name: 'TR-909', reason: 'more late and hybrid than default early synth-pop grounding' },
+        ],
+        avoid_by_default: [
+          { name: 'supersaw trance stacks', reason: 'decades-later EDM texture' },
+          { name: 'modern cinematic riser impacts', reason: 'not period-native as a default palette' },
+        ],
+        historically_plausible_substitutes: [
+          { for: 'modern supersaw pad', substitutes: ['Juno-style chorused pad', 'string machine ensemble'], reason: 'closer to period texture and voicing' },
+          { for: 'aggressive EDM kick', substitutes: ['Linn/DMX-style drum machine kick', 'dry analog kick'], reason: 'keeps the low end period-plausible' },
+        ],
+        anachronism_policy: 'Prefer period-plausible synth and drum machine sources; allow later digital colors only as edge cases, not defaults.',
+      },
       historical_constraints_and_caveats: ['Avoid modern supersaw stack density unless intentionally hybridizing eras.', 'Keep drum programming simpler than contemporary EDM.'],
       facts: [
         { claim: 'Synth-pop is closely associated with late 1970s to mid 1980s electronic pop and new wave scenes.', confidence: 'medium', source_note: 'Seed template' },
@@ -216,6 +290,23 @@ function matchGenreTemplate(topic) {
       rhythm_harmony_tendencies: ['motorik 4/4 possibilities', 'pedal points', 'modal harmony', 'slow harmonic rhythm'],
       sound_design_traits: ['organ drones', 'tape echo', 'filter sweeps', 'noisy transitional texture', 'modular or semi-modular synth accents'],
       suggested_role_palette: ['drums', 'bass', 'lead', 'pad', 'keys', 'fx'],
+      historical_guardrails: {
+        target_period: { start_year: 1968, end_year: 1976 },
+        allowed_instrument_families: ['drum kit', 'electric bass', 'electric guitar', 'organ', 'electric piano', 'analog synths', 'tape effects', 'percussion'],
+        caution_instruments: [
+          { name: 'TR-808', reason: 'appears after the core krautrock period' },
+          { name: 'polyphonic DCO synth pop textures', reason: 'more aligned with later late-70s/80s production language' },
+        ],
+        avoid_by_default: [
+          { name: 'Korg M1', reason: 'late-1980s ROMpler far outside the target period' },
+          { name: 'modern EDM sidechain pumping', reason: 'anachronistic mix behavior for this context' },
+        ],
+        historically_plausible_substitutes: [
+          { for: 'rompler workstation pad', substitutes: ['organ drone', 'analog synth drone', 'tape-treated electric piano'], reason: 'matches period technology and texture' },
+          { for: 'sample-pack transition FX', substitutes: ['tape echo swell', 'noise burst', 'filter sweep'], reason: 'keeps transitions grounded in period-plausible studio moves' },
+        ],
+        anachronism_policy: 'Stay close to late-1960s to mid-1970s instrument technology unless the user explicitly asks for a hybrid update.',
+      },
       historical_constraints_and_caveats: ['Do not collapse all krautrock into one tempo or one drum pattern.', 'Leave room for experimental texture and repetition instead of constant sectional turnover.'],
       facts: [
         { claim: 'Krautrock commonly refers to diverse West German experimental rock scenes active around the late 1960s through mid 1970s.', confidence: 'medium', source_note: 'Seed template' },
@@ -235,8 +326,53 @@ function matchGenreTemplate(topic) {
       rhythm_harmony_tendencies: ['laid-back swing', 'minor-key bias', 'soul/jazz chord color', 'repetitive but slowly evolving rhythmic cells'],
       sound_design_traits: ['vinyl noise', 'tape or bit-reduced texture', 'dark filtered pads', 'reversed effects'],
       suggested_role_palette: ['drums', 'bass', 'keys', 'pad', 'lead', 'vocals', 'fx'],
+      historical_guardrails: {
+        target_period: { start_year: 1990, end_year: 1999 },
+        allowed_instrument_families: ['samplers', 'breakbeats', 'electric bass or sampled bass', 'keys', 'pads', 'guitar fragments', 'vocals', 'turntable texture'],
+        caution_instruments: [
+          { name: 'ultra-clean modern mastering chain choices', reason: 'can erase the dusty and dubby character associated with the style' },
+        ],
+        avoid_by_default: [
+          { name: 'modern festival EDM supersaws', reason: 'not part of the core trip-hop production language' },
+        ],
+        historically_plausible_substitutes: [
+          { for: 'hyper-clean modern drum programming', substitutes: ['swung breakbeat', 'dusty sampled drum loop'], reason: 'better matches period groove language' },
+        ],
+        anachronism_policy: 'Prefer 1990s sampler, dub-space, and breakbeat logic; modern polish can be used, but only deliberately.',
+      },
     };
   }
 
   return {};
+}
+
+function buildDefaultHistoricalGuardrails(periodLabel, instrumentationFamilies) {
+  const { startYear, endYear } = parsePeriodRange(periodLabel);
+  return {
+    target_period: {
+      start_year: startYear,
+      end_year: endYear,
+    },
+    allowed_instrument_families: Array.isArray(instrumentationFamilies) ? instrumentationFamilies : [],
+    caution_instruments: [],
+    avoid_by_default: [],
+    historically_plausible_substitutes: [],
+    anachronism_policy: 'Treat historical guardrails as advisory unless the calling workflow requests stricter period discipline.',
+  };
+}
+
+function parsePeriodRange(periodLabel) {
+  const matches = String(periodLabel || '').match(/\b(19|20)\d{2}\b/g) || [];
+  const years = matches.map(value => parseInt(value, 10)).filter(Number.isFinite);
+  return {
+    startYear: years[0] ?? null,
+    endYear: years[1] ?? years[0] ?? null,
+  };
+}
+
+function formatGuardrailEntry(entry) {
+  if (typeof entry === 'string') return entry;
+  if (!entry || typeof entry !== 'object') return 'unknown';
+  const name = entry.name || entry.instrument || entry.value || 'unknown';
+  return entry.reason ? `${name} (${entry.reason})` : name;
 }

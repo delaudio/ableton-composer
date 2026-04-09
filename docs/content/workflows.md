@@ -63,6 +63,8 @@ ableton-composer generate "melancholic pop pulse with restrained hooks" \
 
 Use this when you want historically informed arrangement and production guardrails without depending only on vague prompt wording. Dossiers are additive: they work alongside style profiles instead of replacing them.
 
+Research dossiers can now carry explicit historical guardrails too, for example period bounds, caution instruments, avoid-by-default lists, and historically plausible substitutes. Those guardrails are passed into generation as advisory constraints so the model can avoid obvious anachronisms by default.
+
 ## 5. Generate a Preset
 
 ```bash
