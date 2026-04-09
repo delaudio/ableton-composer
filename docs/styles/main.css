@@ -66,10 +66,6 @@ html {
   .toc-sidebar {
     display: none;
   }
-
-  .main-content {
-    margin-right: 0 !important;
-  }
 }
 
 @media (max-width: 768px) {
@@ -77,8 +73,19 @@ html {
     display: none;
   }
 
-  .main-content {
-    margin-left: 0 !important;
+  .prose pre {
+    font-size: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .prose code {
+    word-break: break-word;
+  }
+
+  .prose table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
   }
 }
 
@@ -132,6 +139,8 @@ html {
 
 .prose pre {
   @apply bg-black dark:bg-gray-950 text-white p-4 overflow-x-auto mb-6 border border-gray-300 dark:border-gray-800;
+  max-width: 100%;
+  font-size: 0.8rem;
 }
 
 .prose pre code {
