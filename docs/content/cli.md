@@ -23,6 +23,7 @@ template: docs
 - `export-midi` export an AbletonSong set to Standard MIDI File
 - `stems scan` scan a folder of audio stems into a manifest JSON
 - `stems setup` create/reuse Ableton audio tracks from a stem manifest
+- `stems reaper` generate a REAPER ReaScript from a stem manifest
 - `snapshot` save and restore device states
 
 ## Generate
@@ -152,25 +153,36 @@ When present in the source file, `import-xml` also preserves MusicXML lyrics as 
 ```bash
 ableton-composer export-xml sets/my-song --out exports/my-song.musicxml
 ableton-composer export-xml sets/my-song --out exports/my-song.mxl
+ableton-composer export-xml sets/my-song --target logic
 ```
 
 Important options:
 
 - `--out <path>` chooses `.musicxml` or `.mxl` output
+- `--target <name>` enables export presets like `logic`
 
 The exporter concatenates sections into a single score timeline, emits one MusicXML part per track, writes harmony and lyrics when present, prefers preserved `notation` metadata for pitch spelling, clef, and note typing when available, and falls back to best-effort note spelling from the song key when notation metadata is not available.
+
+With `--target logic`, part names are prefixed in a stable import order and the default output path becomes `exports/<name>-logic.musicxml` unless you override it.
 
 ## Export MIDI
 
 ```bash
 ableton-composer export-midi sets/my-song --out exports/my-song.mid
+ableton-composer export-midi sets/my-song --target logic
+ableton-composer export-midi sets/my-song --target reaper
 ```
 
 Important options:
 
 - `--out <path>` chooses the output `.mid` file
+- `--target <name>` enables export presets like `logic` and `reaper`
 
 Use MIDI export for DAW interoperability when you care about notes, timing, tempo, and track separation more than notation fidelity.
+
+With `--target logic`, the exporter adds section markers, writes key signature metadata when the song scale is a simple major/minor key, reserves channel 10 for drum-like tracks, and prefixes track names with their import order for cleaner Logic sessions.
+
+With `--target reaper`, the exporter keeps original track names, adds section markers, and still reserves channel 10 for drum-like tracks so imported MIDI lands in a cleaner REAPER session by default.
 
 ## Stem Scan
 
@@ -198,6 +210,21 @@ Important options:
 - `--dry-run` previews the track setup without touching Ableton
 
 This command creates missing Ableton audio tracks from the manifest, reuses tracks with matching names, and applies manifest colors when possible.
+
+## Stem Reaper
+
+```bash
+ableton-composer stems reaper stems/manifests/my-song.stems.json
+```
+
+Important options:
+
+- `--bpm <n>` sets the REAPER project tempo in the generated script
+- `--time-signature <sig>` sets the project time signature
+- `--flat` creates one flat track list instead of group folders
+- `--out <path>` writes the generated `.lua` script to a custom path
+
+This command does not require REAPER to be running. It writes a Lua ReaScript that you can run inside REAPER to create tracks, preserve stem grouping/colors, and import the referenced audio files at timeline start.
 
 ## Presets
 

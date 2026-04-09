@@ -28,7 +28,7 @@ import { expandCommand }    from '../src/commands/expand.js';
 import { snapshotCommand }  from '../src/commands/snapshot.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
 import { exportXmlCommand } from '../src/commands/export-xml.js';
-import { stemScanCommand, stemSetupCommand } from '../src/commands/stems.js';
+import { stemScanCommand, stemSetupCommand, stemReaperCommand } from '../src/commands/stems.js';
 import { presetSaveCommand, presetLoadCommand, presetListCommand, presetAnalyzeCommand, presetGenerateCommand } from '../src/commands/preset.js';
 
 const program = new Command();
@@ -198,6 +198,7 @@ program
   .command('export-xml <file>')
   .description('Export an AbletonSong set as MusicXML (.musicxml) or compressed MXL (.mxl)')
   .option('-o, --out <path>', 'Save to a specific output file (default: exports/<name>.musicxml)')
+  .option('--target <name>', 'Export target preset: default, logic, or reaper')
   .action(exportXmlCommand);
 
 // ── import-midi ───────────────────────────────────────────────────────────────
@@ -215,6 +216,7 @@ program
   .command('export-midi <file>')
   .description('Export an AbletonSong set as a Standard MIDI File (.mid)')
   .option('-o, --out <path>', 'Save to a specific output file (default: exports/<name>.mid)')
+  .option('--target <name>', 'Export target preset: default, logic, or reaper')
   .action(exportMidiCommand);
 
 // ── snapshot ──────────────────────────────────────────────────────────────────
@@ -243,6 +245,17 @@ stemsCmd
   .description('Create or align Ableton audio tracks from a stem manifest')
   .option('--dry-run', 'Show what would be set up without writing to Ableton')
   .action(stemSetupCommand);
+
+stemsCmd
+  .command('reaper <manifest>')
+  .description('Generate a REAPER ReaScript that imports a stem manifest into tracks')
+  .option('-n, --name <name>', 'Project name shown in the generated REAPER script')
+  .option('-o, --out <path>', 'Output .lua file or directory (default: stems/reaper/<name>-import.lua)')
+  .option('--bpm <n>', 'Project tempo to set in REAPER', '120')
+  .option('--time-signature <sig>', 'Project time signature, e.g. 4/4', '4/4')
+  .option('--flat', 'Create a flat track list instead of group folders')
+  .option('--dry-run', 'Preview the generated REAPER import script path without writing it')
+  .action(stemReaperCommand);
 
 // ── preset ────────────────────────────────────────────────────────────────────
 const presetCmd = program

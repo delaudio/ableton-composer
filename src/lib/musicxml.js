@@ -2,10 +2,12 @@ import { mkdir, writeFile } from 'fs/promises';
 import { basename, dirname, extname, join } from 'path';
 import { zipSync, strToU8 } from 'fflate';
 import { slugify } from './storage.js';
+import { formatExportTrackName, resolveMusicXmlExportPreset } from './export-presets.js';
 
 export async function exportSongToMusicXml(song, outPath, options = {}) {
-  const normalizedOut = resolveExportPath(song, outPath);
-  const xml = buildMusicXml(song, options);
+  const preset = resolveMusicXmlExportPreset(song, options.target, outPath);
+  const normalizedOut = resolveExportPath(song, outPath, preset.defaultOutPath);
+  const xml = buildMusicXml(song, { ...options, preset });
 
   await mkdir(dirname(normalizedOut), { recursive: true });
 
@@ -20,6 +22,7 @@ export async function exportSongToMusicXml(song, outPath, options = {}) {
 }
 
 export function buildMusicXml(song, options = {}) {
+  const preset = options.preset || resolveMusicXmlExportPreset(song, options.target, options.outPath);
   const beatsPerBar = parseBeatsPerBar(song.meta?.time_signature || '4/4');
   const beatType = parseBeatType(song.meta?.time_signature || '4/4');
   const divisions = options.divisions || 4;
@@ -31,9 +34,10 @@ export function buildMusicXml(song, options = {}) {
   const partListXml = trackNames
     .map((name, index) => {
       const id = partId(index);
+      const displayName = formatExportTrackName(name, index, preset.partNameStyle);
       return [
         `    <score-part id="${id}">`,
-        `      <part-name>${xmlEscape(name)}</part-name>`,
+        `      <part-name>${xmlEscape(displayName)}</part-name>`,
         '    </score-part>',
       ].join('\n');
     })
@@ -59,7 +63,7 @@ export function buildMusicXml(song, options = {}) {
     '  "http://www.musicxml.org/dtds/partwise.dtd">',
     '<score-partwise version="3.1">',
     '  <work>',
-    `    <work-title>${xmlEscape(song.meta?.genre || song.sections?.[0]?.name || 'Untitled')}</work-title>`,
+    `    <work-title>${xmlEscape(buildWorkTitle(song, preset))}</work-title>`,
     '  </work>',
     '  <identification>',
     '    <encoding>',
@@ -358,10 +362,16 @@ function inferSectionBars(section, beatsPerBar) {
   return Math.max(1, Math.ceil(lastBeat / beatsPerBar));
 }
 
-function resolveExportPath(song, outPath) {
+function resolveExportPath(song, outPath, defaultOutPath) {
   if (outPath) return outPath.startsWith('/') ? outPath : join(process.cwd(), outPath);
+  if (defaultOutPath) return defaultOutPath;
   const base = slugify(song.meta?.genre || song.sections?.[0]?.name || 'exported-song') || 'exported-song';
   return join(process.cwd(), 'exports', `${base}.musicxml`);
+}
+
+function buildWorkTitle(song, preset) {
+  const base = song.meta?.genre || song.sections?.[0]?.name || 'Untitled';
+  return preset.includeWorkTitleTargetSuffix ? `${base} (Logic)` : base;
 }
 
 function buildMxlArchive(xml, rootName) {

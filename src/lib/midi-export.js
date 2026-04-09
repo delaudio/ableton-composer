@@ -1,25 +1,42 @@
 import { mkdir, writeFile } from 'fs/promises';
-import { dirname, join } from 'path';
-import { slugify } from './storage.js';
+import { dirname } from 'path';
+import {
+  buildSectionMarkers,
+  buildTrackChannelMap,
+  formatExportTrackName,
+  resolveMidiExportPreset,
+  resolveMidiKeySignature,
+} from './export-presets.js';
 
-export async function exportSongToMidi(song, outPath) {
+export async function exportSongToMidi(song, outPath, options = {}) {
   const { Midi } = (await import('@tonejs/midi')).default;
   const midi = new Midi();
+  const preset = resolveMidiExportPreset(song, options.target);
 
   const bpm = Number(song.meta?.bpm) || 120;
   const timeSignature = parseTimeSignature(song.meta?.time_signature || '4/4');
 
+  midi.header.name = buildMidiName(song, preset.target);
   midi.header.tempos.push({ bpm, ticks: 0, time: 0 });
   midi.header.timeSignatures.push({
     ticks: 0,
     timeSignature,
     measures: 0,
   });
+  if (preset.includeSectionMarkers) {
+    midi.header.meta.push(...buildSectionMarkers(song, midi.header.ppq));
+  }
+  if (preset.includeKeySignature) {
+    const keySignature = resolveMidiKeySignature(song.meta?.scale);
+    if (keySignature) midi.header.keySignatures.push(keySignature);
+  }
 
   const trackNames = collectTrackNames(song.sections || []);
-  const tracks = new Map(trackNames.map(name => {
+  const channelMap = buildTrackChannelMap(trackNames, preset.channelStrategy);
+  const tracks = new Map(trackNames.map((name, index) => {
     const track = midi.addTrack();
-    track.name = name;
+    track.name = formatExportTrackName(name, index, preset.trackNameStyle);
+    track.channel = channelMap.get(name) ?? 0;
     return [name, track];
   }));
 
@@ -47,7 +64,7 @@ export async function exportSongToMidi(song, outPath) {
     sectionStartBeat += sectionBars * beatsPerBar;
   }
 
-  const resolvedOut = resolveOutPath(song, outPath);
+  const resolvedOut = resolveOutPath(song, outPath, preset.defaultOutPath);
   await mkdir(dirname(resolvedOut), { recursive: true });
   await writeFile(resolvedOut, Buffer.from(midi.toArray()));
   return resolvedOut;
@@ -88,8 +105,14 @@ function clampVelocity(value) {
   return Math.max(0.01, Math.min(1, normalized));
 }
 
-function resolveOutPath(song, outPath) {
-  if (outPath) return outPath.startsWith('/') ? outPath : join(process.cwd(), outPath);
-  const base = slugify(song.meta?.genre || song.sections?.[0]?.name || 'exported-song') || 'exported-song';
-  return join(process.cwd(), 'exports', `${base}.mid`);
+function resolveOutPath(_song, outPath, defaultOutPath) {
+  if (outPath) return outPath;
+  return defaultOutPath;
+}
+
+function buildMidiName(song, target) {
+  const base = song.meta?.genre || song.sections?.[0]?.name || 'Untitled';
+  if (target === 'logic') return `${base} (Logic)`;
+  if (target === 'reaper') return `${base} (REAPER)`;
+  return base;
 }

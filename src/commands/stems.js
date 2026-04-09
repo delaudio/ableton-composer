@@ -10,6 +10,11 @@ import {
   scanStemDirectory,
   writeStemManifestFile,
 } from '../lib/stems.js';
+import {
+  buildReaperStemImportScript,
+  defaultReaperStemScriptPath,
+  writeReaperStemImportScript,
+} from '../lib/reaper.js';
 
 export async function stemScanCommand(sourceDir, options) {
   const spinner = ora();
@@ -129,12 +134,59 @@ export async function stemSetupCommand(manifestPath, options) {
   }
 }
 
+export async function stemReaperCommand(manifestPath, options) {
+  const spinner = ora();
+
+  try {
+    spinner.start(`Loading stem manifest ${basename(manifestPath)}...`);
+    const absPath = manifestPath.startsWith('/') ? manifestPath : join(process.cwd(), manifestPath);
+    const manifest = await loadStemManifestFile(absPath);
+    spinner.succeed(`Loaded ${manifest.name || basename(absPath)}`);
+
+    const outputPath = resolveReaperOutputPath(manifest.name || basename(absPath), options.out);
+    const script = buildReaperStemImportScript(manifest, {
+      bpm: options.bpm,
+      timeSignature: options.timeSignature,
+      groupFolders: options.flat ? false : true,
+      projectName: options.name || manifest.name,
+    });
+
+    console.log(chalk.bold(`\n  ${manifest.name || basename(absPath)}`));
+    console.log(chalk.dim(`  Manifest: ${absPath}`));
+    console.log(chalk.dim(`  Stems:    ${manifest.stem_count || (manifest.stems || []).length}`));
+    console.log(chalk.dim(`  BPM:      ${options.bpm || 120}`));
+    console.log(chalk.dim(`  Sig:      ${options.timeSignature || '4/4'}`));
+    console.log(chalk.dim(`  Layout:   ${options.flat ? 'flat tracks' : 'group folders'}`));
+
+    if (options.dryRun) {
+      console.log(chalk.yellow('\nDRY RUN — no ReaScript file written.\n'));
+      console.log(chalk.dim(`  Would write: ${outputPath}`));
+      return;
+    }
+
+    await writeReaperStemImportScript(outputPath, script);
+    console.log(chalk.green(`\n✓ Saved REAPER import script to ${outputPath}`));
+    console.log(chalk.dim('  Run the generated .lua script inside REAPER to create tracks and import the stem files.'));
+  } catch (err) {
+    spinner.fail(err.message);
+    process.exit(1);
+  }
+}
+
 function resolveOutputPath(name, outOption) {
   if (!outOption) return defaultStemManifestPath(name);
 
   const absOut = outOption.startsWith('/') ? outOption : join(process.cwd(), outOption);
   if (absOut.endsWith('.json')) return absOut;
   return join(absOut, `${name}.stems.json`);
+}
+
+function resolveReaperOutputPath(name, outOption) {
+  if (!outOption) return defaultReaperStemScriptPath(name);
+
+  const absOut = outOption.startsWith('/') ? outOption : join(process.cwd(), outOption);
+  if (absOut.endsWith('.lua')) return absOut;
+  return join(absOut, `${name}.lua`);
 }
 
 function buildTrackSetupList(stems) {

@@ -220,7 +220,24 @@ Preview only:
 ableton-composer stems setup stems/manifests/song-stems.stems.json --dry-run
 ```
 
-## 14. Typical Album-Style Loop
+## 14. Prepare a REAPER Import Script From a Stem Manifest
+
+```bash
+ableton-composer stems reaper stems/manifests/song-stems.stems.json \
+  --bpm 120 \
+  --time-signature 4/4
+```
+
+Use this when the next step is comping, editing, or mixing in REAPER rather than Ableton. The generated Lua script:
+
+- creates one track per stem and imports the audio file at timeline start
+- optionally groups tracks into REAPER folder tracks by stem group
+- applies track colors derived from the stem manifest
+- sets the target project tempo and time signature before import
+
+Run the generated `.lua` file from REAPER's action list or script editor.
+
+## 15. Typical Album-Style Loop
 
 ```bash
 # analyze
@@ -240,7 +257,34 @@ ableton-composer compare \
   sets/generated-output
 ```
 
-## 15. Build an Evaluation Pack for Thesis or User Studies
+## 16. Export for Logic Pro
+
+```bash
+ableton-composer export-midi sets/my-song --target logic
+ableton-composer export-xml sets/my-song --target logic
+```
+
+Use this when the next step is arranging or scoring in Logic Pro rather than round-tripping back into Ableton. The Logic target preset:
+
+- prefixes part and track names with stable import order
+- adds MIDI section markers from set section names
+- writes MIDI key signature metadata when `meta.scale` is a simple major/minor key
+- reserves channel 10 for drum-like tracks during MIDI export
+
+## 17. Export MIDI for REAPER
+
+```bash
+ableton-composer export-midi sets/my-song --target reaper
+```
+
+Use this when the next step is arranging or editing MIDI directly in REAPER. The REAPER target preset:
+
+- keeps original track names instead of renaming them for score import order
+- adds MIDI section markers from set section names
+- reserves channel 10 for drum-like tracks during MIDI export
+- writes to `exports/<name>-reaper.mid` unless you override `--out`
+
+## 18. Build an Evaluation Pack for Thesis or User Studies
 
 ```bash
 ableton-composer evaluation-pack \
