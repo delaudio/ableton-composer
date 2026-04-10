@@ -29,6 +29,7 @@ import { snapshotCommand }  from '../src/commands/snapshot.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
 import { exportXmlCommand } from '../src/commands/export-xml.js';
 import { reportCommand } from '../src/commands/report.js';
+import { renderPlanCommand } from '../src/commands/render-plan.js';
 import { researchGenreCommand } from '../src/commands/research.js';
 import { paletteGenerateCommand } from '../src/commands/palette.js';
 import { stemScanCommand, stemSetupCommand, stemReaperCommand } from '../src/commands/stems.js';
@@ -179,6 +180,16 @@ program
   .description('Generate a static Markdown song report for docs or thesis/demo use')
   .option('--out <path>', 'Output Markdown path (default: reports/<name>.md)')
   .action(reportCommand);
+
+program
+  .command('render-plan <file>')
+  .description('Generate an engine-agnostic audio render-chain JSON plan from an AbletonSong')
+  .option('--stems <manifest>', 'Optional stem manifest to attach external audio sources to matching tracks')
+  .option('--sample-rate <n>', 'Render sample rate (default: 44100)', '44100')
+  .option('--bit-depth <n>', 'Render bit depth (default: 24)', '24')
+  .option('--channels <n>', 'Render channel count (default: 2)', '2')
+  .option('--out <path>', 'Output render-chain JSON path (default: renders/plans/<name>.render-chain.json)')
+  .action(renderPlanCommand);
 
 // ── research ─────────────────────────────────────────────────────────────────
 const researchCmd = program

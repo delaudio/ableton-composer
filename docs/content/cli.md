@@ -18,6 +18,7 @@ template: docs
 - `critique` review a set with an AI rubric and structured feedback
 - `evaluation-pack` build a thesis/user-study report bundle from one or more sets
 - `report` generate a static Markdown song report / lightweight visualizer
+- `render-plan` generate an engine-agnostic audio render-chain JSON plan
 - `preset generate` create synth presets from preset profiles
 - `push` write notes into Ableton Live
 - `pull` import material from Live
@@ -296,6 +297,23 @@ Important options:
 - `--out <path>` writes the generated `.lua` script to a custom path
 
 This command does not require REAPER to be running. It writes a Lua ReaScript that you can run inside REAPER to create tracks, preserve stem grouping/colors, and import the referenced audio files at timeline start.
+
+## Render Plan
+
+```bash
+ableton-composer render-plan sets/my-song
+ableton-composer render-plan sets/my-song --stems stems/manifests/my-song.stems.json
+```
+
+Important options:
+
+- `--stems <manifest>` attaches external audio stem paths to matching tracks when available
+- `--sample-rate <n>` sets render sample rate in the plan
+- `--bit-depth <n>` sets target bit depth
+- `--channels <n>` sets channel count
+- `--out <path>` writes the render-chain JSON to a custom location
+
+The render plan is a portable contract, not a renderer. It distinguishes per-track source/instrument/effects/mix settings from the master chain and final mixdown output so future engines like ffmpeg or Pedalboard can consume the same plan.
 
 ## Report
 

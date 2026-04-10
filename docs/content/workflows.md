@@ -265,7 +265,22 @@ Use this when the next step is comping, editing, or mixing in REAPER rather than
 
 Run the generated `.lua` file from REAPER's action list or script editor.
 
-## 16. Typical Album-Style Loop
+## 16. Generate a Portable Audio Render Plan
+
+```bash
+ableton-composer render-plan sets/my-song \
+  --stems stems/manifests/my-song.stems.json \
+  --out renders/plans/my-song.render-chain.json
+```
+
+Use this before implementing or invoking any offline audio engine. The render plan:
+
+- maps song tracks to source types such as MIDI or external stems
+- separates instrument placeholders from effect chains and mix settings
+- defines per-track stem outputs plus a master chain and final mixdown target
+- stays portable across future engines such as ffmpeg fallback or Pedalboard
+
+## 17. Typical Album-Style Loop
 
 ```bash
 # analyze
@@ -285,7 +300,7 @@ ableton-composer compare \
   sets/generated-output
 ```
 
-## 17. Export for Logic Pro
+## 18. Export for Logic Pro
 
 ```bash
 ableton-composer export-midi sets/my-song --target logic
@@ -299,7 +314,7 @@ Use this when the next step is arranging or scoring in Logic Pro rather than rou
 - writes MIDI key signature metadata when `meta.scale` is a simple major/minor key
 - reserves channel 10 for drum-like tracks during MIDI export
 
-## 18. Generate a Static Song Report
+## 19. Generate a Static Song Report
 
 ```bash
 ableton-composer report sets/example --out reports/example-report.md
@@ -316,7 +331,7 @@ Use this when you want a lightweight inspection page for demos, thesis material,
 
 When saved under `docs/content/`, the generated Markdown becomes part of the Minuto docs build automatically.
 
-## 19. Export MIDI for REAPER
+## 20. Export MIDI for REAPER
 
 ```bash
 ableton-composer export-midi sets/my-song --target reaper
@@ -329,7 +344,7 @@ Use this when the next step is arranging or editing MIDI directly in REAPER. The
 - reserves channel 10 for drum-like tracks during MIDI export
 - writes to `exports/<name>-reaper.mid` unless you override `--out`
 
-## 20. Build an Evaluation Pack for Thesis or User Studies
+## 21. Build an Evaluation Pack for Thesis or User Studies
 
 ```bash
 ableton-composer evaluation-pack \

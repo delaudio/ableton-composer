@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ableton-composer/schema/render-chain.schema.json",
+  "title": "Ableton Composer Render Chain",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "version",
+    "source",
+    "engine_targets",
+    "render_settings",
+    "tracks",
+    "master_chain",
+    "outputs"
+  ],
+  "properties": {
+    "type": { "const": "render-chain" },
+    "version": { "type": "string" },
+    "generated_at": { "type": "string" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["song_path", "song_title"],
+      "properties": {
+        "song_path": { "type": "string" },
+        "song_title": { "type": "string" },
+        "stem_manifest_path": { "type": ["string", "null"] }
+      }
+    },
+    "engine_targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pedalboard", "ffmpeg"],
+      "properties": {
+        "pedalboard": { "type": "string" },
+        "ffmpeg": { "type": "string" }
+      }
+    },
+    "render_settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sample_rate", "bit_depth", "channels"],
+      "properties": {
+        "sample_rate": { "type": "integer" },
+        "bit_depth": { "type": "integer" },
+        "channels": { "type": "integer" },
+        "normalize_master": { "type": "boolean" }
+      }
+    },
+    "tracks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "track_name",
+          "role",
+          "source",
+          "instrument",
+          "effects_chain",
+          "mix",
+          "outputs"
+        ],
+        "properties": {
+          "track_name": { "type": "string" },
+          "role": { "type": "string" },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type"],
+            "properties": {
+              "type": { "type": "string" },
+              "clip_note_count": { "type": ["integer", "null"] },
+              "stem_path": { "type": ["string", "null"] }
+            }
+          },
+          "instrument": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "name"],
+            "properties": {
+              "kind": { "type": "string" },
+              "name": { "type": "string" },
+              "preset_path": { "type": ["string", "null"] }
+            }
+          },
+          "effects_chain": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "enabled"],
+              "properties": {
+                "type": { "type": "string" },
+                "enabled": { "type": "boolean" },
+                "params": { "type": "object" }
+              }
+            }
+          },
+          "mix": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["gain_db", "pan"],
+            "properties": {
+              "gain_db": { "type": "number" },
+              "pan": { "type": "number" }
+            }
+          },
+          "outputs": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["stem_path"],
+            "properties": {
+              "stem_path": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "master_chain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effects_chain", "mix"],
+      "properties": {
+        "effects_chain": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "enabled"],
+            "properties": {
+              "type": { "type": "string" },
+              "enabled": { "type": "boolean" },
+              "params": { "type": "object" }
+            }
+          }
+        },
+        "mix": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gain_db", "pan"],
+          "properties": {
+            "gain_db": { "type": "number" },
+            "pan": { "type": "number" }
+          }
+        }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mixdown_path"],
+      "properties": {
+        "mixdown_path": { "type": "string" }
+      }
+    }
+  }
+}
