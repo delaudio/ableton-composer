@@ -16,6 +16,7 @@ template: docs
 - `plugins list` inspect a saved plugin inventory
 - `plugins enrich` annotate installed plugins with emulation and historical metadata
 - `plugins match` compare installed plugins against a research dossier
+- `preset plan` map dossier/palette roles to preset profiles and installed devices
 - `palette generate` derive a track-level operational palette from a dossier
 - `compare` compare a generated set against a reference profile or bundle
 - `validate-roundtrip` measure note/track preservation through MIDI or MusicXML export+import
@@ -423,7 +424,23 @@ The report is Markdown-first so it can live in `reports/` for thesis/demo artifa
 ## Presets
 
 ```bash
+ableton-composer preset plan research/synth-pop-80s.json --palette palettes/early-80s-synth-pop-palette.json --installed-only
 ableton-composer preset generate <profile.json> "<prompt>" --provider openai
 ```
+
+Important options:
+
+- `preset plan <dossier>` builds a role-aware preset plan from a dossier
+- `preset plan --palette <path>` uses an operational palette instead of only dossier role hints
+- `preset plan --inventory <path>` reads a specific plugin inventory
+- `preset plan --installed-only` keeps only candidates confirmed by the local inventory
+- `preset plan --print` prints the plan JSON instead of saving it
+
+The preset planner connects dossier guardrails, palette roles, preset profiles under `profiles/presets/`, and the enriched plugin inventory. Its output includes:
+
+- per-role preset prompts
+- recommended preset profiles
+- installed-device preference when available
+- rationale and warnings when only weak or off-period candidates exist
 
 See [Workflows](/workflows.html) for concrete end-to-end examples.

@@ -97,7 +97,24 @@ Use `plugins enrich` when you want the inventory to carry historical/emulation m
 - caution choices that are usable but slightly off-period
 - avoid-by-default choices that conflict with dossier guardrails
 
-## 6. Generate a Preset
+## 6. Plan Presets From a Dossier
+
+```bash
+ableton-composer preset plan research/synth-pop-80s.json \
+  --palette palettes/early-80s-synth-pop-palette.json \
+  --installed-only
+```
+
+Use this when you want dossier and palette guidance to drive actual preset work. The preset plan:
+
+- maps each role to candidate preset profiles under `profiles/presets/`
+- prefers installed devices confirmed by the local plugin inventory when possible
+- generates a ready-to-use prompt per role
+- warns when the best available candidate is weak, off-period, or not confirmed as installed
+
+The intended next step is to pick one recommended profile and pass its prompt into `preset generate`.
+
+## 7. Generate a Preset
 
 ```bash
 ableton-composer preset generate \
@@ -108,7 +125,7 @@ ableton-composer preset generate \
 
 This uses a preset profile plus `preset-generate.md` to create a structured parameter map.
 
-## 7. Expand an Existing Set
+## 8. Expand an Existing Set
 
 ```bash
 ableton-composer expand sets/my-song \
@@ -118,7 +135,7 @@ ableton-composer expand sets/my-song \
 
 Useful when you already have a harmonic structure and only want new supporting parts.
 
-## 8. Import MusicXML With Chord Symbols
+## 9. Import MusicXML With Chord Symbols
 
 ```bash
 ableton-composer import-xml score.mxl \
@@ -138,7 +155,7 @@ ableton-composer import-xml score.mxl \
   --out sets/imported-score/
 ```
 
-## 9. Export a Set Back to MusicXML / MXL
+## 10. Export a Set Back to MusicXML / MXL
 
 ```bash
 ableton-composer export-xml sets/imported-score \
@@ -155,7 +172,7 @@ This is the inverse interoperability path for MuseScore, Logic, and other notati
 - includes harmony symbols and lyrics when present
 - packages compressed `.mxl` output when requested
 
-## 10. Export a Set as MIDI for DAW Interoperability
+## 11. Export a Set as MIDI for DAW Interoperability
 
 ```bash
 ableton-composer export-midi sets/imported-score \
@@ -169,7 +186,7 @@ Use MIDI export when the target is a DAW rather than notation software. The expo
 - preserves tempo and time signature
 - concatenates section-relative notes into one absolute song timeline
 
-## 11. Validate a Round-Trip
+## 12. Validate a Round-Trip
 
 ```bash
 ableton-composer validate-roundtrip examples/ableton-song/chord-progression.song.json --via midi
@@ -184,7 +201,7 @@ Use this when you want to measure what is preserved across interchange formats. 
 - section-count drift
 - pitch/timing/duration mismatches
 
-## 12. Critique a Generated Set
+## 13. Critique a Generated Set
 
 ```bash
 ableton-composer critique sets/my-song \
@@ -215,7 +232,7 @@ ableton-composer generate "moody electronic sketch with restrained hooks" \
   --rubric auto
 ```
 
-## 13. Compare Drift
+## 14. Compare Drift
 
 ```bash
 ableton-composer compare \
@@ -233,7 +250,7 @@ This reports:
 
 When the source is an album, artist, or collection bundle, compare weights role presence, structure, and role-level rhythm more heavily than exact track-name matches.
 
-## 14. Scan a Stem Folder
+## 15. Scan a Stem Folder
 
 ```bash
 ableton-composer stems scan /path/to/song-stems \
@@ -251,7 +268,7 @@ This creates a versioned stem manifest with:
 
 Use this as the first step before building audio-track setup and Ableton stem loading workflows.
 
-## 15. Prepare Ableton Audio Tracks From a Stem Manifest
+## 16. Prepare Ableton Audio Tracks From a Stem Manifest
 
 ```bash
 ableton-composer stems setup stems/manifests/song-stems.stems.json
@@ -272,7 +289,7 @@ ableton-composer stems setup stems/manifests/song-stems.stems.json --prefix-grou
 
 You can also edit `display_name` and `order` in the manifest directly when you want to override the default grouping/order rules without changing the source filenames.
 
-## 16. Prepare a REAPER Import Script From a Stem Manifest
+## 17. Prepare a REAPER Import Script From a Stem Manifest
 
 ```bash
 ableton-composer stems reaper stems/manifests/song-stems.stems.json \
@@ -289,7 +306,7 @@ Use this when the next step is comping, editing, or mixing in REAPER rather than
 
 Run the generated `.lua` file from REAPER's action list or script editor.
 
-## 17. Generate a Portable Audio Render Plan
+## 18. Generate a Portable Audio Render Plan
 
 ```bash
 ableton-composer render-plan sets/my-song \
@@ -304,7 +321,7 @@ Use this before implementing or invoking any offline audio engine. The render pl
 - defines per-track stem outputs plus a master chain and final mixdown target
 - stays portable across future engines such as ffmpeg fallback or Pedalboard
 
-## 18. Mix Existing Audio With ffmpeg Fallback
+## 19. Mix Existing Audio With ffmpeg Fallback
 
 ```bash
 ableton-composer render-audio renders/plans/my-song.render-chain.json --dry-run
@@ -314,7 +331,7 @@ ableton-composer convert-audio renders/my-song/mixdown.wav --out renders/my-song
 
 Use this when audio already exists as stems and you only need format conversion, simple summing, gain/pan application, or normalization. ffmpeg here is not a plugin host and does not render instruments from MIDI.
 
-## 19. Process Existing Stems With Pedalboard
+## 20. Process Existing Stems With Pedalboard
 
 ```bash
 ableton-composer render-stems renders/plans/my-song.render-chain.json --dry-run
@@ -328,7 +345,7 @@ Use this when a render plan already points at external audio stems and you want 
 - it does not synthesize MIDI tracks or emulate a DAW mixer/project renderer
 - it writes per-track outputs using the same render-plan contract as the ffmpeg fallback
 
-## 20. Typical Album-Style Loop
+## 21. Typical Album-Style Loop
 
 ```bash
 # analyze
@@ -348,7 +365,7 @@ ableton-composer compare \
   sets/generated-output
 ```
 
-## 21. Export for Logic Pro
+## 22. Export for Logic Pro
 
 ```bash
 ableton-composer export-midi sets/my-song --target logic
@@ -362,7 +379,7 @@ Use this when the next step is arranging or scoring in Logic Pro rather than rou
 - writes MIDI key signature metadata when `meta.scale` is a simple major/minor key
 - reserves channel 10 for drum-like tracks during MIDI export
 
-## 22. Generate a Static Song Report
+## 23. Generate a Static Song Report
 
 ```bash
 ableton-composer report sets/example --out reports/example-report.md
@@ -379,7 +396,7 @@ Use this when you want a lightweight inspection page for demos, thesis material,
 
 When saved under `docs/content/`, the generated Markdown becomes part of the Minuto docs build automatically.
 
-## 23. Export MIDI for REAPER
+## 24. Export MIDI for REAPER
 
 ```bash
 ableton-composer export-midi sets/my-song --target reaper
@@ -392,7 +409,7 @@ Use this when the next step is arranging or editing MIDI directly in REAPER. The
 - reserves channel 10 for drum-like tracks during MIDI export
 - writes to `exports/<name>-reaper.mid` unless you override `--out`
 
-## 24. Build an Evaluation Pack for Thesis or User Studies
+## 25. Build an Evaluation Pack for Thesis or User Studies
 
 ```bash
 ableton-composer evaluation-pack \

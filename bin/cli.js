@@ -35,6 +35,7 @@ import { renderStemsCommand } from '../src/commands/render-stems.js';
 import { researchGenreCommand } from '../src/commands/research.js';
 import { pluginEnrichCommand, pluginListCommand, pluginMatchCommand, pluginScanCommand } from '../src/commands/plugins.js';
 import { paletteGenerateCommand } from '../src/commands/palette.js';
+import { presetPlanCommand } from '../src/commands/preset-plan.js';
 import { stemScanCommand, stemSetupCommand, stemReaperCommand } from '../src/commands/stems.js';
 import { presetSaveCommand, presetLoadCommand, presetListCommand, presetAnalyzeCommand, presetGenerateCommand } from '../src/commands/preset.js';
 
@@ -412,6 +413,16 @@ presetCmd
   .option('-n, --name <name>',    'Profile name (defaults to directory name)')
   .option('-o, --out <path>',     'Save profile to a specific path')
   .action(presetAnalyzeCommand);
+
+presetCmd
+  .command('plan <dossier>')
+  .description('Plan role-aware preset generation from a research dossier and optional operational palette')
+  .option('--palette <path>', 'Operational palette JSON path')
+  .option('--inventory <path>', 'Plugin inventory path (default: plugins/inventory.json)')
+  .option('--installed-only', 'Prefer only devices confirmed in the local plugin inventory')
+  .option('-o, --out <path>', 'Output path (default: preset-plans/<topic>.json)')
+  .option('--print', 'Print the plan JSON instead of saving')
+  .action(presetPlanCommand);
 
 presetCmd
   .command('generate <profile> [style]')

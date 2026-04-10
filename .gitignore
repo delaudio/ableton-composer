@@ -18,6 +18,8 @@ presets/**/*.json
 !presets/.gitkeep
 plugins/**/*.json
 !plugins/.gitkeep
+preset-plans/**/*.json
+!preset-plans/.gitkeep
 research/**/*.json
 !research/.gitkeep
 .claude/
