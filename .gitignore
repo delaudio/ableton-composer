@@ -16,5 +16,7 @@ profiles/**/*.json
 !profiles/.gitkeep
 presets/**/*.json
 !presets/.gitkeep
+research/**/*.json
+!research/.gitkeep
 .claude/
 thesis/
