@@ -26,6 +26,7 @@ import { importMidiCommand } from '../src/commands/import-midi.js';
 import { exportMidiCommand } from '../src/commands/export-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
 import { snapshotCommand }  from '../src/commands/snapshot.js';
+import { transcribeCommand } from '../src/commands/transcribe.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
 import { exportXmlCommand } from '../src/commands/export-xml.js';
 import { reportCommand } from '../src/commands/report.js';
@@ -333,6 +334,16 @@ program
   .option('--split-every <bars>',        'Split into sections every N bars (default: one section)')
   .option('-t, --tracks <names>',        'Rename tracks: positional "Bass,Drums" or mapped "Piano:Pad,Bass:Bass"')
   .action(importMidiCommand);
+
+program
+  .command('transcribe <file>')
+  .description('Transcribe an audio sketch to MIDI, optionally converting it into an AbletonSong set')
+  .option('--engine <name>', 'Transcription engine (currently: basic-pitch)', 'basic-pitch')
+  .option('--basic-pitch-bin <path>', 'Explicit Basic Pitch CLI path')
+  .option('-o, --out <path>', 'Output MIDI path (default: midis/<audio-name>.mid)')
+  .option('--to-set <path>', 'Optional AbletonSong output path (directory or .json file)')
+  .option('--dry-run', 'Print the Basic Pitch command without executing it')
+  .action(transcribeCommand);
 
 // ── export-midi ──────────────────────────────────────────────────────────────
 program

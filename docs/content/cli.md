@@ -23,6 +23,7 @@ template: docs
 - `critique` review a set with an AI rubric and structured feedback
 - `evaluation-pack` build a thesis/user-study report bundle from one or more sets
 - `report` generate a static Markdown song report / lightweight visualizer
+- `transcribe` convert an audio sketch to MIDI and optionally to an AbletonSong
 - `render-plan` generate an engine-agnostic audio render-chain JSON plan
 - `render-audio` mix existing audio stems through ffmpeg using a render plan
 - `convert-audio` convert/post-process a single audio file with ffmpeg
@@ -420,6 +421,23 @@ Important options:
 - `--out <path>` writes the generated Markdown report to a custom location
 
 The report is Markdown-first so it can live in `reports/` for thesis/demo artifacts or under `docs/content/` for the Minuto site. It includes metadata, section/track tables, role presence, density summaries, and inline SVG visualizations for timeline and energy curve.
+
+## Transcribe
+
+```bash
+ableton-composer transcribe audio/idea.wav --engine basic-pitch --out midis/idea.mid
+ableton-composer transcribe audio/idea.wav --to-set sets/idea/
+```
+
+Important options:
+
+- `--engine basic-pitch` selects the optional Basic Pitch workflow
+- `--basic-pitch-bin <path>` points to an explicit `basic-pitch` CLI
+- `--out <path>` overrides the MIDI output path
+- `--to-set <path>` imports the generated MIDI into an AbletonSong directory or `.json`
+- `--dry-run` prints the command without executing it
+
+This workflow is optional and requires the Basic Pitch CLI to be installed separately, typically via `pip install basic-pitch`. It works best on monophonic or lightly polyphonic single-instrument audio. When `--to-set` is used, the imported song carries transcription provenance including source audio path, hash, engine, and generated MIDI path.
 
 ## Presets
 
