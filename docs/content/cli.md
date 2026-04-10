@@ -24,6 +24,7 @@ template: docs
 - `evaluation-pack` build a thesis/user-study report bundle from one or more sets
 - `report` generate a static Markdown song report / lightweight visualizer
 - `transcribe` convert an audio sketch to MIDI and optionally to an AbletonSong
+- `separate` split a mixed audio file into stems with an optional external engine
 - `render-plan` generate an engine-agnostic audio render-chain JSON plan
 - `render-audio` mix existing audio stems through ffmpeg using a render plan
 - `convert-audio` convert/post-process a single audio file with ffmpeg
@@ -438,6 +439,23 @@ Important options:
 - `--dry-run` prints the command without executing it
 
 This workflow is optional and requires the Basic Pitch CLI to be installed separately, typically via `pip install basic-pitch`. It works best on monophonic or lightly polyphonic single-instrument audio. When `--to-set` is used, the imported song carries transcription provenance including source audio path, hash, engine, and generated MIDI path.
+
+## Separate
+
+```bash
+ableton-composer separate audio/song.wav --engine demucs
+ableton-composer separate audio/song.wav --out stems/separated/song/
+```
+
+Important options:
+
+- `--engine demucs` selects the optional source-separation workflow
+- `--demucs-bin <path>` points to an explicit `demucs` CLI
+- `--model <name>` chooses the Demucs model name
+- `--out <dir>` overrides the output directory
+- `--dry-run` prints the command without executing it
+
+This workflow is optional and requires the Demucs CLI to be installed separately, typically via `pip install demucs`. The current MVP writes a normalized output directory with expected stem names such as `drums`, `bass`, `vocals`, and `other`, plus a `separation.json` provenance file that records the source audio path, source hash, engine, model, and output stem paths.
 
 ## Presets
 

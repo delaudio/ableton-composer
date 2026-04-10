@@ -26,6 +26,7 @@ import { importMidiCommand } from '../src/commands/import-midi.js';
 import { exportMidiCommand } from '../src/commands/export-midi.js';
 import { expandCommand }    from '../src/commands/expand.js';
 import { snapshotCommand }  from '../src/commands/snapshot.js';
+import { separateCommand } from '../src/commands/separate.js';
 import { transcribeCommand } from '../src/commands/transcribe.js';
 import { importXmlCommand } from '../src/commands/import-xml.js';
 import { exportXmlCommand } from '../src/commands/export-xml.js';
@@ -344,6 +345,16 @@ program
   .option('--to-set <path>', 'Optional AbletonSong output path (directory or .json file)')
   .option('--dry-run', 'Print the Basic Pitch command without executing it')
   .action(transcribeCommand);
+
+program
+  .command('separate <file>')
+  .description('Separate a mixed audio file into stems using an optional external engine')
+  .option('--engine <name>', 'Separation engine (currently: demucs)', 'demucs')
+  .option('--demucs-bin <path>', 'Explicit Demucs CLI path')
+  .option('--model <name>', 'Demucs model name (default: htdemucs)', 'htdemucs')
+  .option('-o, --out <dir>', 'Output directory (default: stems/separated/<audio-name>/)')
+  .option('--dry-run', 'Print the Demucs command without executing it')
+  .action(separateCommand);
 
 // ── export-midi ──────────────────────────────────────────────────────────────
 program

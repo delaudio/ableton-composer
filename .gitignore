@@ -8,6 +8,7 @@ sets/*/
 !sets/.gitkeep
 midis/*
 !midis/.gitkeep
+stems/separated/**
 snapshots/*
 !snapshots/.gitkeep
 mxls/*
@@ -24,5 +25,7 @@ research/**/*.json
 !research/.gitkeep
 transcriptions/**/*.log
 !transcriptions/.gitkeep
+separations/**/*.log
+!separations/.gitkeep
 .claude/
 thesis/
