@@ -17,6 +17,7 @@ import { fetchContext } from '../lib/fetchers/index.js';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
 import { loadStyleProfile } from '../lib/profiles.js';
 import { loadResearchDossier, normalizeHistoricalStrictness } from '../lib/dossiers.js';
+import { loadOperationalPalette } from '../lib/palettes.js';
 import { appendProvenance, createProvenance } from '../lib/provenance.js';
 import { defaultCritiqueReportPath, runSongCritique, saveCritiqueReport } from '../lib/critique-runner.js';
 
@@ -41,6 +42,8 @@ export async function generateCommand(prompt, options) {
     let styleProfilePath = null;
     let researchDossier = null;
     let researchDossierPath = null;
+    let operationalPalette = null;
+    let operationalPalettePath = null;
     const historicalStrictness = normalizeHistoricalStrictness(options.historicalStrictness || 'loose');
     if (options.style) {
       const absStyle = options.style.startsWith('/')
@@ -65,6 +68,15 @@ export async function generateCommand(prompt, options) {
       researchDossierPath = loaded.resolvedPath;
       console.log(chalk.dim(`Research dossier: ${researchDossier.topic} -> ${researchDossierPath}`));
       console.log(chalk.dim(`Historical strictness: ${historicalStrictness}`));
+    }
+
+    if (options.palette) {
+      const loaded = await loadOperationalPalette(options.palette).catch(() => {
+        throw new Error(`Operational palette not found or invalid: ${options.palette}`);
+      });
+      operationalPalette = loaded.palette;
+      operationalPalettePath = loaded.resolvedPath;
+      console.log(chalk.dim(`Operational palette: ${operationalPalette.topic} -> ${operationalPalettePath}`));
     }
 
     // ── 1. Resolve track names ───────────────────────────────────────────────
@@ -93,6 +105,11 @@ export async function generateCommand(prompt, options) {
     if (trackNames.length === 0 && styleProfile?.arrangement?.tracks?.length > 0) {
       trackNames = styleProfile.arrangement.tracks;
       console.log(chalk.dim(`Using tracks from style profile: ${trackNames.join(', ')}`));
+    }
+
+    if (trackNames.length === 0 && operationalPalette?.tracks?.length > 0) {
+      trackNames = operationalPalette.tracks.map(track => track.track_name).filter(Boolean);
+      console.log(chalk.dim(`Using tracks from operational palette: ${trackNames.join(', ')}`));
     }
 
     if (trackNames.length === 0) {
@@ -153,6 +170,7 @@ export async function generateCommand(prompt, options) {
             context:      chunk === 0 ? context : {},
             styleProfile,
             researchDossier,
+            operationalPalette,
             historicalStrictness,
             existingSong: accumulated,
             tonalState,
@@ -195,6 +213,7 @@ export async function generateCommand(prompt, options) {
           context,
           styleProfile,
           researchDossier,
+          operationalPalette,
           historicalStrictness,
           existingSong,
           model:        options.model,
@@ -217,6 +236,7 @@ export async function generateCommand(prompt, options) {
         prompt,
         styleProfilePath,
         researchDossierPath,
+        operationalPalettePath,
         historicalStrictness,
         sections: sections.length,
         tracks: trackNames,

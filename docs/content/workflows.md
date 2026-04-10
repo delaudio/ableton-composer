@@ -55,14 +55,19 @@ Use chunking for larger prompts or album-scale style bundles.
 ableton-composer research genre "early 80s synth-pop" \
   --out research/synth-pop-80s.json
 
+ableton-composer palette generate research/synth-pop-80s.json \
+  --tracks "Drums,Bass,Pad,Lead,Keys,Vocals,FX" \
+  --historical-strictness loose
+
 ableton-composer generate "melancholic pop pulse with restrained hooks" \
   --dossier research/synth-pop-80s.json \
+  --palette palettes/early-80s-synth-pop-palette.json \
   --historical-strictness loose \
   --tracks "Drums,Bass,Pad,Lead,Keys,Vocals,FX" \
   --provider openai
 ```
 
-Use this when you want historically informed arrangement and production guardrails without depending only on vague prompt wording. Dossiers are additive: they work alongside style profiles instead of replacing them.
+Use this when you want historically informed arrangement and production guardrails without depending only on vague prompt wording. Dossiers are additive: they work alongside style profiles instead of replacing them. The optional operational palette turns dossier guidance into concrete per-track constraints before note generation.
 
 Research dossiers can now carry explicit historical guardrails too, for example period bounds, caution instruments, avoid-by-default lists, and historically plausible substitutes. Those guardrails are passed into generation as advisory constraints so the model can avoid obvious anachronisms by default.
 

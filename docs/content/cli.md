@@ -12,6 +12,7 @@ template: docs
 - `expand` add tracks to existing sections
 - `analyze` extract song, album, artist, or collection profiles
 - `research genre` create structured historical/production dossiers for prompt guidance
+- `palette generate` derive a track-level operational palette from a dossier
 - `compare` compare a generated set against a reference profile or bundle
 - `validate-roundtrip` measure note/track preservation through MIDI or MusicXML export+import
 - `critique` review a set with an AI rubric and structured feedback
@@ -39,6 +40,7 @@ Common options:
 - `--tracks "Bass,Drums,Pad,Lead,Chords,FX"`
 - `--style <path>`
 - `--dossier <path>`
+- `--palette <path>`
 - `--historical-strictness strict|loose|hybrid|modern`
 - `--provider anthropic|openai|codex|claude-cli`
 - `--model <model>`
@@ -55,6 +57,8 @@ Common options:
 When `--evaluate` is enabled, `generate` saves the set first and then runs the critique pipeline against the saved output. If `--eval-out` is omitted, the report is written next to the saved set as `<saved-path>.critique.json`.
 
 `--dossier` adds a separate knowledge layer for historical context, instrumentation families, production traits, facts, inferences, sources, and historical guardrails. It complements a style profile instead of replacing it.
+
+`--palette` adds a track-level operational layer derived from a dossier. Use it when you want concrete per-track guidance such as instrument family, register, articulation, rhythmic behavior, and role-specific guardrails.
 
 ## Research Dossiers
 
@@ -92,6 +96,27 @@ Strictness modes:
 - `loose` prefer period-plausible choices but allow practical modern equivalents
 - `hybrid` start from the historical palette but allow deliberate modern/anachronistic choices
 - `modern` use the dossier as inspiration without enforcing period discipline
+
+## Operational Palettes
+
+```bash
+ableton-composer palette generate research/synth-pop-80s.json \
+  --tracks "Bass,Drums,Pad,Lead,Chords,FX"
+
+ableton-composer generate "melancholic pop pulse with restrained hooks" \
+  --dossier research/synth-pop-80s.json \
+  --palette palettes/early-80s-synth-pop-palette.json \
+  --tracks "Bass,Drums,Pad,Lead,Chords,FX"
+```
+
+Important options:
+
+- `--tracks <names>` defines which tracks receive palette guidance
+- `--historical-strictness <mode>` adjusts how hard the palette should lean into dossier guardrails
+- `--out <path>` writes the palette JSON to a custom location
+- `--print` prints the palette JSON instead of saving
+
+The operational palette is not a preset file and not a style profile. It is a prompt-safe per-track guidance layer intended to make sound-role decisions more concrete during generation.
 
 ## Analyze
 

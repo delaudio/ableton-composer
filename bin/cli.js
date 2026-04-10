@@ -30,6 +30,7 @@ import { importXmlCommand } from '../src/commands/import-xml.js';
 import { exportXmlCommand } from '../src/commands/export-xml.js';
 import { reportCommand } from '../src/commands/report.js';
 import { researchGenreCommand } from '../src/commands/research.js';
+import { paletteGenerateCommand } from '../src/commands/palette.js';
 import { stemScanCommand, stemSetupCommand, stemReaperCommand } from '../src/commands/stems.js';
 import { presetSaveCommand, presetLoadCommand, presetListCommand, presetAnalyzeCommand, presetGenerateCommand } from '../src/commands/preset.js';
 
@@ -53,6 +54,7 @@ program
   .option('-o, --output <path>',   'Save to a specific path instead of sets/')
   .option('-s, --style <path>',    'Style profile JSON to guide generation (from "analyze" command)')
   .option('-d, --dossier <path>',  'Research dossier JSON to add historical/production constraints')
+  .option('-p, --palette <path>',  'Operational palette JSON with track-level sound/role guidance')
   .option('--historical-strictness <mode>', 'Historical guardrail mode: strict, loose, hybrid, or modern', 'loose')
   .option('-c, --continue <file>', 'Existing set to continue — new sections are appended')
   .option('-V, --variations <n>',  'Generate N variations and save each one', '1')
@@ -189,6 +191,20 @@ researchCmd
   .option('-o, --out <path>', 'Output file path (default: research/<topic>.json)')
   .option('--print', 'Print JSON to stdout instead of saving')
   .action(researchGenreCommand);
+
+// ── palette ──────────────────────────────────────────────────────────────────
+const paletteCmd = program
+  .command('palette')
+  .description('Create operational track palettes from research dossiers');
+
+paletteCmd
+  .command('generate <dossier>')
+  .description('Generate a track-level operational palette from a research dossier')
+  .requiredOption('-t, --tracks <names>', 'Comma-separated track names, e.g. "Bass,Drums,Pad,Lead,Chords,FX"')
+  .option('--historical-strictness <mode>', 'Historical guardrail mode: strict, loose, hybrid, or modern', 'loose')
+  .option('-o, --out <path>', 'Output file path (default: palettes/<topic>-palette.json)')
+  .option('--print', 'Print JSON to stdout instead of saving')
+  .action(paletteGenerateCommand);
 
 // ── expand ────────────────────────────────────────────────────────────────────
 program

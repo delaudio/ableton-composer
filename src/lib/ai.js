@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { classifyTrackRole } from './analysis.js';
 import { buildDossierPromptSection } from './dossiers.js';
+import { buildPalettePromptSection } from './palettes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROMPTS_DIR = join(__dirname, '../../prompts');
@@ -447,7 +448,7 @@ function parseJsonResponse(raw) {
   }
 }
 
-export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, historicalStrictness = 'loose', existingSong = null, model, provider = 'anthropic', tonalState = null }) {
+export async function generateSong({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, operationalPalette = null, historicalStrictness = 'loose', existingSong = null, model, provider = 'anthropic', tonalState = null }) {
   const inferredGenreKey = inferGenrePromptKey(prompt, styleProfile, researchDossier);
   const inferredHarmonyKey = inferHarmonyPromptKey(prompt, styleProfile, researchDossier);
   const systemPrompt = await buildSongGenerationPrompt({
@@ -475,6 +476,7 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
       context,
       styleProfile,
       researchDossier,
+      operationalPalette,
       historicalStrictness,
       existingSong,
       tonalState,
@@ -493,6 +495,7 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
         context,
         styleProfile,
         researchDossier,
+        operationalPalette,
         historicalStrictness,
         existingSong,
         tonalState,
@@ -507,6 +510,7 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
         context,
         styleProfile,
         researchDossier,
+        operationalPalette,
         historicalStrictness,
         existingSong,
         tonalState,
@@ -531,6 +535,10 @@ export async function generateSong({ prompt, trackNames, context = {}, styleProf
 
   if (researchDossier) {
     parts.push(buildDossierPromptSection(researchDossier, { historicalStrictness }));
+  }
+
+  if (operationalPalette) {
+    parts.push(buildPalettePromptSection(operationalPalette));
   }
 
   if (existingSong) {
@@ -593,7 +601,7 @@ async function buildSongGenerationPrompt({ prompt, styleProfile, genreKey = null
   return sections.join('\n\n');
 }
 
-async function generateHarmonicPlan({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, historicalStrictness = 'loose', existingSong = null, tonalState = null, model, provider, genreKey = null, harmonyKey = null }) {
+async function generateHarmonicPlan({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, operationalPalette = null, historicalStrictness = 'loose', existingSong = null, tonalState = null, model, provider, genreKey = null, harmonyKey = null }) {
   const systemPrompt = await buildHarmonicPlanPrompt({ genreKey, harmonyKey });
   const parts = [];
 
@@ -609,6 +617,10 @@ async function generateHarmonicPlan({ prompt, trackNames, context = {}, stylePro
 
   if (researchDossier) {
     parts.push(buildDossierPromptSection(researchDossier, { historicalStrictness }));
+  }
+
+  if (operationalPalette) {
+    parts.push(buildPalettePromptSection(operationalPalette));
   }
 
   if (existingSong) {
@@ -634,7 +646,7 @@ async function generateHarmonicPlan({ prompt, trackNames, context = {}, stylePro
   });
 }
 
-async function generateSongBlueprint({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, historicalStrictness = 'loose', existingSong = null, tonalState = null, model, provider, genreKey = null, harmonyKey = null }) {
+async function generateSongBlueprint({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, operationalPalette = null, historicalStrictness = 'loose', existingSong = null, tonalState = null, model, provider, genreKey = null, harmonyKey = null }) {
   const systemPrompt = await buildSongBlueprintPrompt({ genreKey, harmonyKey });
   const parts = [];
 
@@ -650,6 +662,10 @@ async function generateSongBlueprint({ prompt, trackNames, context = {}, stylePr
 
   if (researchDossier) {
     parts.push(buildDossierPromptSection(researchDossier, { historicalStrictness }));
+  }
+
+  if (operationalPalette) {
+    parts.push(buildPalettePromptSection(operationalPalette));
   }
 
   if (existingSong) {
@@ -675,7 +691,7 @@ async function generateSongBlueprint({ prompt, trackNames, context = {}, stylePr
   });
 }
 
-async function generateArrangementPlan({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, historicalStrictness = 'loose', existingSong = null, model, provider, genreKey = null }) {
+async function generateArrangementPlan({ prompt, trackNames, context = {}, styleProfile = null, researchDossier = null, operationalPalette = null, historicalStrictness = 'loose', existingSong = null, model, provider, genreKey = null }) {
   const systemPrompt = await buildArrangementPlanPrompt({ genreKey });
   const parts = [];
 
@@ -691,6 +707,10 @@ async function generateArrangementPlan({ prompt, trackNames, context = {}, style
 
   if (researchDossier) {
     parts.push(buildDossierPromptSection(researchDossier, { historicalStrictness }));
+  }
+
+  if (operationalPalette) {
+    parts.push(buildPalettePromptSection(operationalPalette));
   }
 
   if (existingSong) {
