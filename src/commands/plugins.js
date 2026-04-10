@@ -1,12 +1,17 @@
 import chalk from 'chalk';
 import {
   buildPromptSafePluginInventory,
+  enrichPluginInventory,
   formatPluginInventorySummary,
+  formatPluginMatchReport,
   loadPluginInventory,
+  matchPluginsToDossier,
   normalizePluginFormats,
   scanLocalPlugins,
+  writePluginMatchReport,
   writePluginInventory,
 } from '../lib/plugins.js';
+import { loadResearchDossier } from '../lib/dossiers.js';
 
 export async function pluginScanCommand(options) {
   try {
@@ -61,4 +66,82 @@ export async function pluginListCommand(options) {
     console.error(chalk.red(`✗ ${err.message}`));
     process.exit(1);
   }
+}
+
+export async function pluginEnrichCommand(options) {
+  try {
+    const { inventory } = await loadPluginInventory(options.inventory || 'plugins/inventory.json');
+    const enriched = enrichPluginInventory(inventory);
+
+    if (options.print) {
+      const payload = options.promptSafe ? buildPromptSafePluginInventory(enriched) : enriched;
+      console.log(JSON.stringify(payload, null, 2));
+      return payload;
+    }
+
+    const writtenPath = await writePluginInventory(enriched, options.out || options.inventory || 'plugins/inventory.json');
+    console.log(chalk.green(`✓ Plugin inventory enriched at ${writtenPath}`));
+    console.log(chalk.bold(`\n  Plugin enrichment`));
+    console.log(chalk.dim(`  Plugins:      ${enriched.counts.total}`));
+    console.log(chalk.dim(`  Enriched:     ${enriched.counts.enriched}`));
+    console.log(chalk.dim(`  Next:         ableton-composer plugins match research/your-dossier.json --inventory ${writtenPath}`));
+    return writtenPath;
+  } catch (err) {
+    console.error(chalk.red(`✗ ${err.message}`));
+    process.exit(1);
+  }
+}
+
+export async function pluginMatchCommand(dossierPath, options) {
+  try {
+    const { inventory } = await loadPluginInventory(options.inventory || 'plugins/inventory.json');
+    const { dossier } = await loadResearchDossier(dossierPath).catch(() => {
+      throw new Error(`Research dossier not found or invalid: ${dossierPath}`);
+    });
+
+    const readyInventory = inventory.plugins.some(plugin => plugin.enrichment)
+      ? inventory
+      : enrichPluginInventory(inventory);
+    const report = matchPluginsToDossier(readyInventory, dossier);
+
+    if (options.print) {
+      if (options.promptSafe !== false) {
+        const promptSafeReport = {
+          ...report,
+          recommended: report.recommended.map(stripMatchPaths),
+          caution: report.caution.map(stripMatchPaths),
+          avoid: report.avoid.map(stripMatchPaths),
+        };
+        console.log(JSON.stringify(promptSafeReport, null, 2));
+        return promptSafeReport;
+      }
+      console.log(JSON.stringify(report, null, 2));
+      return report;
+    }
+
+    if (options.out) {
+      const writtenPath = await writePluginMatchReport(report, options.out);
+      console.log(chalk.green(`✓ Plugin match report saved to ${writtenPath}`));
+    }
+
+    console.log(chalk.bold(`\n  Plugin match`));
+    console.log(chalk.dim(`  Topic:        ${report.topic}`));
+    console.log(chalk.dim(`  Recommended:  ${report.counts.recommended}`));
+    console.log(chalk.dim(`  Caution:      ${report.counts.caution}`));
+    console.log(chalk.dim(`  Avoid:        ${report.counts.avoid}`));
+    console.log('');
+    for (const line of formatPluginMatchReport(report, { promptSafe: options.promptSafe !== false })) {
+      console.log(line);
+    }
+
+    return report;
+  } catch (err) {
+    console.error(chalk.red(`✗ ${err.message}`));
+    process.exit(1);
+  }
+}
+
+function stripMatchPaths(entry) {
+  const { path, ...rest } = entry;
+  return rest;
 }

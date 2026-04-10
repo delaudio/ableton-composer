@@ -14,6 +14,8 @@ template: docs
 - `research genre` create structured historical/production dossiers for prompt guidance
 - `plugins scan` build a local AU/VST/VST3/CLAP inventory
 - `plugins list` inspect a saved plugin inventory
+- `plugins enrich` annotate installed plugins with emulation and historical metadata
+- `plugins match` compare installed plugins against a research dossier
 - `palette generate` derive a track-level operational palette from a dossier
 - `compare` compare a generated set against a reference profile or bundle
 - `validate-roundtrip` measure note/track preservation through MIDI or MusicXML export+import
@@ -107,6 +109,8 @@ Strictness modes:
 
 ```bash
 ableton-composer plugins scan
+ableton-composer plugins enrich
+ableton-composer plugins match research/synth-pop-80s.json
 ableton-composer plugins scan --formats au,vst3,clap
 ableton-composer plugins list
 ableton-composer plugins list --no-prompt-safe
@@ -120,8 +124,23 @@ Important options:
 - `plugins scan --print --prompt-safe` prints a filtered view with path hashes instead of full paths
 - `plugins list --inventory <path>` reads a specific inventory file
 - `plugins list --no-prompt-safe` shows full local paths for manual inspection
+- `plugins enrich --inventory <path>` reads an existing inventory and adds local enrichment metadata
+- `plugins match <dossier>` produces recommended, caution, and avoid buckets against a dossier
+- `plugins match --no-prompt-safe` shows full local paths in the printed match report
 
 The inventory stays local by default. The saved JSON can include full paths because it is meant for your machine, but the default list view is prompt-safe and shows hashed paths instead of raw filesystem locations. This keeps later AI-facing integrations able to consume a filtered inventory without exposing unnecessary local path data.
+
+`plugins enrich` is deterministic in this first version: it uses local heuristics and a small catalog of known emulation patterns to add fields such as:
+
+- `emulates`
+- `original_release_period`
+- `synthesis_type`
+- `instrument_families`
+- `role_suitability`
+- `historical_tags`
+- `caution_for_periods`
+
+`plugins match` uses the dossier topic, instrumentation families, and historical guardrails to score installed plugins into `recommended`, `caution`, and `avoid` lists. This is the layer that makes examples like a Juno-style installed substitute show up as a practical recommendation instead of naming plugins that are not installed.
 
 ## Operational Palettes
 

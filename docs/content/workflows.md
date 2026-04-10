@@ -77,6 +77,8 @@ If you want the model to stay much closer to the target era, switch to `--histor
 
 ```bash
 ableton-composer plugins scan
+ableton-composer plugins enrich
+ableton-composer plugins match research/synth-pop-80s.json
 ableton-composer plugins scan --formats au,vst3,clap
 ableton-composer plugins list
 ```
@@ -88,6 +90,12 @@ The default list view is prompt-safe:
 - it prints plugin name, format, inferred type, install scope, and a path hash
 - it does not print raw filesystem paths unless you explicitly ask for `--no-prompt-safe`
 - missing plugin directories are treated as normal and do not fail the scan
+
+Use `plugins enrich` when you want the inventory to carry historical/emulation metadata, and `plugins match <dossier>` when you want dossier-aware buckets such as:
+
+- recommended installed substitutes
+- caution choices that are usable but slightly off-period
+- avoid-by-default choices that conflict with dossier guardrails
 
 ## 6. Generate a Preset
 
