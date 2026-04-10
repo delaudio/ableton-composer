@@ -21,6 +21,7 @@ template: docs
 - `render-plan` generate an engine-agnostic audio render-chain JSON plan
 - `render-audio` mix existing audio stems through ffmpeg using a render plan
 - `convert-audio` convert/post-process a single audio file with ffmpeg
+- `render-stems` use an optional Pedalboard Python worker on existing audio stems
 - `preset generate` create synth presets from preset profiles
 - `push` write notes into Ableton Live
 - `pull` import material from Live
@@ -347,6 +348,23 @@ Important options:
 - `--channels <n>` changes channel count
 - `--normalize` applies loudness normalization
 - `--dry-run` prints the ffmpeg command without executing it
+
+## Render Stems
+
+```bash
+ableton-composer render-stems renders/plans/my-song.render-chain.json --dry-run
+ableton-composer render-stems renders/plans/my-song.render-chain.json --out renders/my-song/pedalboard/
+```
+
+Important options:
+
+- `--engine pedalboard` selects the optional Python/Pedalboard worker
+- `--python-bin <path>` points to the Python interpreter to use
+- `--worker <path>` overrides the default worker script path
+- `--dry-run` prints the worker command without executing it
+- `--out <dir>` overrides the output directory for rendered stems
+
+This integration is optional and requires a Python environment with `pedalboard` installed. The current proof of concept is deliberately narrow: it operates on existing external audio stems from a render plan and does not synthesize MIDI or act like a full DAW mixer.
 
 ## Report
 

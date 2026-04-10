@@ -290,7 +290,21 @@ ableton-composer convert-audio renders/my-song/mixdown.wav --out renders/my-song
 
 Use this when audio already exists as stems and you only need format conversion, simple summing, gain/pan application, or normalization. ffmpeg here is not a plugin host and does not render instruments from MIDI.
 
-## 18. Typical Album-Style Loop
+## 18. Process Existing Stems With Pedalboard
+
+```bash
+ableton-composer render-stems renders/plans/my-song.render-chain.json --dry-run
+ableton-composer render-stems renders/plans/my-song.render-chain.json --out renders/my-song/pedalboard/
+```
+
+Use this when a render plan already points at external audio stems and you want an optional offline Python worker to process them. The current Pedalboard integration is intentionally narrow:
+
+- it requires Python plus the `pedalboard` package installed separately
+- it currently handles external audio stems only
+- it does not synthesize MIDI tracks or emulate a DAW mixer/project renderer
+- it writes per-track outputs using the same render-plan contract as the ffmpeg fallback
+
+## 19. Typical Album-Style Loop
 
 ```bash
 # analyze
@@ -310,7 +324,7 @@ ableton-composer compare \
   sets/generated-output
 ```
 
-## 19. Export for Logic Pro
+## 20. Export for Logic Pro
 
 ```bash
 ableton-composer export-midi sets/my-song --target logic
@@ -324,7 +338,7 @@ Use this when the next step is arranging or scoring in Logic Pro rather than rou
 - writes MIDI key signature metadata when `meta.scale` is a simple major/minor key
 - reserves channel 10 for drum-like tracks during MIDI export
 
-## 20. Generate a Static Song Report
+## 21. Generate a Static Song Report
 
 ```bash
 ableton-composer report sets/example --out reports/example-report.md

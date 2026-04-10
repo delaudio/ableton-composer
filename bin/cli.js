@@ -31,6 +31,7 @@ import { exportXmlCommand } from '../src/commands/export-xml.js';
 import { reportCommand } from '../src/commands/report.js';
 import { renderPlanCommand } from '../src/commands/render-plan.js';
 import { renderAudioCommand, convertAudioCommand } from '../src/commands/render-audio.js';
+import { renderStemsCommand } from '../src/commands/render-stems.js';
 import { researchGenreCommand } from '../src/commands/research.js';
 import { paletteGenerateCommand } from '../src/commands/palette.js';
 import { stemScanCommand, stemSetupCommand, stemReaperCommand } from '../src/commands/stems.js';
@@ -212,6 +213,16 @@ program
   .option('--dry-run', 'Print the ffmpeg command without executing it')
   .option('--out <path>', 'Output file path')
   .action(convertAudioCommand);
+
+program
+  .command('render-stems <plan>')
+  .description('Use an optional Pedalboard Python worker to render/process existing audio stems from a render-chain JSON')
+  .option('--engine <name>', 'Render engine (currently: pedalboard)', 'pedalboard')
+  .option('--python-bin <path>', 'Explicit Python binary path')
+  .option('--worker <path>', 'Explicit Pedalboard worker script path')
+  .option('--dry-run', 'Print the worker command without executing it')
+  .option('--out <dir>', 'Optional output directory for rendered stems')
+  .action(renderStemsCommand);
 
 // ── research ─────────────────────────────────────────────────────────────────
 const researchCmd = program
