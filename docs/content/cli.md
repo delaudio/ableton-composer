@@ -19,6 +19,8 @@ template: docs
 - `evaluation-pack` build a thesis/user-study report bundle from one or more sets
 - `report` generate a static Markdown song report / lightweight visualizer
 - `render-plan` generate an engine-agnostic audio render-chain JSON plan
+- `render-audio` mix existing audio stems through ffmpeg using a render plan
+- `convert-audio` convert/post-process a single audio file with ffmpeg
 - `preset generate` create synth presets from preset profiles
 - `push` write notes into Ableton Live
 - `pull` import material from Live
@@ -314,6 +316,37 @@ Important options:
 - `--out <path>` writes the render-chain JSON to a custom location
 
 The render plan is a portable contract, not a renderer. It distinguishes per-track source/instrument/effects/mix settings from the master chain and final mixdown output so future engines like ffmpeg or Pedalboard can consume the same plan.
+
+## Render Audio
+
+```bash
+ableton-composer render-audio renders/plans/my-song.render-chain.json --dry-run
+ableton-composer render-audio renders/plans/my-song.render-chain.json --normalize
+```
+
+Important options:
+
+- `--ffmpeg-bin <path>` points to an explicit ffmpeg binary when it is not on `PATH`
+- `--normalize` adds a loudness normalization stage to the mixdown
+- `--dry-run` prints the ffmpeg command without executing it
+- `--out <path>` overrides the mixdown target path from the plan
+
+This is a post-processing and mixdown fallback only. It works on existing audio stems referenced by the render plan and does not synthesize MIDI or render plugins.
+
+## Convert Audio
+
+```bash
+ableton-composer convert-audio renders/mixdown.wav --out renders/mixdown.mp3
+```
+
+Important options:
+
+- `--ffmpeg-bin <path>` points to an explicit ffmpeg binary
+- `--codec <name>` selects an ffmpeg audio codec
+- `--sample-rate <n>` resamples the output
+- `--channels <n>` changes channel count
+- `--normalize` applies loudness normalization
+- `--dry-run` prints the ffmpeg command without executing it
 
 ## Report
 

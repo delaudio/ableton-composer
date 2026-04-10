@@ -30,6 +30,7 @@ import { importXmlCommand } from '../src/commands/import-xml.js';
 import { exportXmlCommand } from '../src/commands/export-xml.js';
 import { reportCommand } from '../src/commands/report.js';
 import { renderPlanCommand } from '../src/commands/render-plan.js';
+import { renderAudioCommand, convertAudioCommand } from '../src/commands/render-audio.js';
 import { researchGenreCommand } from '../src/commands/research.js';
 import { paletteGenerateCommand } from '../src/commands/palette.js';
 import { stemScanCommand, stemSetupCommand, stemReaperCommand } from '../src/commands/stems.js';
@@ -190,6 +191,27 @@ program
   .option('--channels <n>', 'Render channel count (default: 2)', '2')
   .option('--out <path>', 'Output render-chain JSON path (default: renders/plans/<name>.render-chain.json)')
   .action(renderPlanCommand);
+
+program
+  .command('render-audio <plan>')
+  .description('Use ffmpeg as a post-processing/mixdown fallback for an existing render-chain JSON')
+  .option('--ffmpeg-bin <path>', 'Explicit ffmpeg binary path')
+  .option('--normalize', 'Apply loudness normalization in the ffmpeg filter graph')
+  .option('--dry-run', 'Print the ffmpeg command without executing it')
+  .option('--out <path>', 'Output mixdown path (default: uses plan.outputs.mixdown_path)')
+  .action(renderAudioCommand);
+
+program
+  .command('convert-audio <file>')
+  .description('Convert an audio file with ffmpeg as a lightweight fallback utility')
+  .option('--ffmpeg-bin <path>', 'Explicit ffmpeg binary path')
+  .option('--codec <name>', 'Explicit audio codec, e.g. libmp3lame or flac')
+  .option('--sample-rate <n>', 'Target sample rate')
+  .option('--channels <n>', 'Target channel count')
+  .option('--normalize', 'Apply loudness normalization')
+  .option('--dry-run', 'Print the ffmpeg command without executing it')
+  .option('--out <path>', 'Output file path')
+  .action(convertAudioCommand);
 
 // ── research ─────────────────────────────────────────────────────────────────
 const researchCmd = program
