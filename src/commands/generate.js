@@ -16,7 +16,7 @@ import { saveSetDirectory, loadSong, SETS_DIR, slugify, stringifySong, writeSong
 import { fetchContext } from '../lib/fetchers/index.js';
 import { connect, disconnect, getMidiTracks } from '../lib/ableton.js';
 import { loadStyleProfile } from '../lib/profiles.js';
-import { loadResearchDossier } from '../lib/dossiers.js';
+import { loadResearchDossier, normalizeHistoricalStrictness } from '../lib/dossiers.js';
 import { appendProvenance, createProvenance } from '../lib/provenance.js';
 import { defaultCritiqueReportPath, runSongCritique, saveCritiqueReport } from '../lib/critique-runner.js';
 
@@ -41,6 +41,7 @@ export async function generateCommand(prompt, options) {
     let styleProfilePath = null;
     let researchDossier = null;
     let researchDossierPath = null;
+    const historicalStrictness = normalizeHistoricalStrictness(options.historicalStrictness || 'loose');
     if (options.style) {
       const absStyle = options.style.startsWith('/')
         ? options.style
@@ -63,6 +64,7 @@ export async function generateCommand(prompt, options) {
       researchDossier = loaded.dossier;
       researchDossierPath = loaded.resolvedPath;
       console.log(chalk.dim(`Research dossier: ${researchDossier.topic} -> ${researchDossierPath}`));
+      console.log(chalk.dim(`Historical strictness: ${historicalStrictness}`));
     }
 
     // ── 1. Resolve track names ───────────────────────────────────────────────
@@ -151,6 +153,7 @@ export async function generateCommand(prompt, options) {
             context:      chunk === 0 ? context : {},
             styleProfile,
             researchDossier,
+            historicalStrictness,
             existingSong: accumulated,
             tonalState,
             model:        options.model,
@@ -192,6 +195,7 @@ export async function generateCommand(prompt, options) {
           context,
           styleProfile,
           researchDossier,
+          historicalStrictness,
           existingSong,
           model:        options.model,
           provider,
@@ -213,6 +217,7 @@ export async function generateCommand(prompt, options) {
         prompt,
         styleProfilePath,
         researchDossierPath,
+        historicalStrictness,
         sections: sections.length,
         tracks: trackNames,
       };

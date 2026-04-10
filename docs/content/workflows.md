@@ -57,6 +57,7 @@ ableton-composer research genre "early 80s synth-pop" \
 
 ableton-composer generate "melancholic pop pulse with restrained hooks" \
   --dossier research/synth-pop-80s.json \
+  --historical-strictness loose \
   --tracks "Drums,Bass,Pad,Lead,Keys,Vocals,FX" \
   --provider openai
 ```
@@ -64,6 +65,8 @@ ableton-composer generate "melancholic pop pulse with restrained hooks" \
 Use this when you want historically informed arrangement and production guardrails without depending only on vague prompt wording. Dossiers are additive: they work alongside style profiles instead of replacing them.
 
 Research dossiers can now carry explicit historical guardrails too, for example period bounds, caution instruments, avoid-by-default lists, and historically plausible substitutes. Those guardrails are passed into generation as advisory constraints so the model can avoid obvious anachronisms by default.
+
+If you want the model to stay much closer to the target era, switch to `--historical-strictness strict`. Use `hybrid` or `modern` when the goal is reinterpretation rather than reconstruction.
 
 ## 5. Generate a Preset
 

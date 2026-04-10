@@ -18,6 +18,16 @@ export async function writeResearchDossier(dossier, outPath) {
   return resolvedPath;
 }
 
+export const HISTORICAL_STRICTNESS_MODES = new Set(['strict', 'loose', 'hybrid', 'modern']);
+
+export function normalizeHistoricalStrictness(value) {
+  const normalized = String(value || 'loose').trim().toLowerCase();
+  if (!HISTORICAL_STRICTNESS_MODES.has(normalized)) {
+    throw new Error(`Invalid historical strictness: ${value}. Expected one of strict, loose, hybrid, modern.`);
+  }
+  return normalized;
+}
+
 export function createGenreResearchDossier(topic) {
   const normalizedTopic = String(topic || '').trim();
   if (!normalizedTopic) {
@@ -84,13 +94,15 @@ export function createGenreResearchDossier(topic) {
   return dossier;
 }
 
-export function buildDossierPromptSection(dossier) {
+export function buildDossierPromptSection(dossier, options = {}) {
   if (!dossier) return '';
+  const strictness = normalizeHistoricalStrictness(options.historicalStrictness || 'loose');
 
   const lines = [
     '## Research dossier',
     `Topic: ${dossier.topic || 'unknown'}`,
     `Focus: ${dossier.focus || 'unknown'}`,
+    `Historical strictness: ${strictness}`,
   ];
 
   const historical = dossier.historical_context || {};
@@ -111,7 +123,7 @@ export function buildDossierPromptSection(dossier) {
   pushList(lines, 'Rhythm and harmony tendencies', dossier.rhythm_harmony_tendencies);
   pushList(lines, 'Sound design traits', dossier.sound_design_traits);
   pushList(lines, 'Suggested role palette', dossier.suggested_role_palette);
-  pushHistoricalGuardrails(lines, dossier.historical_guardrails);
+  pushHistoricalGuardrails(lines, dossier.historical_guardrails, strictness);
   pushList(lines, 'Historical constraints and caveats', dossier.historical_constraints_and_caveats);
 
   const facts = normalizeClaims(dossier.facts);
@@ -156,7 +168,7 @@ function pushList(lines, heading, values) {
   }
 }
 
-function pushHistoricalGuardrails(lines, guardrails) {
+function pushHistoricalGuardrails(lines, guardrails, strictness) {
   if (!guardrails || typeof guardrails !== 'object') return;
 
   const period = guardrails.target_period || {};
@@ -175,7 +187,7 @@ function pushHistoricalGuardrails(lines, guardrails) {
     return;
   }
 
-  lines.push('Historical guardrails (advisory by default):');
+  lines.push(`Historical guardrails (${describeStrictness(strictness)}):`);
   if (periodLabel) lines.push(`- Target period: ${periodLabel}`);
   if (guardrails.anachronism_policy) lines.push(`- Anachronism policy: ${guardrails.anachronism_policy}`);
 
@@ -375,4 +387,18 @@ function formatGuardrailEntry(entry) {
   if (!entry || typeof entry !== 'object') return 'unknown';
   const name = entry.name || entry.instrument || entry.value || 'unknown';
   return entry.reason ? `${name} (${entry.reason})` : name;
+}
+
+function describeStrictness(strictness) {
+  switch (strictness) {
+    case 'strict':
+      return 'strict mode: obey avoid/caution lists strongly and stay within period-plausible choices unless explicitly overridden';
+    case 'hybrid':
+      return 'hybrid mode: start from the historical palette but allow selective modern/anachronistic choices when framed intentionally';
+    case 'modern':
+      return 'modern mode: treat guardrails as inspiration only and allow modern reinterpretation freely';
+    case 'loose':
+    default:
+      return 'loose mode: prefer period-plausible choices but allow practical modern equivalents';
+  }
 }

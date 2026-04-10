@@ -53,6 +53,7 @@ program
   .option('-o, --output <path>',   'Save to a specific path instead of sets/')
   .option('-s, --style <path>',    'Style profile JSON to guide generation (from "analyze" command)')
   .option('-d, --dossier <path>',  'Research dossier JSON to add historical/production constraints')
+  .option('--historical-strictness <mode>', 'Historical guardrail mode: strict, loose, hybrid, or modern', 'loose')
   .option('-c, --continue <file>', 'Existing set to continue — new sections are appended')
   .option('-V, --variations <n>',  'Generate N variations and save each one', '1')
   .option('-S, --sections <n>',    'Total number of sections to generate')

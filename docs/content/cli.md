@@ -39,6 +39,7 @@ Common options:
 - `--tracks "Bass,Drums,Pad,Lead,Chords,FX"`
 - `--style <path>`
 - `--dossier <path>`
+- `--historical-strictness strict|loose|hybrid|modern`
 - `--provider anthropic|openai|codex|claude-cli`
 - `--model <model>`
 - `--sections <n>`
@@ -62,6 +63,7 @@ ableton-composer research genre "early 80s synth-pop"
 ableton-composer research genre "krautrock 1968-1976" --out research/krautrock.json
 ableton-composer generate "motorik instrumental with gradual synth lift" \
   --dossier research/krautrock.json \
+  --historical-strictness strict \
   --tracks "Drums,Bass,Organ,Synth,FX"
 ```
 
@@ -69,6 +71,7 @@ Important options:
 
 - `--out <path>` writes the dossier JSON to a custom location
 - `--print` prints the dossier JSON without saving
+- `--historical-strictness <mode>` is used by `generate` to decide how strongly the model should obey dossier guardrails
 
 The dossier format separates factual claims, creative inferences, source notes, and historical caveats so generation can use historically informed guardrails without collapsing into artist cloning.
 
@@ -82,6 +85,13 @@ Each dossier can now also include a structured `historical_guardrails` block wit
 - `anachronism_policy`
 
 These guardrails are advisory by default. They are meant to bias generation away from obvious anachronisms without turning every dossier into a rigid reconstruction.
+
+Strictness modes:
+
+- `strict` obey avoid/caution lists strongly and stay within period-plausible choices unless explicitly overridden
+- `loose` prefer period-plausible choices but allow practical modern equivalents
+- `hybrid` start from the historical palette but allow deliberate modern/anachronistic choices
+- `modern` use the dossier as inspiration without enforcing period discipline
 
 ## Analyze
 
