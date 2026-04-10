@@ -353,6 +353,8 @@ program
   .option('--demucs-bin <path>', 'Explicit Demucs CLI path')
   .option('--model <name>', 'Demucs model name (default: htdemucs)', 'htdemucs')
   .option('-o, --out <dir>', 'Output directory (default: stems/separated/<audio-name>/)')
+  .option('--manifest', 'Also scan the separated output into a standard stem manifest')
+  .option('--manifest-out <path>', 'Optional manifest output path when --manifest is enabled')
   .option('--dry-run', 'Print the Demucs command without executing it')
   .action(separateCommand);
 

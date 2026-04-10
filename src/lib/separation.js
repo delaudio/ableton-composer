@@ -76,6 +76,8 @@ export async function runDemucsSeparation({
     await writeFile(logPath, `${stdout}\n${stderr}`.trim(), 'utf-8').catch(() => {});
   }
 
+  await import('fs/promises').then(({ rm }) => rm(tempRoot, { recursive: true, force: true })).catch(() => {});
+
   return { stdout, stderr, outputs, tempRoot, model };
 }
 

@@ -69,6 +69,7 @@ The transcribed set path is useful when you want to:
 ```bash
 ableton-composer separate audio/song.wav --engine demucs
 ableton-composer separate audio/song.wav --out stems/separated/song/
+ableton-composer separate audio/song.wav --manifest
 ```
 
 Use this when you start from a stereo file and want to unlock the existing stems workflow. The current MVP:
@@ -76,6 +77,7 @@ Use this when you start from a stereo file and want to unlock the existing stems
 - depends on the optional Demucs CLI
 - writes a normalized output directory instead of exposing Demucs-internal folder layout
 - preserves a `separation.json` file with source audio hash, engine, model, and output stems
+- can immediately write a standard stem manifest with `--manifest`
 
 This is the right precursor for both stem-manifest workflows and better per-stem transcription.
 

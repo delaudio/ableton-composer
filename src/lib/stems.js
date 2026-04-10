@@ -29,6 +29,7 @@ const AUDIO_EXTENSIONS = new Set([
 export async function scanStemDirectory(rootDir) {
   const absRoot = rootDir.startsWith('/') ? rootDir : join(process.cwd(), rootDir);
   const files = await collectAudioFiles(absRoot);
+  const separation = await loadSeparationMetadata(absRoot);
 
   const stems = await Promise.all(
     files.map(async filePath => {
@@ -52,11 +53,11 @@ export async function scanStemDirectory(rootDir) {
   );
 
   stems.sort((a, b) => a.relative_path.localeCompare(b.relative_path, 'en'));
-  return { absRoot, stems };
+  return { absRoot, stems, separation };
 }
 
-export function createStemManifest({ name, sourceRoot, stems }) {
-  return {
+export function createStemManifest({ name, sourceRoot, stems, separation = null }) {
+  const manifest = {
     _format: { ...STEM_MANIFEST_FORMAT },
     name,
     source_root: sourceRoot,
@@ -64,6 +65,18 @@ export function createStemManifest({ name, sourceRoot, stems }) {
     stem_count: stems.length,
     stems,
   };
+
+  if (separation) {
+    manifest.provenance = {
+      source_type: 'separated-audio',
+      source_audio: separation.source_audio || null,
+      engine: separation.engine || null,
+      model: separation.model || null,
+      separation_metadata: separation.path || null,
+    };
+  }
+
+  return manifest;
 }
 
 export async function loadStemManifestFile(filePath) {
@@ -78,6 +91,11 @@ export async function writeStemManifestFile(outputPath, manifest) {
 
 export function defaultStemManifestPath(name) {
   return join(STEMS_DIR, 'manifests', `${slugify(name) || 'stems'}.stems.json`);
+}
+
+export function defaultSeparatedStemManifestPath(sourceRoot) {
+  const name = basename(String(sourceRoot || '').replace(/\/+$/, ''));
+  return defaultStemManifestPath(name || 'stems');
 }
 
 export function mergeStemOverrides(stems, existingManifest) {
@@ -140,7 +158,7 @@ async function collectAudioFiles(dir, bucket = []) {
   const entries = await readdir(dir, { withFileTypes: true });
 
   for (const entry of entries) {
-    if (entry.name.startsWith('.')) continue;
+    if (entry.name.startsWith('.') || entry.name.startsWith('_')) continue;
 
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
@@ -154,6 +172,20 @@ async function collectAudioFiles(dir, bucket = []) {
   }
 
   return bucket;
+}
+
+async function loadSeparationMetadata(rootDir) {
+  const pathname = join(rootDir, 'separation.json');
+  try {
+    const raw = await readFile(pathname, 'utf-8');
+    const parsed = JSON.parse(raw);
+    return {
+      ...parsed,
+      path: pathname,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function deriveTrackName(base) {
@@ -253,7 +285,7 @@ function roleOrder(role) {
 const STEM_ROLE_RULES = [
   { role: 'vocal-lead', patterns: [/\blead vox\b/, /\blead vocal\b/, /\bmain vox\b/, /\bmain vocal\b/, /\bvocal lead\b/, /\bvox lead\b/] },
   { role: 'vocal-backing', patterns: [/\bbv\b/, /\bbacking vocal\b/, /\bbacking vox\b/, /\bharmony vocal\b/, /\bdouble vocal\b/, /\bdouble vox\b/] },
-  { role: 'vocal', patterns: [/\bvox\b/, /\bvocal\b/, /\bvoice\b/, /\bchoir\b/] },
+  { role: 'vocal', patterns: [/\bvox\b/, /\bvocal(s)?\b/, /\bvoice\b/, /\bchoir\b/] },
   { role: 'kick', patterns: [/\bkick\b/, /\bbd\b/, /\bbass drum\b/] },
   { role: 'snare', patterns: [/\bsnare\b/, /\bsd\b/] },
   { role: 'clap', patterns: [/\bclap\b/] },
@@ -261,7 +293,7 @@ const STEM_ROLE_RULES = [
   { role: 'tom', patterns: [/\btom\b/] },
   { role: 'cymbal', patterns: [/\bcymbal\b/, /\bcrash\b/, /\bride\b/, /\boverhead\b/, /\boh\b/] },
   { role: 'percussion', patterns: [/\bperc\b/, /\bpercussion\b/, /\bconga\b/, /\bbongo\b/, /\bshaker\b/, /\btamb\b/, /\btambourine\b/] },
-  { role: 'drums', patterns: [/\bdrum\b/, /\bkit\b/, /\bbeat\b/] },
+  { role: 'drums', patterns: [/\bdrum(s)?\b/, /\bkit\b/, /\bbeat\b/] },
   { role: 'bass', patterns: [/\bbass\b/, /\bsub\b/, /\b808\b/] },
   { role: 'lead', patterns: [/\blead\b/, /\bmelody\b/, /\bhook\b/] },
   { role: 'pad', patterns: [/\bpad\b/, /\bstring\b/, /\batmos\b/, /\batmosphere\b/] },

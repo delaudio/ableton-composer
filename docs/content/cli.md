@@ -445,6 +445,7 @@ This workflow is optional and requires the Basic Pitch CLI to be installed separ
 ```bash
 ableton-composer separate audio/song.wav --engine demucs
 ableton-composer separate audio/song.wav --out stems/separated/song/
+ableton-composer separate audio/song.wav --manifest
 ```
 
 Important options:
@@ -453,9 +454,11 @@ Important options:
 - `--demucs-bin <path>` points to an explicit `demucs` CLI
 - `--model <name>` chooses the Demucs model name
 - `--out <dir>` overrides the output directory
+- `--manifest` also writes a standard `.stems.json` manifest for the separated output
+- `--manifest-out <path>` overrides the manifest path when `--manifest` is enabled
 - `--dry-run` prints the command without executing it
 
-This workflow is optional and requires the Demucs CLI to be installed separately, typically via `pip install demucs`. The current MVP writes a normalized output directory with expected stem names such as `drums`, `bass`, `vocals`, and `other`, plus a `separation.json` provenance file that records the source audio path, source hash, engine, model, and output stem paths.
+This workflow is optional and requires the Demucs CLI to be installed separately, typically via `pip install demucs`. The current MVP writes a normalized output directory with expected stem names such as `drums`, `bass`, `vocals`, and `other`, plus a `separation.json` provenance file that records the source audio path, source hash, engine, model, and output stem paths. When `--manifest` is enabled, the command immediately bridges into the existing stem-manifest workflow by writing a standard `.stems.json` file with separation provenance attached.
 
 ## Presets
 

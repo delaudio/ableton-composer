@@ -5,6 +5,7 @@ import { connect, disconnect, setupAudioTracks } from '../lib/ableton.js';
 import {
   buildStemTrackDefinitions,
   createStemManifest,
+  defaultSeparatedStemManifestPath,
   defaultStemManifestPath,
   loadStemManifestFile,
   mergeStemOverrides,
@@ -23,7 +24,7 @@ export async function stemScanCommand(sourceDir, options) {
 
   try {
     spinner.start(`Scanning ${basename(sourceDir)} for stems...`);
-    const { absRoot, stems } = await scanStemDirectory(sourceDir);
+    const { absRoot, stems, separation } = await scanStemDirectory(sourceDir);
 
     if (stems.length === 0) {
       spinner.fail(`No supported audio files found in ${absRoot}`);
@@ -40,6 +41,7 @@ export async function stemScanCommand(sourceDir, options) {
       name,
       sourceRoot: absRoot,
       stems: mergedStems,
+      separation,
     });
     await writeStemManifestFile(outputPath, manifest);
     spinner.succeed(`Scanned ${mergedStems.length} stem(s)`);
@@ -66,6 +68,9 @@ export async function stemScanCommand(sourceDir, options) {
       console.log(chalk.dim('  Existing manual overrides for track_name/role/group/color were preserved.'));
     }
     printGroupSummary(mergedStems);
+    if (manifest.provenance?.engine) {
+      console.log(chalk.dim(`  Separation: ${manifest.provenance.engine}${manifest.provenance.model ? ` (${manifest.provenance.model})` : ''}`));
+    }
     console.log(chalk.dim('\n  Next: use the manifest as input for audio-track setup and Ableton stem loading.'));
   } catch (err) {
     spinner.fail(err.message);
@@ -182,6 +187,15 @@ function resolveOutputPath(name, outOption) {
 
   const absOut = outOption.startsWith('/') ? outOption : join(process.cwd(), outOption);
   if (absOut.endsWith('.json')) return absOut;
+  return join(absOut, `${name}.stems.json`);
+}
+
+export function resolveSeparatedManifestOutput(sourceRoot, outOption) {
+  if (!outOption) return defaultSeparatedStemManifestPath(sourceRoot);
+
+  const absOut = outOption.startsWith('/') ? outOption : join(process.cwd(), outOption);
+  if (absOut.endsWith('.json')) return absOut;
+  const name = basename(String(sourceRoot || '').replace(/\/+$/, '')) || 'stems';
   return join(absOut, `${name}.stems.json`);
 }
 
