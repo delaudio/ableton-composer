@@ -33,6 +33,7 @@ import { renderPlanCommand } from '../src/commands/render-plan.js';
 import { renderAudioCommand, convertAudioCommand } from '../src/commands/render-audio.js';
 import { renderStemsCommand } from '../src/commands/render-stems.js';
 import { researchGenreCommand } from '../src/commands/research.js';
+import { pluginListCommand, pluginScanCommand } from '../src/commands/plugins.js';
 import { paletteGenerateCommand } from '../src/commands/palette.js';
 import { stemScanCommand, stemSetupCommand, stemReaperCommand } from '../src/commands/stems.js';
 import { presetSaveCommand, presetLoadCommand, presetListCommand, presetAnalyzeCommand, presetGenerateCommand } from '../src/commands/preset.js';
@@ -235,6 +236,27 @@ researchCmd
   .option('-o, --out <path>', 'Output file path (default: research/<topic>.json)')
   .option('--print', 'Print JSON to stdout instead of saving')
   .action(researchGenreCommand);
+
+// ── plugins ─────────────────────────────────────────────────────────────────
+const pluginsCmd = program
+  .command('plugins')
+  .description('Scan and inspect local AU/VST/VST3/CLAP plugin inventories');
+
+pluginsCmd
+  .command('scan')
+  .description('Scan common local plugin folders and write a structured inventory JSON')
+  .option('--formats <names>', 'Comma-separated formats: au,vst,vst3,clap')
+  .option('-o, --out <path>', 'Output file path (default: plugins/inventory.json)')
+  .option('--print', 'Print JSON to stdout instead of saving')
+  .option('--prompt-safe', 'Print a prompt-safe view when used with --print')
+  .action(pluginScanCommand);
+
+pluginsCmd
+  .command('list')
+  .description('Print a readable summary from a saved plugin inventory')
+  .option('--inventory <path>', 'Inventory file path (default: plugins/inventory.json)')
+  .option('--no-prompt-safe', 'Show full local paths instead of the default prompt-safe view')
+  .action(pluginListCommand);
 
 // ── palette ──────────────────────────────────────────────────────────────────
 const paletteCmd = program

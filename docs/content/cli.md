@@ -12,6 +12,8 @@ template: docs
 - `expand` add tracks to existing sections
 - `analyze` extract song, album, artist, or collection profiles
 - `research genre` create structured historical/production dossiers for prompt guidance
+- `plugins scan` build a local AU/VST/VST3/CLAP inventory
+- `plugins list` inspect a saved plugin inventory
 - `palette generate` derive a track-level operational palette from a dossier
 - `compare` compare a generated set against a reference profile or bundle
 - `validate-roundtrip` measure note/track preservation through MIDI or MusicXML export+import
@@ -100,6 +102,26 @@ Strictness modes:
 - `loose` prefer period-plausible choices but allow practical modern equivalents
 - `hybrid` start from the historical palette but allow deliberate modern/anachronistic choices
 - `modern` use the dossier as inspiration without enforcing period discipline
+
+## Plugins
+
+```bash
+ableton-composer plugins scan
+ableton-composer plugins scan --formats au,vst3,clap
+ableton-composer plugins list
+ableton-composer plugins list --no-prompt-safe
+```
+
+Important options:
+
+- `plugins scan --formats au,vst,vst3,clap` limits the scan to selected formats
+- `plugins scan --out <path>` writes the inventory JSON somewhere other than `plugins/inventory.json`
+- `plugins scan --print` prints the inventory JSON instead of saving it
+- `plugins scan --print --prompt-safe` prints a filtered view with path hashes instead of full paths
+- `plugins list --inventory <path>` reads a specific inventory file
+- `plugins list --no-prompt-safe` shows full local paths for manual inspection
+
+The inventory stays local by default. The saved JSON can include full paths because it is meant for your machine, but the default list view is prompt-safe and shows hashed paths instead of raw filesystem locations. This keeps later AI-facing integrations able to consume a filtered inventory without exposing unnecessary local path data.
 
 ## Operational Palettes
 
