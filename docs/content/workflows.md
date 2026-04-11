@@ -55,9 +55,10 @@ Use chunking for larger prompts or album-scale style bundles.
 ableton-composer transcribe audio/idea.wav --engine basic-pitch --out midis/idea.mid
 ableton-composer transcribe audio/idea.wav --to-set sets/idea/
 ableton-composer transcribe audio/song.wav --separate-first --stem vocals --to-set sets/song-vocal-line/
+ableton-composer transcribe audio/piano.wav --engine klangio --out midis/piano.mid --xml-out exports/piano.musicxml --to-set sets/piano/
 ```
 
-Use this when you want to start from a hummed melody, instrument sketch, or rough audio idea and bring it into the existing MIDI/AbletonSong workflow. This path is optional and depends on the external Basic Pitch CLI.
+Use this when you want to start from a hummed melody, instrument sketch, or rough audio idea and bring it into the existing MIDI/AbletonSong workflow. This path is optional and can use either the external Basic Pitch CLI or the hosted Klangio API.
 
 The transcribed set path is useful when you want to:
 
@@ -65,6 +66,7 @@ The transcribed set path is useful when you want to:
 - critique or compare the result
 - continue composing from the transcription rather than only exporting raw MIDI
 - improve results by transcribing a simpler separated stem such as vocals or bass instead of the full mix
+- switch to Klangio when you want an optional hosted engine that can return both MIDI and MusicXML with local caching
 
 ## 5. Separate a Mix Into Stems
 

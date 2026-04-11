@@ -25,6 +25,7 @@ research/**/*.json
 !research/.gitkeep
 transcriptions/**/*.log
 !transcriptions/.gitkeep
+transcriptions/cache/**
 separations/**/*.log
 !separations/.gitkeep
 .claude/

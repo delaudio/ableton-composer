@@ -431,23 +431,30 @@ The report is Markdown-first so it can live in `reports/` for thesis/demo artifa
 ableton-composer transcribe audio/idea.wav --engine basic-pitch --out midis/idea.mid
 ableton-composer transcribe audio/idea.wav --to-set sets/idea/
 ableton-composer transcribe audio/song.wav --separate-first --stem vocals --to-set sets/song-vocal-line/
+ableton-composer transcribe audio/piano.wav --engine klangio --out midis/piano.mid --xml-out exports/piano.musicxml
 ```
 
 Important options:
 
-- `--engine basic-pitch` selects the optional Basic Pitch workflow
+- `--engine basic-pitch|klangio` selects the transcription backend
 - `--basic-pitch-bin <path>` points to an explicit `basic-pitch` CLI
+- `--klangio-api-key <key>` or `KLANGIO_API_KEY` enables the optional Klangio service workflow
+- `--xml-out <path>` saves MusicXML when the selected engine supports it
+- `--prefer-musicxml` imports MusicXML into `--to-set` when available
+- `--refresh-cache` forces a fresh Klangio upload instead of reusing cached artifacts
 - `--separate-first` runs Demucs before transcription
 - `--stem <name>` selects which separated stem to transcribe when `--separate-first` is enabled
 - `--demucs-bin <path>` points to an explicit `demucs` CLI for `--separate-first`
 - `--separation-out <dir>` overrides where the separated stems are written
 - `--out <path>` overrides the MIDI output path
-- `--to-set <path>` imports the generated MIDI into an AbletonSong directory or `.json`
+- `--to-set <path>` imports the generated MIDI or MusicXML into an AbletonSong directory or `.json`
 - `--dry-run` prints the command without executing it
 
 This workflow is optional and requires the Basic Pitch CLI to be installed separately, typically via `pip install basic-pitch`. It works best on monophonic or lightly polyphonic single-instrument audio. When `--to-set` is used, the imported song carries transcription provenance including source audio path, hash, engine, and generated MIDI path.
 
 If you pass a separated stem file directly, or use `--separate-first --stem <name>`, the provenance also links the transcription back to the original source audio and the `separation.json` metadata. This is the recommended path when you want better transcription quality than a full-mix pass can provide.
+
+`--engine klangio` is an optional online workflow. It uploads the input audio to the Klangio API, caches returned symbolic artifacts under `transcriptions/cache/klangio/`, and can save both MIDI and MusicXML locally. Missing credentials fail cleanly, and `--refresh-cache` lets you bypass the local cache when you want a fresh remote run.
 
 ## Separate
 
