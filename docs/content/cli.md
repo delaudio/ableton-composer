@@ -330,6 +330,8 @@ Important options:
 
 This command creates missing Ableton audio tracks from the manifest, reuses tracks with matching names, and applies manifest colors when possible. Track order follows manifest organization rules, and `--prefix-groups` makes group buckets visible even without true Ableton folder tracks.
 
+Current limitation: this workflow prepares Ableton tracks only. With the current `ableton-js` API surface, `ableton-composer` cannot yet import external audio files into Session View clip slots directly, so loading the actual stem audio still requires manual drag-and-drop in Live or a different host workflow such as the generated REAPER import script.
+
 ## Stem Reaper
 
 ```bash

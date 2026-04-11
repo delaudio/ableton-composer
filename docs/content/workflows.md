@@ -323,6 +323,8 @@ ableton-composer stems setup stems/manifests/song-stems.stems.json --prefix-grou
 
 You can also edit `display_name` and `order` in the manifest directly when you want to override the default grouping/order rules without changing the source filenames.
 
+Current limitation: the Ableton remote API exposed through `ableton-js` can create and reuse tracks and inspect existing clips, but it does not currently expose a supported way to import arbitrary external audio files into Session View clip slots. So this step prepares the Live set structure; loading the actual stem audio into clips still needs manual drag-and-drop in Ableton or the REAPER import workflow below.
+
 ## 19. Prepare a REAPER Import Script From a Stem Manifest
 
 ```bash
