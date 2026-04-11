@@ -352,11 +352,16 @@ program
   .option('--prefer-musicxml', 'When supported, import MusicXML into --to-set instead of MIDI')
   .option('--separate-first', 'Run source separation before transcription')
   .option('--stem <name>', 'Stem name to transcribe when --separate-first is enabled: drums, bass, vocals, other')
+  .option('--stems <names>', 'Comma-separated stem names to transcribe and merge when --separate-first is enabled')
+  .option('--all-stems', 'Transcribe and merge all supported stems when --separate-first is enabled')
   .option('--demucs-bin <path>', 'Explicit Demucs CLI path for --separate-first')
   .option('--demucs-model <name>', 'Demucs model name for --separate-first', 'htdemucs')
   .option('--separation-out <dir>', 'Output directory for separated stems when --separate-first is enabled')
   .option('-o, --out <path>', 'Output MIDI path (default: midis/<audio-name>.mid)')
   .option('--to-set <path>', 'Optional AbletonSong output path (directory or .json file)')
+  .option('--push', 'Push the imported AbletonSong into the current Ableton Live set after transcription')
+  .option('--push-setup', 'When used with --push, create missing MIDI tracks and scenes before pushing')
+  .option('--push-overwrite', 'When used with --push, replace existing clips in target slots')
   .option('--dry-run', 'Print the Basic Pitch command without executing it')
   .action(transcribeCommand);
 

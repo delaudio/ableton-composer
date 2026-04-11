@@ -55,6 +55,8 @@ Use chunking for larger prompts or album-scale style bundles.
 ableton-composer transcribe audio/idea.wav --engine basic-pitch --out midis/idea.mid
 ableton-composer transcribe audio/idea.wav --to-set sets/idea/
 ableton-composer transcribe audio/song.wav --separate-first --stem vocals --to-set sets/song-vocal-line/
+ableton-composer transcribe audio/song.wav --separate-first --stems bass,vocals --to-set sets/song-stems/
+ableton-composer transcribe audio/song.wav --separate-first --stems bass,vocals --push --push-setup
 ableton-composer transcribe audio/piano.wav --engine klangio --out midis/piano.mid --xml-out exports/piano.musicxml --to-set sets/piano/
 ```
 
@@ -66,7 +68,10 @@ The transcribed set path is useful when you want to:
 - critique or compare the result
 - continue composing from the transcription rather than only exporting raw MIDI
 - improve results by transcribing a simpler separated stem such as vocals or bass instead of the full mix
+- merge multiple separated stems into one AbletonSong before pushing to Live
 - switch to Klangio when you want an optional hosted engine that can return both MIDI and MusicXML with local caching
+
+For one-shot WAV-to-Ableton workflows, `transcribe` can now separate a mix first, transcribe multiple stems with `--stems` or `--all-stems`, merge those symbolic tracks into one set, and optionally push the merged result straight into the open Ableton Live set with `--push`.
 
 ## 5. Separate a Mix Into Stems
 
