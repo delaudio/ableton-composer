@@ -428,17 +428,24 @@ The report is Markdown-first so it can live in `reports/` for thesis/demo artifa
 ```bash
 ableton-composer transcribe audio/idea.wav --engine basic-pitch --out midis/idea.mid
 ableton-composer transcribe audio/idea.wav --to-set sets/idea/
+ableton-composer transcribe audio/song.wav --separate-first --stem vocals --to-set sets/song-vocal-line/
 ```
 
 Important options:
 
 - `--engine basic-pitch` selects the optional Basic Pitch workflow
 - `--basic-pitch-bin <path>` points to an explicit `basic-pitch` CLI
+- `--separate-first` runs Demucs before transcription
+- `--stem <name>` selects which separated stem to transcribe when `--separate-first` is enabled
+- `--demucs-bin <path>` points to an explicit `demucs` CLI for `--separate-first`
+- `--separation-out <dir>` overrides where the separated stems are written
 - `--out <path>` overrides the MIDI output path
 - `--to-set <path>` imports the generated MIDI into an AbletonSong directory or `.json`
 - `--dry-run` prints the command without executing it
 
 This workflow is optional and requires the Basic Pitch CLI to be installed separately, typically via `pip install basic-pitch`. It works best on monophonic or lightly polyphonic single-instrument audio. When `--to-set` is used, the imported song carries transcription provenance including source audio path, hash, engine, and generated MIDI path.
+
+If you pass a separated stem file directly, or use `--separate-first --stem <name>`, the provenance also links the transcription back to the original source audio and the `separation.json` metadata. This is the recommended path when you want better transcription quality than a full-mix pass can provide.
 
 ## Separate
 

@@ -6,6 +6,7 @@ import { createHash } from 'crypto';
 import { slugify } from './storage.js';
 
 const STEM_BASENAMES = ['drums', 'bass', 'vocals', 'other'];
+export const SUPPORTED_SEPARATION_STEMS = [...STEM_BASENAMES];
 
 export async function ensureSeparationInput(pathname) {
   const resolved = pathname.startsWith('/') ? pathname : join(process.cwd(), pathname);
@@ -109,6 +110,43 @@ export async function writeSeparationMetadata({
   const target = join(outputDir, 'separation.json');
   await writeFile(target, JSON.stringify(metadata, null, 2), 'utf-8');
   return target;
+}
+
+export async function loadSeparationMetadata(pathname) {
+  const resolved = pathname.startsWith('/') ? pathname : join(process.cwd(), pathname);
+  const raw = await readFile(resolved, 'utf-8');
+  return JSON.parse(raw);
+}
+
+export async function findSeparationContext(audioPath) {
+  let current = dirname(audioPath);
+
+  while (true) {
+    const candidate = join(current, 'separation.json');
+    try {
+      const metadata = await loadSeparationMetadata(candidate);
+      const stemEntry = Array.isArray(metadata.stems)
+        ? metadata.stems.find(entry => entry.path === audioPath || basename(entry.path || '') === basename(audioPath))
+        : null;
+      return {
+        metadata,
+        metadataPath: candidate,
+        stem: stemEntry || null,
+      };
+    } catch {
+      // continue walking up
+    }
+
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+
+  return null;
+}
+
+export function resolveStemPathFromSeparation(outputDir, stemName) {
+  return join(outputDir, `${stemName}.wav`);
 }
 
 async function findStemFile(dir, stemName) {

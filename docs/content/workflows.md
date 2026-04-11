@@ -54,6 +54,7 @@ Use chunking for larger prompts or album-scale style bundles.
 ```bash
 ableton-composer transcribe audio/idea.wav --engine basic-pitch --out midis/idea.mid
 ableton-composer transcribe audio/idea.wav --to-set sets/idea/
+ableton-composer transcribe audio/song.wav --separate-first --stem vocals --to-set sets/song-vocal-line/
 ```
 
 Use this when you want to start from a hummed melody, instrument sketch, or rough audio idea and bring it into the existing MIDI/AbletonSong workflow. This path is optional and depends on the external Basic Pitch CLI.
@@ -63,6 +64,7 @@ The transcribed set path is useful when you want to:
 - inspect the notes before pushing to Ableton
 - critique or compare the result
 - continue composing from the transcription rather than only exporting raw MIDI
+- improve results by transcribing a simpler separated stem such as vocals or bass instead of the full mix
 
 ## 5. Separate a Mix Into Stems
 
