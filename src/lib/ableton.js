@@ -1,18 +1,20 @@
 /**
  * Higher-level ableton-js wrapper.
  *
- * ableton-js (v2.x) communicates with Ableton Live via a Python MIDI Remote Script
+ * ableton-js (v4.x) communicates with Ableton Live via a Python MIDI Remote Script
  * over UDP. The script must be installed at:
  *   ~/Music/Ableton/User Library/Remote Scripts/AbletonJS/
  * and activated in Live → Preferences → Link, Tempo & MIDI → Control Surfaces.
  *
- * NOTE: v2.x has no start() method — the UDP socket and heartbeat start in the
- * constructor automatically. connect() waits for the first successful handshake.
+ * NOTE: v4.x requires an explicit `start()` call. The library now uses random
+ * client/server ports coordinated through temp port files, so connect() is the
+ * place where we establish and wait for the Live handshake.
  */
 
 import { Ableton } from 'ableton-js';
 
 let _instance = null;
+let _startPromise = null;
 
 export function getAbleton() {
   if (!_instance) {
@@ -23,33 +25,30 @@ export function getAbleton() {
 
 /**
  * Wait for Ableton to be reachable and return the instance.
- * The connection is established automatically on construction;
- * this function just waits until the heartbeat confirms Live is responding.
+ * In ableton-js v4.x the connection is started explicitly.
  */
 export async function connect() {
   const ableton = getAbleton();
 
   if (ableton.isConnected()) return ableton;
 
-  await new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error(
-        'Timed out waiting for Ableton Live.\n' +
-        'Make sure Live is open and AbletonJS is set as a Control Surface in Preferences → Link, Tempo & MIDI.'
-      ));
-    }, 10_000);
+  if (!_startPromise) {
+    _startPromise = withTimeout(ableton.start(), 10_000, 'Connection timed out.')
+      .catch(async err => {
+        await ableton.close().catch(() => {});
+        _instance = null;
+        throw new Error(
+          'Timed out waiting for Ableton Live.\n' +
+          'Make sure Live is open and AbletonJS is set as a Control Surface in Preferences → Link, Tempo & MIDI.\n' +
+          `Underlying ableton-js error: ${normalizeErrorMessage(err)}`
+        );
+      })
+      .finally(() => {
+        _startPromise = null;
+      });
+  }
 
-    ableton.once('connect', () => {
-      clearTimeout(timeout);
-      resolve();
-    });
-
-    // Handle the race condition where it connected between isConnected() check and once()
-    if (ableton.isConnected()) {
-      clearTimeout(timeout);
-      resolve();
-    }
-  });
+  await _startPromise;
 
   return ableton;
 }
@@ -61,6 +60,7 @@ export async function disconnect() {
   if (_instance) {
     await _instance.close();
     _instance = null;
+    _startPromise = null;
   }
 }
 
@@ -244,8 +244,22 @@ export async function pushClip(track, slotIndex, clipDef, opts = {}) {
     muted:    n.muted ?? false,
   }));
 
-  // v2.x API: setNotes replaces/adds notes in the clip
+  // ableton-js clip.setNotes replaces/adds notes in the clip
   await clip.setNotes(notes);
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), timeoutMs)),
+  ]);
+}
+
+function normalizeErrorMessage(err) {
+  if (!err) return 'unknown error';
+  if (typeof err === 'string') return err;
+  if (err instanceof Error) return err.message || err.name;
+  return String(err);
 }
 
 /**

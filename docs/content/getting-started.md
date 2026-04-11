@@ -8,7 +8,7 @@ template: docs
 
 ## Requirements
 
-- Node.js 18 or newer
+- Node.js 20 or newer
 - Ableton Live
 - the `ableton-js` MIDI Remote Script enabled in Live
 - one of:
