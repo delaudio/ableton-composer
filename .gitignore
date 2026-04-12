@@ -1,6 +1,10 @@
 node_modules/
 docs/build/
+docs/content/reports/
 .env
+.DS_Store
+.venv-audio/
+.venv-audio39/
 sets/*.json
 sets/*/
 !sets/example/

@@ -62,6 +62,8 @@ Then activate `AbletonJS` in:
 
 Restart Live if needed.
 
+Note for Live 11+: the custom `AbletonJS` Remote Script may trigger Ableton's warning about using an older MIDI-note editing process. For normal clip/note workflows you can proceed, but advanced Live 11 note metadata such as MPE, probability, velocity deviation, and release velocity may not be preserved when a Remote Script rewrites MIDI notes.
+
 ## Push a Generated Set
 
 ```bash
