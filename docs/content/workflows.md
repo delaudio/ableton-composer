@@ -483,6 +483,24 @@ The command writes:
 
 This is the intended bridge between generation, compare, critique, and interoperability validation when you need repeatable evaluation artifacts.
 
+## 29. Revise From Critique
+
+```bash
+ableton-composer critique sets/my-song --rubric auto --out reports/my-song.critique.json
+
+ableton-composer revise sets/my-song \
+  --critique reports/my-song.critique.json \
+  --provider openai \
+  --out sets/my-song-revised/
+```
+
+Use this when the first symbolic generation is structurally promising but needs a second pass guided by explicit critique. The revision workflow:
+
+- keeps the process in the symbolic domain instead of re-entering audio transcription
+- reuses strengths from the original set where possible
+- turns critique findings and suggested revisions into a fresh full AbletonSong output
+- is a natural bridge between `generate`, `critique`, and later `push`
+
 ## Format Versioning
 
 New full AbletonSong JSON outputs include a format marker:

@@ -218,6 +218,23 @@ Important options:
 - `--model <model>`
 - `--out <path>`
 
+## Revise
+
+```bash
+ableton-composer revise sets/my-song --critique reports/my-song.critique.json --provider openai
+ableton-composer revise sets/my-song --rubric auto --provider openai --out sets/my-song-revised/
+```
+
+Important options:
+
+- `--critique <path>` reuses an existing critique JSON instead of generating one inline
+- `--rubric <name>` selects the rubric when critique is generated inline
+- `--provider anthropic|openai|codex|claude-cli`
+- `--model <model>`
+- `--out <path>`
+
+This command performs a second-pass structured rewrite of an existing AbletonSong. It feeds the current song plus either a saved critique or an inline-generated critique back into the model and asks for a revised full song JSON, keeping the workflow symbolic rather than audio-derived.
+
 If you want the same critique step immediately after generation, use `generate --evaluate` with the same `--rubric` flag.
 
 The critique command returns structured guidance, not objective truth. It does not modify the source set.

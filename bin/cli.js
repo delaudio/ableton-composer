@@ -21,6 +21,7 @@ import { analyzeCommand }  from '../src/commands/analyze.js';
 import { compareCommand }  from '../src/commands/compare.js';
 import { validateRoundtripCommand } from '../src/commands/validate-roundtrip.js';
 import { critiqueCommand } from '../src/commands/critique.js';
+import { reviseCommand } from '../src/commands/revise.js';
 import { evaluationPackCommand } from '../src/commands/evaluation-pack.js';
 import { importMidiCommand } from '../src/commands/import-midi.js';
 import { exportMidiCommand } from '../src/commands/export-midi.js';
@@ -167,6 +168,16 @@ program
   .option('-m, --model <model>', 'Model override')
   .option('--out <path>', 'Save the critique report as JSON')
   .action(critiqueCommand);
+
+program
+  .command('revise <file>')
+  .description('Revise an existing set using a saved or inline-generated critique')
+  .option('--critique <path>', 'Optional critique JSON report to use as revision guidance')
+  .option('--rubric <name>', 'Critique rubric when generating critique inline')
+  .option('--provider <name>', 'AI provider: "api"/"anthropic", "openai", "codex", or "cli"/"claude-cli"')
+  .option('-m, --model <model>', 'Model override for the revision pass')
+  .option('--out <path>', 'Save to a specific path instead of sets/')
+  .action(reviseCommand);
 
 program
   .command('evaluation-pack <targets...>')
