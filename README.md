@@ -103,6 +103,12 @@ profiles/        analyzed style bundles
 docs/            Minuto-powered static documentation site
 ```
 
+## Acknowledgements
+
+`ableton-composer` owes a practical debt to [`ableton-js`](https://github.com/leolabs/ableton-js).
+
+Its Remote Script and Live API bridge made it possible to prototype and ship a large part of this project's Ableton integration much faster than would otherwise have been realistic. This project builds on that groundwork with gratitude and treats it as an important source of inspiration for the Live-facing workflow.
+
 ## License
 
 MIT
